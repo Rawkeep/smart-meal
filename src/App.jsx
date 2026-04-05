@@ -363,13 +363,13 @@ const IngredientPicker = ({ selected, onToggle, profile }) => {
 };
 
 // ─── Photo Upload Component ───
-const PhotoUpload = ({ onResult, apiKey }) => {
+const PhotoUpload = ({ onResult, apiKey, backendAvailable }) => {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(null);
   const fileRef = useRef(null);
 
   const handleFile = async (file) => {
-    if (!file || !apiKey) return;
+    if (!file || (!backendAvailable && !apiKey)) return;
     setUploading(true);
     setPreview(URL.createObjectURL(file));
 
@@ -380,30 +380,40 @@ const PhotoUpload = ({ onResult, apiKey }) => {
         reader.readAsDataURL(file);
       });
 
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 500,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "image", source: { type: "base64", media_type: file.type, data: base64 } },
-              { type: "text", text: "Erkenne alle Lebensmittel/Zutaten auf diesem Foto. Antworte NUR mit einem JSON-Array der Zutatennamen auf Deutsch, z.B. [\"Tomaten\",\"Käse\",\"Hähnchenbrust\"]. Keine Erklärung, nur das Array." },
-            ],
-          }],
-        }),
-      });
-
-      const d = await r.json();
-      const t = d.content?.map(c => c.type === "text" ? c.text : "").join("") || "[]";
-      const items = JSON.parse(t.replace(/```json|```/g, "").trim());
+      let items;
+      if (backendAvailable) {
+        const r = await fetch("/api/recognize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: base64, mediaType: file.type }),
+        });
+        const d = await r.json();
+        items = JSON.parse(d.text.replace(/```json|```/g, "").trim());
+      } else {
+        const r = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 500,
+            messages: [{
+              role: "user",
+              content: [
+                { type: "image", source: { type: "base64", media_type: file.type, data: base64 } },
+                { type: "text", text: "Erkenne alle Lebensmittel/Zutaten auf diesem Foto. Antworte NUR mit einem JSON-Array der Zutatennamen auf Deutsch, z.B. [\"Tomaten\",\"Käse\",\"Hähnchenbrust\"]. Keine Erklärung, nur das Array." },
+              ],
+            }],
+          }),
+        });
+        const d = await r.json();
+        const t = d.content?.map(c => c.type === "text" ? c.text : "").join("") || "[]";
+        items = JSON.parse(t.replace(/```json|```/g, "").trim());
+      }
       onResult(items);
     } catch (e) {
       console.error("Foto-Erkennung fehlgeschlagen:", e);
@@ -647,8 +657,32 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
     return `${base}\n\n- Mahlzeit: ${MEALS.find(x => x.id === meal)?.label || ""}\n- Kochzeit: ${TIMES.find(x => x.id === cookTime)?.label || ""}\n- Stimmung: ${MOODS.find(x => x.id === mood)?.label || ""}\n- Budget: ${BUDGETS.find(x => x.id === budget)?.label || ""}\n${recent ? `- NICHT wiederholen: ${recent}` : ""}\n\nNUR JSON:\n{"name":"...","beschreibung":"1 Satz","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","weinempfehlung":"passender Wein/Getränk","gesundheitshinweis":"..."}`;
   }, [profile, guestMode, guestAllergies, guestHistamin, guestDiet, history, persons, fridgeInput, selectedIngredients, budget, meal, cookTime, mood]);
 
-  // ─── API Call ───
-  const callAPI = useCallback(async (prompt) => {
+  // ─── Backend availability check ───
+  const [backendAvailable, setBackendAvailable] = useState(null);
+  useEffect(() => {
+    fetch("/api/health").then(r => r.json())
+      .then(d => setBackendAvailable(d.status === "ok" && d.hasApiKey))
+      .catch(() => setBackendAvailable(false));
+  }, []);
+
+  // ─── API Call (backend proxy with direct-browser fallback) ───
+  const callAPI = useCallback(async (prompt, endpoint = "/api/suggest") => {
+    // Try backend first
+    if (backendAvailable) {
+      const r = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `API Fehler: ${r.status}`);
+      }
+      const d = await r.json();
+      return JSON.parse(d.text.replace(/```json|```/g, "").trim());
+    }
+
+    // Fallback: direct browser access (demo / GitHub Pages mode)
     if (!apiKey) throw new Error("Kein API-Key");
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -671,11 +705,11 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
     const d = await r.json();
     const t = d.content.map(c => c.type === "text" ? c.text : "").join("");
     return JSON.parse(t.replace(/```json|```/g, "").trim());
-  }, [apiKey]);
+  }, [apiKey, backendAvailable]);
 
   // ─── Generate ───
   const generate = useCallback(async (m) => {
-    if (!apiKey) { setShowKeyInput(true); return; }
+    if (!backendAvailable && !apiKey) { setShowKeyInput(true); return; }
     setLoading(true);
     setSuggestion(null);
     const msgs = ["Schaue in die Vorratskammer...", "Wähle die besten Zutaten...", "Kreiere dein Gericht...", "Perfektioniere das Rezept..."];
@@ -696,16 +730,16 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
     }
     clearInterval(iv);
     setLoading(false);
-  }, [apiKey, callAPI, buildPrompt, history, updateStreak]);
+  }, [apiKey, backendAvailable, callAPI, buildPrompt, history, updateStreak]);
 
   const generatePlan = useCallback(async () => {
-    if (!apiKey) { setShowKeyInput(true); return; }
+    if (!backendAvailable && !apiKey) { setShowKeyInput(true); return; }
     setPlanLoading(true);
     setWeekPlan(null);
-    try { setWeekPlan(await callAPI(buildPrompt("plan"))); }
+    try { setWeekPlan(await callAPI(buildPrompt("plan"), "/api/meal-plan")); }
     catch { setWeekPlan({ error: true }); }
     setPlanLoading(false);
-  }, [apiKey, callAPI, buildPrompt]);
+  }, [apiKey, backendAvailable, callAPI, buildPrompt]);
 
   const reset = useCallback(() => {
     setMeal(autoMeal()); setCookTime(""); setMood(""); setBudget("egal");
@@ -1280,7 +1314,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
                 </>
               )}
               {fridgeInputMode === "photo" && (
-                <PhotoUpload apiKey={apiKey} onResult={addIngredientsFromPhoto} />
+                <PhotoUpload apiKey={apiKey} backendAvailable={backendAvailable} onResult={addIngredientsFromPhoto} />
               )}
             </Card>
             <div style={{ animation: "fadeUp 0.4s ease both", animationDelay: "0.2s" }}>
