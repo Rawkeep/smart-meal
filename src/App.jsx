@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { initDB, getAllFoods, getFoodsFiltered } from "./db";
 import { FOODS, FOOD_CATEGORIES } from "./data/foods";
+import { CROSS_ALLERGIES, ADDITIVES, ADDITIVE_CATEGORIES, NUTRIENT_DEFICIENCIES, METABOLISM_CONDITIONS, HEALTH_GOALS } from "./data/health";
 
 // ─── Storage Keys ───
 const K = {
@@ -445,7 +446,12 @@ const PhotoUpload = ({ onResult, apiKey }) => {
 };
 
 // ─── Default State ───
-const defaultProfile = { allergies: [], nutAllergies: [], histamin: false, diet: [], cuisines: [], dislikes: "", name: "", persons: 2 };
+const defaultProfile = {
+  allergies: [], nutAllergies: [], histamin: false, diet: [], cuisines: [],
+  dislikes: "", name: "", persons: 2,
+  crossAllergies: [], avoidAdditives: [], deficiencies: [],
+  metabolism: [], goals: [],
+};
 
 // ─── Main App ───
 export default function App() {
@@ -580,7 +586,42 @@ export default function App() {
     const recent = history.slice(-8).map(h => h.name).join(", ");
     const mo = new Date().getMonth();
 
-    const base = `Du bist ein weltklasse Koch-Assistent. Du kennst internationale Küche, afrikanische Spezialitäten und saisonale deutsche Küche.
+    // Cross-allergies
+    const crossAllergyInfo = (profile.crossAllergies || []).map(id => {
+      const ca = CROSS_ALLERGIES.find(c => c.id === id);
+      if (!ca) return null;
+      const highFoods = ca.triggers.filter(t => t.severity === "high").map(t => t.food);
+      const medFoods = ca.triggers.filter(t => t.severity === "medium").map(t => t.food);
+      return `${ca.label}: STRENG meiden: ${highFoods.join(", ")}. Vorsicht: ${medFoods.join(", ")}`;
+    }).filter(Boolean);
+
+    // Metabolism conditions
+    const metaInfo = (profile.metabolism || []).map(id => {
+      const mc = METABOLISM_CONDITIONS.find(c => c.id === id);
+      if (!mc) return null;
+      return `${mc.label}: Regeln: ${mc.dietRules.slice(0, 3).join("; ")}. Meiden: ${mc.avoid.join(", ")}. Bevorzugen: ${mc.prefer.join(", ")}`;
+    }).filter(Boolean);
+
+    // Nutrient deficiencies
+    const defInfo = (profile.deficiencies || []).map(id => {
+      const nd = NUTRIENT_DEFICIENCIES.find(d => d.id === id);
+      if (!nd) return null;
+      return `${nd.label}: Bevorzuge: ${nd.foods.join(", ")}. Tipp: ${nd.tips}`;
+    }).filter(Boolean);
+
+    // Health goals
+    const goalInfo = (profile.goals || []).map(id => {
+      const g = HEALTH_GOALS.find(h => h.id === id);
+      return g ? `${g.label} (${g.tip})` : null;
+    }).filter(Boolean);
+
+    // Avoided additives
+    const addInfo = (profile.avoidAdditives || []).map(id => {
+      const a = ADDITIVES.find(x => x.id === id);
+      return a ? a.label : null;
+    }).filter(Boolean);
+
+    const base = `Du bist ein weltklasse Koch-Assistent und Ernährungsberater. Du kennst internationale Küche, afrikanische Spezialitäten und saisonale deutsche Küche. Du nimmst Unverträglichkeiten und gesundheitliche Einschränkungen SEHR ERNST.
 
 PROFIL:
 - Allergien: ${an.length ? an.join(", ") : "keine"}
@@ -590,15 +631,20 @@ PROFIL:
 - Abneigungen: ${profile.dislikes || "keine"}
 - Portionen: ${persons}
 ${guestMode ? "- ⚠️ GÄSTE-MODUS: Alle Gäste-Einschränkungen beachten!" : ""}
+${crossAllergyInfo.length ? `\nKREUZALLERGIEN (⚠️ STRENG BEACHTEN):\n${crossAllergyInfo.map(c => `- ${c}`).join("\n")}` : ""}
+${metaInfo.length ? `\nSTOFFWECHSEL-ERKRANKUNGEN (⚠️ STRENG BEACHTEN):\n${metaInfo.map(m => `- ${m}`).join("\n")}` : ""}
+${defInfo.length ? `\nNÄHRSTOFFMANGEL (gezielt einbauen):\n${defInfo.map(d => `- ${d}`).join("\n")}` : ""}
+${goalInfo.length ? `\nGESUNDHEITSZIELE:\n${goalInfo.map(g => `- ${g}`).join("\n")}` : ""}
+${addInfo.length ? `\nZUSATZSTOFFE VERMEIDEN:\n- ${addInfo.join(", ")}\n- Rezepte nur mit natürlichen Zutaten, keine Fertigprodukte mit diesen E-Stoffen empfehlen!` : ""}
 
 SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
 
     const fridgeItems = [...selectedIngredients, ...(fridgeInput.trim() ? fridgeInput.split(/[,\n]+/).map(s => s.trim()).filter(Boolean) : [])];
-    if (m === "fridge") return `${base}\n\nKÜHLSCHRANK-MODUS: Zutaten: ${fridgeItems.join(", ")}\nNur diese + Grundzutaten verwenden.\n${recent ? `Nicht wiederholen: ${recent}` : ""}\n\nNUR JSON (kein Markdown):\n{"name":"...","beschreibung":"1 Satz","zutaten":["..."],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region"}`;
+    if (m === "fridge") return `${base}\n\nKÜHLSCHRANK-MODUS: Zutaten: ${fridgeItems.join(", ")}\nNur diese + Grundzutaten verwenden.\n${recent ? `Nicht wiederholen: ${recent}` : ""}\n\nNUR JSON (kein Markdown):\n{"name":"...","beschreibung":"1 Satz","zutaten":["..."],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","gesundheitshinweis":"..."}`;
 
     if (m === "plan") return `${base}\n\nWOCHENPLAN: 5 Werktage (Mo–Fr), je Frühstück/Mittag/Abend. Budget: ${BUDGETS.find(b => b.id === budget)?.label || "normal"}. Abwechslungsreich!\n\nNUR JSON:\n{"plan":[{"tag":"Montag","frühstück":{"name":"...","emoji":"...","zeit":"XX Min"},"mittag":{"name":"...","emoji":"...","zeit":"XX Min"},"abend":{"name":"...","emoji":"...","zeit":"XX Min"}},...],  "einkaufsliste":["Zutat 1","Zutat 2",...]}`;
 
-    return `${base}\n\n- Mahlzeit: ${MEALS.find(x => x.id === meal)?.label || ""}\n- Kochzeit: ${TIMES.find(x => x.id === cookTime)?.label || ""}\n- Stimmung: ${MOODS.find(x => x.id === mood)?.label || ""}\n- Budget: ${BUDGETS.find(x => x.id === budget)?.label || ""}\n${recent ? `- NICHT wiederholen: ${recent}` : ""}\n\nNUR JSON:\n{"name":"...","beschreibung":"1 Satz","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","weinempfehlung":"passender Wein/Getränk"}`;
+    return `${base}\n\n- Mahlzeit: ${MEALS.find(x => x.id === meal)?.label || ""}\n- Kochzeit: ${TIMES.find(x => x.id === cookTime)?.label || ""}\n- Stimmung: ${MOODS.find(x => x.id === mood)?.label || ""}\n- Budget: ${BUDGETS.find(x => x.id === budget)?.label || ""}\n${recent ? `- NICHT wiederholen: ${recent}` : ""}\n\nNUR JSON:\n{"name":"...","beschreibung":"1 Satz","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","weinempfehlung":"passender Wein/Getränk","gesundheitshinweis":"..."}`;
   }, [profile, guestMode, guestAllergies, guestHistamin, guestDiet, history, persons, fridgeInput, selectedIngredients, budget, meal, cookTime, mood]);
 
   // ─── API Call ───
@@ -761,6 +807,75 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
       {
         t: "No-Gos", s: "Was magst du gar nicht?",
         c: <InputField multiline value={profile.dislikes} onChange={e => setProfile(p => ({ ...p, dislikes: e.target.value }))} placeholder="z.B. Koriander, Rosenkohl, Innereien, Pilze..." />,
+      },
+      {
+        t: "Kreuzallergien", s: "Pollen- oder Latexallergien?",
+        c: <>
+          <p style={{ fontSize: "12px", color: "var(--ink3)", marginBottom: "10px", lineHeight: 1.5 }}>
+            Bei Pollenallergie reagiert dein Körper oft auch auf bestimmte Lebensmittel (z.B. Birke → Apfel, Haselnuss). Die App warnt dich automatisch.
+          </p>
+          <ChipGrid options={CROSS_ALLERGIES.map(c => ({ id: c.id, label: c.label, emoji: c.emoji }))} selected={profile.crossAllergies || []} onToggle={id => setProfile(p => ({ ...p, crossAllergies: toggle(p.crossAllergies || [], id) }))} />
+        </>,
+      },
+      {
+        t: "Stoffwechsel", s: "Stoffwechselbedingte Besonderheiten?",
+        c: <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "280px", overflowY: "auto" }}>
+          {METABOLISM_CONDITIONS.map(m => {
+            const active = (profile.metabolism || []).includes(m.id);
+            return <button key={m.id} onClick={() => setProfile(p => ({ ...p, metabolism: toggle(p.metabolism || [], m.id) }))} style={{
+              padding: "10px 14px", borderRadius: "var(--r)", textAlign: "left",
+              border: active ? "2px solid var(--accent)" : "2px solid var(--card-border)",
+              background: active ? "linear-gradient(135deg,var(--accent),var(--accent2))" : "var(--card)",
+              color: active ? "#fff" : "var(--ink2)", cursor: "pointer", fontFamily: "'Outfit',sans-serif",
+              transition: "all 0.2s ease",
+            }}>
+              <div style={{ fontSize: "14px", fontWeight: 600 }}>{m.emoji} {m.label}</div>
+              <div style={{ fontSize: "11px", opacity: 0.8, marginTop: "2px" }}>{m.description}</div>
+            </button>;
+          })}
+        </div>,
+      },
+      {
+        t: "Nährstoffmangel", s: "Bekannte Mängel? (Optional)",
+        c: <>
+          <p style={{ fontSize: "12px", color: "var(--ink3)", marginBottom: "10px", lineHeight: 1.5 }}>
+            Die App schlägt gezielt nährstoffreiche Rezepte vor, um deine Mängel auszugleichen.
+          </p>
+          <ChipGrid options={NUTRIENT_DEFICIENCIES.map(n => ({ id: n.id, label: n.label, emoji: n.emoji }))} selected={profile.deficiencies || []} onToggle={id => setProfile(p => ({ ...p, deficiencies: toggle(p.deficiencies || [], id) }))} />
+        </>,
+      },
+      {
+        t: "Deine Ziele", s: "Was willst du mit Ernährung erreichen?",
+        c: <ChipGrid options={HEALTH_GOALS} selected={profile.goals || []} onToggle={id => setProfile(p => ({ ...p, goals: toggle(p.goals || [], id) }))} />,
+      },
+      {
+        t: "Zusatzstoffe", s: "Welche Zusatzstoffe willst du meiden?",
+        c: <>
+          <p style={{ fontSize: "12px", color: "var(--ink3)", marginBottom: "10px", lineHeight: 1.5 }}>
+            Optional: Die App berücksichtigt diese bei Rezeptvorschlägen und warnt bei problematischen Zutaten.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "250px", overflowY: "auto" }}>
+            {ADDITIVE_CATEGORIES.map(cat => {
+              const items = ADDITIVES.filter(a => a.category === cat.id);
+              return <div key={cat.id}>
+                <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>{cat.emoji} {cat.label}</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                  {items.map(a => {
+                    const active = (profile.avoidAdditives || []).includes(a.id);
+                    return <button key={a.id} onClick={() => setProfile(p => ({ ...p, avoidAdditives: toggle(p.avoidAdditives || [], a.id) }))} title={a.note} style={{
+                      padding: "3px 8px", borderRadius: "12px", fontSize: "11px",
+                      border: active ? "1.5px solid var(--accent)" : "1.5px solid var(--card-border)",
+                      background: active ? "var(--accent)" : "var(--card)",
+                      color: active ? "#fff" : a.risk === "high" ? "#C44040" : "var(--ink2)",
+                      fontWeight: active ? 600 : a.risk === "high" ? 500 : 400,
+                      cursor: "pointer", fontFamily: "'Outfit',sans-serif",
+                    }}>{a.label}</button>;
+                  })}
+                </div>
+              </div>;
+            })}
+          </div>
+        </>,
       },
       {
         t: "KI verbinden", s: "Damit die App Rezepte erstellen kann",
@@ -944,6 +1059,34 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
           <InputField multiline value={profile.dislikes} onChange={e => setProfile(p => ({ ...p, dislikes: e.target.value }))} placeholder="z.B. Koriander, Pilze..." />
         </Card>
         <Card anim="fadeUp" delay="0.25s">
+          <ST sub="Pollen-/Latexallergien die Lebensmittel beeinflussen">🌳 Kreuzallergien</ST>
+          <ChipGrid options={CROSS_ALLERGIES.map(c => ({ id: c.id, label: c.label, emoji: c.emoji }))} selected={profile.crossAllergies || []} onToggle={id => setProfile(p => ({ ...p, crossAllergies: toggle(p.crossAllergies || [], id) }))} />
+          {(profile.crossAllergies || []).length > 0 && (
+            <div style={{ marginTop: "10px", padding: "10px", borderRadius: "var(--r)", background: "rgba(200,97,26,0.06)", border: "1px solid rgba(200,97,26,0.12)" }}>
+              <p style={{ fontSize: "11px", color: "var(--ink2)", fontWeight: 600, marginBottom: "4px" }}>⚠️ Betroffene Lebensmittel:</p>
+              {(profile.crossAllergies || []).map(id => {
+                const ca = CROSS_ALLERGIES.find(c => c.id === id);
+                if (!ca) return null;
+                return <div key={id} style={{ fontSize: "11px", color: "var(--ink3)", marginBottom: "4px" }}>
+                  <strong>{ca.emoji} {ca.label}:</strong> {ca.triggers.filter(t => t.severity === "high").map(t => t.food).join(", ")}
+                </div>;
+              })}
+            </div>
+          )}
+        </Card>
+        <Card anim="fadeUp" delay="0.3s">
+          <ST sub="Stoffwechselbedingte Besonderheiten">🔬 Stoffwechsel</ST>
+          <ChipGrid options={METABOLISM_CONDITIONS.map(m => ({ id: m.id, label: m.label, emoji: m.emoji }))} selected={profile.metabolism || []} onToggle={id => setProfile(p => ({ ...p, metabolism: toggle(p.metabolism || [], id) }))} />
+        </Card>
+        <Card anim="fadeUp" delay="0.35s">
+          <ST sub="Bekannte Nährstoffmängel">💊 Nährstoffmangel</ST>
+          <ChipGrid options={NUTRIENT_DEFICIENCIES.map(n => ({ id: n.id, label: n.label, emoji: n.emoji }))} selected={profile.deficiencies || []} onToggle={id => setProfile(p => ({ ...p, deficiencies: toggle(p.deficiencies || [], id) }))} />
+        </Card>
+        <Card anim="fadeUp" delay="0.4s">
+          <ST sub="Was du erreichen möchtest">🎯 Gesundheitsziele</ST>
+          <ChipGrid options={HEALTH_GOALS} selected={profile.goals || []} onToggle={id => setProfile(p => ({ ...p, goals: toggle(p.goals || [], id) }))} />
+        </Card>
+        <Card anim="fadeUp" delay="0.45s">
           <ST sub="Dein Anthropic API-Key">🔑 API-Key</ST>
           <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-ant-..." style={{
             width: "100%", padding: "10px 14px", borderRadius: "var(--r)",
@@ -1315,6 +1458,15 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
           <Card anim="fadeUp" delay="0.3s" style={{ marginBottom: "12px", background: "linear-gradient(135deg,rgba(200,97,26,0.05),rgba(245,166,35,0.05))", border: "1px solid rgba(200,97,26,0.15)" }}>
             <p style={{ margin: 0, fontSize: "14px", color: "var(--ink2)", lineHeight: 1.6 }}>
               <strong style={{ color: "var(--accent)" }}>💡 Tipp:</strong> {suggestion.tipp}
+            </p>
+          </Card>
+        )}
+
+        {/* Health hint */}
+        {suggestion.gesundheitshinweis && (
+          <Card anim="fadeUp" delay="0.35s" style={{ marginBottom: "12px", background: "linear-gradient(135deg,rgba(34,139,34,0.05),rgba(60,179,113,0.05))", border: "1px solid rgba(34,139,34,0.15)" }}>
+            <p style={{ margin: 0, fontSize: "14px", color: "var(--ink2)", lineHeight: 1.6 }}>
+              <strong style={{ color: "#228B22" }}>🩺 Gesundheit:</strong> {suggestion.gesundheitshinweis}
             </p>
           </Card>
         )}
