@@ -1,0 +1,58 @@
+:root {
+  --bg1: #FAF5EE;
+  --bg2: #F5EDE0;
+  --bg3: #EDE3D2;
+  --ink: #2C2016;
+  --ink2: #5A4A38;
+  --ink3: #9A8A76;
+  --accent: #C8611A;
+  --accent2: #E07A2E;
+  --accent3: #F5A623;
+  --card: rgba(255, 253, 250, 0.78);
+  --card-border: rgba(200, 185, 165, 0.25);
+  --R: 20px;
+  --r: 12px;
+  --shadow: 0 8px 32px rgba(60, 40, 20, 0.07), 0 2px 8px rgba(60, 40, 20, 0.04);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg1);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes cookSpin {
+  0% { transform: rotate(0) scale(1); }
+  50% { transform: rotate(180deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+@keyframes heartPop {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.35); }
+  60% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes bgShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
