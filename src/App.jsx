@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { initDB, getAllFoods, getFoodsFiltered } from "./db";
+import { FOODS, FOOD_CATEGORIES } from "./data/foods";
 
 // ─── Storage Keys ───
 const K = {
@@ -14,7 +16,6 @@ const K = {
 const ALLERGIES = [
   { id: "gluten", label: "Gluten", emoji: "🌾" },
   { id: "laktose", label: "Laktose", emoji: "🥛" },
-  { id: "nüsse", label: "Nüsse", emoji: "🥜" },
   { id: "ei", label: "Eier", emoji: "🥚" },
   { id: "soja", label: "Soja", emoji: "🫘" },
   { id: "fisch", label: "Fisch/Meeresfrüchte", emoji: "🐟" },
@@ -25,6 +26,20 @@ const ALLERGIES = [
   { id: "fruktose", label: "Fruktose", emoji: "🍎" },
   { id: "sorbit", label: "Sorbit", emoji: "🍬" },
 ];
+
+const NUT_ALLERGIES = [
+  { id: "erdnuss", label: "Erdnuss", emoji: "🥜" },
+  { id: "haselnuss", label: "Haselnuss", emoji: "🌰" },
+  { id: "walnuss", label: "Walnuss", emoji: "🌰" },
+  { id: "mandel", label: "Mandel", emoji: "🌰" },
+  { id: "cashew", label: "Cashew", emoji: "🌰" },
+  { id: "pistazie", label: "Pistazie", emoji: "🌰" },
+  { id: "macadamia", label: "Macadamia", emoji: "🌰" },
+  { id: "pekan", label: "Pekannuss", emoji: "🌰" },
+  { id: "paranuss", label: "Paranuss", emoji: "🌰" },
+];
+
+const ALL_ALLERGIES = [...ALLERGIES, ...NUT_ALLERGIES];
 
 const DIETS = [
   { id: "vegetarisch", label: "Vegetarisch", emoji: "🥗" },
@@ -259,8 +274,178 @@ const InputField = ({ value, onChange, placeholder, multiline, style: s }) => {
   return <input value={value} onChange={onChange} placeholder={placeholder} style={{ ...base, fontSize: "16px" }} />;
 };
 
+// ─── Ingredient Picker (Chips by Category) ───
+const IngredientPicker = ({ selected, onToggle, profile }) => {
+  const [activeCategory, setActiveCategory] = useState("gemüse");
+  const [search, setSearch] = useState("");
+  const [filteredFoods, setFilteredFoods] = useState([]);
+  const [allFoods, setAllFoods] = useState([]);
+
+  useEffect(() => {
+    getFoodsFiltered(profile).then(setAllFoods).catch(() => setAllFoods(FOODS));
+  }, [profile]);
+
+  useEffect(() => {
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      setFilteredFoods(allFoods.filter(f => f.name.toLowerCase().includes(q)));
+    } else {
+      setFilteredFoods(allFoods.filter(f => f.category === activeCategory));
+    }
+  }, [activeCategory, search, allFoods]);
+
+  return (
+    <div>
+      <input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="🔍 Zutat suchen..."
+        style={{
+          width: "100%", padding: "10px 14px", borderRadius: "var(--r)",
+          border: "2px solid var(--card-border)", background: "var(--card)",
+          fontFamily: "'Outfit',sans-serif", fontSize: "14px", color: "var(--ink)",
+          outline: "none", boxSizing: "border-box", marginBottom: "10px",
+        }}
+      />
+      {!search && (
+        <div style={{ display: "flex", gap: "4px", overflowX: "auto", paddingBottom: "8px", marginBottom: "8px", WebkitOverflowScrolling: "touch" }}>
+          {FOOD_CATEGORIES.map(cat => (
+            <button key={cat.id} onClick={() => setActiveCategory(cat.id)} style={{
+              padding: "5px 10px", borderRadius: "16px", border: "none",
+              background: activeCategory === cat.id ? "var(--accent)" : "var(--bg2)",
+              color: activeCategory === cat.id ? "#fff" : "var(--ink3)",
+              fontSize: "12px", fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap",
+              fontFamily: "'Outfit',sans-serif", transition: "all 0.2s ease",
+            }}>{cat.emoji} {cat.label}</button>
+          ))}
+        </div>
+      )}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", maxHeight: "180px", overflowY: "auto" }}>
+        {filteredFoods.map(food => {
+          const isSelected = selected.includes(food.name);
+          return (
+            <button key={food.id} onClick={() => onToggle(food.name)} style={{
+              padding: "5px 10px", borderRadius: "16px",
+              border: isSelected ? "2px solid var(--accent)" : "1.5px solid var(--card-border)",
+              background: isSelected ? "linear-gradient(135deg,var(--accent),var(--accent2))" : "var(--card)",
+              color: isSelected ? "#fff" : "var(--ink2)",
+              fontSize: "12px", fontWeight: isSelected ? 600 : 400, cursor: "pointer",
+              fontFamily: "'Outfit',sans-serif", transition: "all 0.2s ease",
+              display: "flex", alignItems: "center", gap: "3px",
+            }}>
+              <span>{food.emoji}</span>
+              <span>{food.name}</span>
+              {food.histamin === "high" && <span title="Histamin" style={{ fontSize: "9px" }}>⚠️</span>}
+            </button>
+          );
+        })}
+        {filteredFoods.length === 0 && (
+          <p style={{ fontSize: "12px", color: "var(--ink3)", padding: "8px" }}>Keine passenden Zutaten gefunden.</p>
+        )}
+      </div>
+      {selected.length > 0 && (
+        <div style={{ marginTop: "10px", padding: "8px 12px", borderRadius: "var(--r)", background: "var(--bg2)" }}>
+          <p style={{ fontSize: "11px", color: "var(--ink3)", marginBottom: "6px" }}>Ausgewählt ({selected.length}):</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+            {selected.map(name => (
+              <span key={name} onClick={() => onToggle(name)} style={{
+                padding: "3px 8px", borderRadius: "10px",
+                background: "var(--accent)", color: "#fff", fontSize: "11px",
+                cursor: "pointer", fontWeight: 500,
+              }}>{name} ✕</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Photo Upload Component ───
+const PhotoUpload = ({ onResult, apiKey }) => {
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const fileRef = useRef(null);
+
+  const handleFile = async (file) => {
+    if (!file || !apiKey) return;
+    setUploading(true);
+    setPreview(URL.createObjectURL(file));
+
+    try {
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.readAsDataURL(file);
+      });
+
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 500,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: file.type, data: base64 } },
+              { type: "text", text: "Erkenne alle Lebensmittel/Zutaten auf diesem Foto. Antworte NUR mit einem JSON-Array der Zutatennamen auf Deutsch, z.B. [\"Tomaten\",\"Käse\",\"Hähnchenbrust\"]. Keine Erklärung, nur das Array." },
+            ],
+          }],
+        }),
+      });
+
+      const d = await r.json();
+      const t = d.content?.map(c => c.type === "text" ? c.text : "").join("") || "[]";
+      const items = JSON.parse(t.replace(/```json|```/g, "").trim());
+      onResult(items);
+    } catch (e) {
+      console.error("Foto-Erkennung fehlgeschlagen:", e);
+    }
+    setUploading(false);
+  };
+
+  return (
+    <div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={e => handleFile(e.target.files[0])}
+        style={{ display: "none" }}
+      />
+      <button onClick={() => fileRef.current?.click()} disabled={uploading || !apiKey} style={{
+        width: "100%", padding: "14px", borderRadius: "var(--r)",
+        border: "2px dashed var(--card-border)", background: "var(--bg2)",
+        color: "var(--ink2)", fontSize: "14px", fontWeight: 500,
+        cursor: uploading ? "wait" : "pointer", fontFamily: "'Outfit',sans-serif",
+        transition: "all 0.2s ease", display: "flex", alignItems: "center",
+        justifyContent: "center", gap: "8px",
+      }}>
+        {uploading ? (
+          <><span style={{ animation: "cookSpin 1.5s ease infinite", display: "inline-block" }}>📷</span> KI erkennt Zutaten...</>
+        ) : (
+          <>📸 Foto vom Kühlschrank</>
+        )}
+      </button>
+      {!apiKey && <p style={{ fontSize: "11px", color: "#C44040", marginTop: "4px" }}>API-Key benötigt für Foto-Erkennung</p>}
+      {preview && (
+        <div style={{ marginTop: "8px", borderRadius: "var(--r)", overflow: "hidden", maxHeight: "150px" }}>
+          <img src={preview} alt="Kühlschrank" style={{ width: "100%", objectFit: "cover", borderRadius: "var(--r)" }} />
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Default State ───
-const defaultProfile = { allergies: [], histamin: false, diet: [], cuisines: [], dislikes: "", name: "", persons: 2 };
+const defaultProfile = { allergies: [], nutAllergies: [], histamin: false, diet: [], cuisines: [], dislikes: "", name: "", persons: 2 };
 
 // ─── Main App ───
 export default function App() {
@@ -273,6 +458,8 @@ export default function App() {
   const [budget, setBudget] = useState("egal");
   const [persons, setPersons] = useState(2);
   const [fridgeInput, setFridgeInput] = useState("");
+  const [selectedIngredients, setSelectedIngredients] = useState([]);
+  const [fridgeInputMode, setFridgeInputMode] = useState("chips"); // chips | text | photo
   const [guestMode, setGuestMode] = useState(false);
   const [guestAllergies, setGuestAllergies] = useState([]);
   const [guestHistamin, setGuestHistamin] = useState(false);
@@ -304,13 +491,26 @@ export default function App() {
     const sh = load(K.shoplist);
     const key = load(K.apiKey);
 
-    if (p) { setProfile(p); setView("home"); } else setView("onboarding");
+    if (p) {
+      // Migrate old profiles without nutAllergies
+      if (!p.nutAllergies) p.nutAllergies = [];
+      // Migrate old "nüsse" allergy to all nut types
+      if (p.allergies?.includes("nüsse")) {
+        p.allergies = p.allergies.filter(a => a !== "nüsse");
+        p.nutAllergies = NUT_ALLERGIES.map(n => n.id);
+      }
+      setProfile(p);
+      setView("home");
+    } else setView("onboarding");
     if (h) setHistory(h);
     if (f) setFavorites(f);
     if (s) setStreak(s);
     if (sh) setShopList(sh);
     if (key) setApiKey(key);
     setMeal(autoMeal());
+
+    // Init IndexedDB
+    initDB(FOODS).catch(() => {});
   }, []);
 
   // ─── Persistence ───
@@ -326,6 +526,19 @@ export default function App() {
     setStreak(ns);
     save(K.streak, ns);
   }, [streak]);
+
+  const toggleIngredient = useCallback((name) => {
+    setSelectedIngredients(prev =>
+      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
+    );
+  }, []);
+
+  const addIngredientsFromPhoto = useCallback((items) => {
+    setSelectedIngredients(prev => {
+      const newItems = items.filter(i => !prev.includes(i));
+      return [...prev, ...newItems];
+    });
+  }, []);
 
   const toggleFav = useCallback((dish) => {
     const exists = favorites.find(f => f.name === dish.name);
@@ -357,7 +570,10 @@ export default function App() {
 
   // ─── Prompt Builder ───
   const buildPrompt = useCallback((m) => {
-    const an = [...profile.allergies, ...(guestMode ? guestAllergies : [])].map(a => ALLERGIES.find(o => o.id === a)?.label).filter(Boolean);
+    const allAllergies = [...profile.allergies, ...(guestMode ? guestAllergies : [])];
+    const an = allAllergies.map(a => ALL_ALLERGIES.find(o => o.id === a)?.label).filter(Boolean);
+    const nutLabels = (profile.nutAllergies || []).map(n => NUT_ALLERGIES.find(o => o.id === n)?.label).filter(Boolean);
+    if (nutLabels.length > 0) an.push(`Nüsse: ${nutLabels.join(", ")}`);
     const hi = profile.histamin || (guestMode && guestHistamin);
     const dn = [...profile.diet, ...(guestMode ? guestDiet : [])].map(d => DIETS.find(o => o.id === d)?.label).filter(Boolean);
     const cn = profile.cuisines.map(c => CUISINES.find(o => o.id === c)?.label).filter(Boolean);
@@ -377,12 +593,13 @@ ${guestMode ? "- ⚠️ GÄSTE-MODUS: Alle Gäste-Einschränkungen beachten!" : 
 
 SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
 
-    if (m === "fridge") return `${base}\n\nKÜHLSCHRANK-MODUS: Zutaten: ${fridgeInput}\nNur diese + Grundzutaten verwenden.\n${recent ? `Nicht wiederholen: ${recent}` : ""}\n\nNUR JSON (kein Markdown):\n{"name":"...","beschreibung":"1 Satz","zutaten":["..."],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region"}`;
+    const fridgeItems = [...selectedIngredients, ...(fridgeInput.trim() ? fridgeInput.split(/[,\n]+/).map(s => s.trim()).filter(Boolean) : [])];
+    if (m === "fridge") return `${base}\n\nKÜHLSCHRANK-MODUS: Zutaten: ${fridgeItems.join(", ")}\nNur diese + Grundzutaten verwenden.\n${recent ? `Nicht wiederholen: ${recent}` : ""}\n\nNUR JSON (kein Markdown):\n{"name":"...","beschreibung":"1 Satz","zutaten":["..."],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region"}`;
 
     if (m === "plan") return `${base}\n\nWOCHENPLAN: 5 Werktage (Mo–Fr), je Frühstück/Mittag/Abend. Budget: ${BUDGETS.find(b => b.id === budget)?.label || "normal"}. Abwechslungsreich!\n\nNUR JSON:\n{"plan":[{"tag":"Montag","frühstück":{"name":"...","emoji":"...","zeit":"XX Min"},"mittag":{"name":"...","emoji":"...","zeit":"XX Min"},"abend":{"name":"...","emoji":"...","zeit":"XX Min"}},...],  "einkaufsliste":["Zutat 1","Zutat 2",...]}`;
 
     return `${base}\n\n- Mahlzeit: ${MEALS.find(x => x.id === meal)?.label || ""}\n- Kochzeit: ${TIMES.find(x => x.id === cookTime)?.label || ""}\n- Stimmung: ${MOODS.find(x => x.id === mood)?.label || ""}\n- Budget: ${BUDGETS.find(x => x.id === budget)?.label || ""}\n${recent ? `- NICHT wiederholen: ${recent}` : ""}\n\nNUR JSON:\n{"name":"...","beschreibung":"1 Satz","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","weinempfehlung":"passender Wein/Getränk"}`;
-  }, [profile, guestMode, guestAllergies, guestHistamin, guestDiet, history, persons, fridgeInput, budget, meal, cookTime, mood]);
+  }, [profile, guestMode, guestAllergies, guestHistamin, guestDiet, history, persons, fridgeInput, selectedIngredients, budget, meal, cookTime, mood]);
 
   // ─── API Call ───
   const callAPI = useCallback(async (prompt) => {
@@ -446,7 +663,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
 
   const reset = useCallback(() => {
     setMeal(autoMeal()); setCookTime(""); setMood(""); setBudget("egal");
-    setSuggestion(null); setView("home"); setFridgeInput("");
+    setSuggestion(null); setView("home"); setFridgeInput(""); setSelectedIngredients([]);
     setGuestMode(false); setGuestAllergies([]); setGuestHistamin(false); setGuestDiet([]);
   }, []);
 
@@ -454,30 +671,46 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
   if (showKeyInput) return (
     <Layout>
       <div style={{ paddingTop: "40px" }}>
-        <Card anim="scaleIn" style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "48px", marginBottom: "12px" }}>🔑</div>
-          <h2 style={{ fontFamily: "'Fraunces',serif", color: "var(--ink)", fontSize: "20px", marginBottom: "8px" }}>API-Key benötigt</h2>
-          <p style={{ color: "var(--ink3)", fontSize: "13px", marginBottom: "16px", lineHeight: 1.5 }}>
-            Gib deinen Anthropic API-Key ein, um Rezepte zu generieren. Der Key wird nur lokal in deinem Browser gespeichert.
-          </p>
+        <Card anim="scaleIn">
+          <div style={{ textAlign: "center", marginBottom: "16px" }}>
+            <div style={{ fontSize: "48px", marginBottom: "12px" }}>🔑</div>
+            <h2 style={{ fontFamily: "'Fraunces',serif", color: "var(--ink)", fontSize: "20px", marginBottom: "8px" }}>Einmalige Einrichtung</h2>
+            <p style={{ color: "var(--ink3)", fontSize: "13px", lineHeight: 1.5 }}>
+              Die App nutzt KI um Rezepte zu erstellen. Dafür brauchst du einen kostenlosen API-Schlüssel.
+            </p>
+          </div>
+
+          <div style={{ background: "var(--bg2)", borderRadius: "var(--r)", padding: "14px", marginBottom: "16px" }}>
+            <p style={{ fontSize: "13px", color: "var(--ink)", fontWeight: 600, marginBottom: "8px" }}>So geht's (2 Minuten):</p>
+            <ol style={{ paddingLeft: "18px", fontSize: "12px", color: "var(--ink2)", lineHeight: 1.8, margin: 0 }}>
+              <li>Erstelle einen Account auf <strong>console.anthropic.com</strong></li>
+              <li>Gehe zu <strong>API Keys</strong> im Menü</li>
+              <li>Klicke auf <strong>"Create Key"</strong></li>
+              <li>Kopiere den Key und füge ihn unten ein</li>
+            </ol>
+          </div>
+
           <input
             type="password"
             value={apiKey}
             onChange={e => setApiKey(e.target.value)}
-            placeholder="sk-ant-..."
+            placeholder="sk-ant-api03-..."
             style={{
               width: "100%", padding: "12px 14px", borderRadius: "var(--r)",
               border: "2px solid var(--card-border)", background: "var(--card)",
               fontFamily: "'Outfit',sans-serif", fontSize: "14px", color: "var(--ink)",
-              outline: "none", boxSizing: "border-box", marginBottom: "12px",
+              outline: "none", boxSizing: "border-box", marginBottom: "4px",
             }}
           />
+          <p style={{ fontSize: "11px", color: "var(--ink3)", marginBottom: "12px" }}>
+            🔒 Dein Key bleibt lokal in deinem Browser. Er wird nie an uns gesendet.
+          </p>
           <Btn onClick={() => { saveApiKey(apiKey); setShowKeyInput(false); }} disabled={!apiKey.startsWith("sk-")}>
-            Speichern
+            Verbinden & Loslegen
           </Btn>
           {view !== "loading" && (
             <div style={{ marginTop: "8px" }}>
-              <Btn secondary onClick={() => setShowKeyInput(false)}>Abbrechen</Btn>
+              <Btn secondary onClick={() => setShowKeyInput(false)}>Später einrichten</Btn>
             </div>
           )}
         </Card>
@@ -514,6 +747,10 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
         </>,
       },
       {
+        t: "Nussallergien", s: "Welche Nüsse verträgst du nicht? (Einzeln wählbar)",
+        c: <ChipGrid options={NUT_ALLERGIES} selected={profile.nutAllergies || []} onToggle={id => setProfile(p => ({ ...p, nutAllergies: toggle(p.nutAllergies || [], id) }))} />,
+      },
+      {
         t: "Ernährungsform", s: "Wie ernährst du dich?",
         c: <ChipGrid options={DIETS} selected={profile.diet} onToggle={id => setProfile(p => ({ ...p, diet: toggle(p.diet, id) }))} />,
       },
@@ -526,13 +763,24 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
         c: <InputField multiline value={profile.dislikes} onChange={e => setProfile(p => ({ ...p, dislikes: e.target.value }))} placeholder="z.B. Koriander, Rosenkohl, Innereien, Pilze..." />,
       },
       {
-        t: "API-Key", s: "Dein Anthropic API-Key (wird lokal gespeichert)",
-        c: <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-ant-..." style={{
-          width: "100%", padding: "14px 16px", borderRadius: "var(--r)",
-          border: "2px solid var(--card-border)", background: "var(--card)",
-          fontFamily: "'Outfit',sans-serif", fontSize: "14px", color: "var(--ink)",
-          outline: "none", boxSizing: "border-box",
-        }} />,
+        t: "KI verbinden", s: "Damit die App Rezepte erstellen kann",
+        c: <>
+          <div style={{ background: "var(--bg2)", borderRadius: "var(--r)", padding: "12px", marginBottom: "12px" }}>
+            <ol style={{ paddingLeft: "18px", fontSize: "12px", color: "var(--ink2)", lineHeight: 1.8, margin: 0 }}>
+              <li>Öffne <strong>console.anthropic.com</strong></li>
+              <li>Erstelle einen kostenlosen Account</li>
+              <li>Gehe zu <strong>API Keys → Create Key</strong></li>
+              <li>Kopiere den Key hierher</li>
+            </ol>
+          </div>
+          <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-ant-api03-..." style={{
+            width: "100%", padding: "14px 16px", borderRadius: "var(--r)",
+            border: "2px solid var(--card-border)", background: "var(--card)",
+            fontFamily: "'Outfit',sans-serif", fontSize: "14px", color: "var(--ink)",
+            outline: "none", boxSizing: "border-box",
+          }} />
+          <p style={{ fontSize: "11px", color: "var(--ink3)", marginTop: "6px" }}>🔒 Bleibt lokal in deinem Browser gespeichert. Optional – du kannst das auch später machen.</p>
+        </>,
       },
     ];
     const cs = steps[onbStep];
@@ -679,6 +927,10 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
             <Chip active={profile.histamin} onClick={() => setProfile(p => ({ ...p, histamin: !p.histamin }))} color="#C44040">⚠️ Histaminintoleranz</Chip>
           </div>
         </Card>
+        <Card anim="fadeUp" delay="0.08s">
+          <ST sub="Einzeln auswählbar">🥜 Nussallergien</ST>
+          <ChipGrid options={NUT_ALLERGIES} selected={profile.nutAllergies || []} onToggle={id => setProfile(p => ({ ...p, nutAllergies: toggle(p.nutAllergies || [], id) }))} />
+        </Card>
         <Card anim="fadeUp" delay="0.1s">
           <ST>🥗 Ernährungsform</ST>
           <ChipGrid options={DIETS} selected={profile.diet} onToggle={id => setProfile(p => ({ ...p, diet: toggle(p.diet, id) }))} />
@@ -731,7 +983,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
 
   // ─── Home ───
   if (view === "home") {
-    const ready = mode === "fridge" ? fridgeInput.trim().length > 2 : (meal && cookTime && mood);
+    const ready = mode === "fridge" ? (selectedIngredients.length > 0 || fridgeInput.trim().length > 2) : (meal && cookTime && mood);
     const mo = new Date().getMonth();
 
     return (
@@ -852,13 +1104,45 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
         {mode === "fridge" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "14px" }}>
             <Card anim="fadeUp" delay="0.15s">
-              <ST sub="Was hast du noch da? Einfach aufzählen.">🧊 Kühlschrank-Check</ST>
-              <InputField multiline value={fridgeInput} onChange={e => setFridgeInput(e.target.value)} placeholder="z.B. Hähnchenbrust, Reis, Paprika, Zwiebeln, Kokosmilch..." style={{ minHeight: "120px" }} />
-              <p style={{ fontSize: "11px", color: "var(--ink3)", marginTop: "6px" }}>Grundzutaten (Salz, Pfeffer, Öl, Gewürze) sind immer vorhanden.</p>
+              <ST sub="Wähle Zutaten aus oder mach ein Foto">🧊 Kühlschrank-Check</ST>
+              {/* Input mode tabs */}
+              <div style={{ display: "flex", gap: "4px", marginBottom: "12px" }}>
+                {[
+                  { id: "chips", emoji: "🏷️", label: "Auswählen" },
+                  { id: "text", emoji: "✏️", label: "Tippen" },
+                  { id: "photo", emoji: "📸", label: "Foto" },
+                ].map(t => (
+                  <button key={t.id} onClick={() => setFridgeInputMode(t.id)} style={{
+                    flex: 1, padding: "8px 4px", borderRadius: "10px", border: "none",
+                    background: fridgeInputMode === t.id ? "var(--accent)" : "var(--bg2)",
+                    color: fridgeInputMode === t.id ? "#fff" : "var(--ink3)",
+                    fontSize: "12px", fontWeight: fridgeInputMode === t.id ? 600 : 400,
+                    cursor: "pointer", fontFamily: "'Outfit',sans-serif",
+                    transition: "all 0.2s ease",
+                  }}>{t.emoji} {t.label}</button>
+                ))}
+              </div>
+
+              {fridgeInputMode === "chips" && (
+                <IngredientPicker
+                  selected={selectedIngredients}
+                  onToggle={toggleIngredient}
+                  profile={profile}
+                />
+              )}
+              {fridgeInputMode === "text" && (
+                <>
+                  <InputField multiline value={fridgeInput} onChange={e => setFridgeInput(e.target.value)} placeholder="z.B. Hähnchenbrust, Reis, Paprika, Zwiebeln, Kokosmilch..." style={{ minHeight: "120px" }} />
+                  <p style={{ fontSize: "11px", color: "var(--ink3)", marginTop: "6px" }}>Grundzutaten (Salz, Pfeffer, Öl, Gewürze) sind immer vorhanden.</p>
+                </>
+              )}
+              {fridgeInputMode === "photo" && (
+                <PhotoUpload apiKey={apiKey} onResult={addIngredientsFromPhoto} />
+              )}
             </Card>
             <div style={{ animation: "fadeUp 0.4s ease both", animationDelay: "0.2s" }}>
               <Btn onClick={() => generate("fridge")} disabled={!ready || loading}>
-                {loading ? "Schaue was geht... 🔍" : "Daraus mach was! 🍳"}
+                {loading ? "Schaue was geht... 🔍" : `Daraus mach was! 🍳${selectedIngredients.length > 0 ? ` (${selectedIngredients.length} Zutaten)` : ""}`}
               </Btn>
             </div>
           </div>
