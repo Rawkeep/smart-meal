@@ -382,14 +382,18 @@ const PhotoUpload = ({ onResult, apiKey, backendAvailable }) => {
 
       let items;
       if (backendAvailable) {
+        const headers = { "Content-Type": "application/json" };
+        if (apiKey) headers["x-user-api-key"] = apiKey;
         const r = await fetch("/api/recognize", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({ image: base64, mediaType: file.type }),
         });
         const d = await r.json();
+        if (d.needsKey) { setShowKeyInput(true); setUploading(false); return; }
         items = JSON.parse(d.text.replace(/```json|```/g, "").trim());
       } else {
+        if (!apiKey) { setShowKeyInput(true); setUploading(false); return; }
         const r = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
@@ -659,31 +663,39 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
 
   // ─── Backend availability check ───
   const [backendAvailable, setBackendAvailable] = useState(null);
+  const [freemiumInfo, setFreemiumInfo] = useState({ remaining: 0, dailyLimit: 10, freemium: false });
   useEffect(() => {
     fetch("/api/health").then(r => r.json())
-      .then(d => setBackendAvailable(d.status === "ok" && d.hasApiKey))
+      .then(d => {
+        setBackendAvailable(d.status === "ok" && (d.hasApiKey || d.freemium));
+        setFreemiumInfo({ remaining: d.remaining ?? 0, dailyLimit: d.dailyLimit ?? 10, freemium: !!d.freemium });
+      })
       .catch(() => setBackendAvailable(false));
   }, []);
 
-  // ─── API Call (backend proxy with direct-browser fallback) ───
+  // ─── API Call (backend proxy with freemium/BYOK, direct-browser fallback) ───
   const callAPI = useCallback(async (prompt, endpoint = "/api/suggest") => {
-    // Try backend first
+    // Try backend first (freemium or BYOK)
     if (backendAvailable) {
+      const headers = { "Content-Type": "application/json" };
+      if (apiKey) headers["x-user-api-key"] = apiKey;
       const r = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ prompt }),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
+        if (err.needsKey) { setShowKeyInput(true); throw new Error(err.error); }
         throw new Error(err.error || `API Fehler: ${r.status}`);
       }
       const d = await r.json();
+      if (d.remaining != null) setFreemiumInfo(prev => ({ ...prev, remaining: d.remaining }));
       return JSON.parse(d.text.replace(/```json|```/g, "").trim());
     }
 
     // Fallback: direct browser access (demo / GitHub Pages mode)
-    if (!apiKey) throw new Error("Kein API-Key");
+    if (!apiKey) { setShowKeyInput(true); throw new Error("Kein API-Key"); }
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -709,7 +721,6 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
 
   // ─── Generate ───
   const generate = useCallback(async (m) => {
-    if (!backendAvailable && !apiKey) { setShowKeyInput(true); return; }
     setLoading(true);
     setSuggestion(null);
     const msgs = ["Schaue in die Vorratskammer...", "Wähle die besten Zutaten...", "Kreiere dein Gericht...", "Perfektioniere das Rezept..."];
@@ -733,7 +744,6 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
   }, [apiKey, backendAvailable, callAPI, buildPrompt, history, updateStreak]);
 
   const generatePlan = useCallback(async () => {
-    if (!backendAvailable && !apiKey) { setShowKeyInput(true); return; }
     setPlanLoading(true);
     setWeekPlan(null);
     try { setWeekPlan(await callAPI(buildPrompt("plan"), "/api/meal-plan")); }
@@ -754,9 +764,13 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
         <Card anim="scaleIn">
           <div style={{ textAlign: "center", marginBottom: "16px" }}>
             <div style={{ fontSize: "48px", marginBottom: "12px" }}>🔑</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", color: "var(--ink)", fontSize: "20px", marginBottom: "8px" }}>Einmalige Einrichtung</h2>
+            <h2 style={{ fontFamily: "'Fraunces',serif", color: "var(--ink)", fontSize: "20px", marginBottom: "8px" }}>
+              {freemiumInfo.freemium && freemiumInfo.remaining <= 0 ? "Tageslimit erreicht" : "Eigenen API-Key verwenden"}
+            </h2>
             <p style={{ color: "var(--ink3)", fontSize: "13px", lineHeight: 1.5 }}>
-              Die App nutzt KI um Rezepte zu erstellen. Dafür brauchst du einen kostenlosen API-Schlüssel.
+              {freemiumInfo.freemium && freemiumInfo.remaining <= 0
+                ? `Deine ${freemiumInfo.dailyLimit} kostenlosen Anfragen für heute sind aufgebraucht. Mit eigenem Key hast du unbegrenzte Nutzung.`
+                : "Für unbegrenzte Nutzung kannst du deinen eigenen API-Schlüssel verwenden."}
             </p>
           </div>
 
@@ -1121,13 +1135,17 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
           <ChipGrid options={HEALTH_GOALS} selected={profile.goals || []} onToggle={id => setProfile(p => ({ ...p, goals: toggle(p.goals || [], id) }))} />
         </Card>
         <Card anim="fadeUp" delay="0.45s">
-          <ST sub="Dein Anthropic API-Key">🔑 API-Key</ST>
-          <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-ant-..." style={{
+          <ST sub={apiKey ? "Eigener Key aktiv — unbegrenzte Nutzung" : freemiumInfo.freemium ? `Kostenlos: ${freemiumInfo.remaining}/${freemiumInfo.dailyLimit} Anfragen heute` : "Für KI-Rezepte wird ein Key benötigt"}>🔑 API-Key (optional)</ST>
+          <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-ant-... (leer lassen für Freemium)" style={{
             width: "100%", padding: "10px 14px", borderRadius: "var(--r)",
             border: "2px solid var(--card-border)", background: "var(--card)",
             fontFamily: "'Outfit',sans-serif", fontSize: "14px", color: "var(--ink)",
             outline: "none", boxSizing: "border-box",
           }} />
+          {apiKey && <button onClick={() => { setApiKey(""); save(K.apiKey, ""); }} style={{
+            marginTop: "6px", background: "none", border: "none", color: "var(--ink3)",
+            fontSize: "12px", cursor: "pointer", padding: "4px 0",
+          }}>Key entfernen (zurück zu Freemium)</button>}
         </Card>
         <Btn onClick={() => { saveProfile(profile); saveApiKey(apiKey); setOverlay(null); }}>💾 Profil speichern</Btn>
       </div>
@@ -1187,7 +1205,9 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
             {profile.allergies.length > 0 && <Badge icon="🛡️" text={`${profile.allergies.length} Allergien`} />}
             {profile.diet.slice(0, 2).map(d => <Badge key={d} icon={DIETS.find(o => o.id === d)?.emoji} text={DIETS.find(o => o.id === d)?.label} />)}
             {guestMode && <Badge icon="👥" text="Gäste aktiv" />}
-            {!apiKey && <Badge icon="🔑" text="Key fehlt" />}
+            {apiKey ? <Badge icon="🔓" text="Eigener Key" /> :
+              freemiumInfo.freemium ? <Badge icon="✨" text={`${freemiumInfo.remaining}/${freemiumInfo.dailyLimit} frei`} /> :
+              <Badge icon="🔑" text="Key fehlt" />}
           </div>
         </div>
 
