@@ -21,6 +21,7 @@ import { scoreCuisine } from "./cuisine-agent";
 import { scorePairing } from "./combination-agent";
 import { findMatchingTemplates } from "./recipe-templates";
 import { estimateNutrition } from "./nutrition-data";
+import { getIngredientPreference, getTemplatePreference, recordGeneration } from "./learning-engine";
 import { NUTRIENT_DEFICIENCIES, HEALTH_GOALS } from "../data/health";
 
 // Recently used template tracker (session-level)
@@ -61,10 +62,14 @@ function scoreFood(food, context, selectedFoods, templateCuisine) {
     pairing: scorePairing(food, selectedFoods, context),
   };
 
+  // Learning engine preference boost (7th scoring dimension)
+  const learnedPref = getIngredientPreference(food.id);
+  const learningBoost = (learnedPref - 0.5) * 0.3; // -0.15..+0.15
+
   const composite = Object.entries(AGENT_WEIGHTS).reduce(
     (sum, [key, weight]) => sum + (scores[key] || 0) * weight,
     0
-  );
+  ) + learningBoost;
 
   return { ...food, score: composite, scores };
 }
@@ -80,14 +85,16 @@ function selectTemplate(context) {
   const fresh = matching.filter((t) => !recentTemplateIds.includes(t.id));
   const pool = fresh.length > 0 ? fresh : matching;
 
-  // Prefer templates matching user's preferred cuisines
+  // Prefer templates matching user's preferred cuisines + learned preference
   const preferredCuisines = context.profile.cuisines || [];
   const scored = pool.map((t) => {
     let cuisineBonus = 0;
     for (const tc of t.cuisines) {
       if (preferredCuisines.includes(tc)) cuisineBonus = 0.3;
     }
-    return { ...t, templateScore: 0.5 + cuisineBonus + Math.random() * 0.3 };
+    const templatePref = getTemplatePreference(t.id);
+    const learnedBonus = (templatePref - 0.5) * 0.4; // -0.2..+0.2
+    return { ...t, templateScore: 0.5 + cuisineBonus + learnedBonus + Math.random() * 0.3 };
   });
 
   scored.sort((a, b) => b.templateScore - a.templateScore);
@@ -353,7 +360,7 @@ export async function orchestrate(context) {
   const healthHint = generateHealthHint(selectedFoods, context);
   const wineHint = generateWineHint(template, selectedFoods);
 
-  return {
+  const result = {
     name: filled.name,
     beschreibung: filled.beschreibung,
     zutaten,
@@ -369,7 +376,14 @@ export async function orchestrate(context) {
     weinempfehlung: wineHint,
     gesundheitshinweis: healthHint,
     _offline: true,
+    _templateId: template.id,
+    _foodIds: allFoodIds,
   };
+
+  // Record generation for learning engine
+  recordGeneration(result, template.id, allFoodIds);
+
+  return result;
 }
 
 /**

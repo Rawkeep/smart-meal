@@ -3,6 +3,8 @@ import { initDB, getAllFoods, getFoodsFiltered } from "./db";
 import { FOODS, FOOD_CATEGORIES } from "./data/foods";
 import { CROSS_ALLERGIES, ADDITIVES, ADDITIVE_CATEGORIES, NUTRIENT_DEFICIENCIES, METABOLISM_CONDITIONS, HEALTH_GOALS } from "./data/health";
 import { generateOfflineSuggestion } from "./swarm/index";
+import { recordLike, recordDislike } from "./swarm/learning-engine";
+import { generateOfflinePlan } from "./swarm/plan-generator";
 
 // ─── Storage Keys ───
 const K = {
@@ -567,6 +569,10 @@ export default function App() {
     const u = exists
       ? favorites.filter(f => f.name !== dish.name)
       : [...favorites, { ...dish, savedAt: new Date().toISOString() }];
+    // Learning signal: like when adding to favorites (offline recipes)
+    if (!exists && dish._offline && dish._foodIds) {
+      recordLike(dish, dish._foodIds, dish._templateId);
+    }
     setFavorites(u);
     save(K.favorites, u);
   }, [favorites]);
@@ -765,10 +771,20 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
   const generatePlan = useCallback(async () => {
     setPlanLoading(true);
     setWeekPlan(null);
-    try { setWeekPlan(await callAPI(buildPrompt("plan"), "/api/meal-plan")); }
-    catch { setWeekPlan({ error: true }); }
+    const useOffline = offlineMode || (!backendAvailable && !apiKey);
+    try {
+      if (useOffline) {
+        const result = await generateOfflinePlan({
+          profile, meal, cookTime, mood, budget, persons, history,
+          guestMode, guestAllergies, guestHistamin, guestDiet,
+        });
+        setWeekPlan(result);
+      } else {
+        setWeekPlan(await callAPI(buildPrompt("plan"), "/api/meal-plan"));
+      }
+    } catch { setWeekPlan({ error: true }); }
     setPlanLoading(false);
-  }, [apiKey, backendAvailable, callAPI, buildPrompt]);
+  }, [apiKey, backendAvailable, offlineMode, callAPI, buildPrompt, profile, meal, cookTime, mood, budget, persons, history, guestMode, guestAllergies, guestHistamin, guestDiet]);
 
   const reset = useCallback(() => {
     setMeal(autoMeal()); setCookTime(""); setMood(""); setBudget("egal");
@@ -1571,7 +1587,13 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
 
         {/* Bottom actions */}
         <div style={{ display: "flex", flexDirection: "column", gap: "8px", animation: "fadeUp 0.5s ease both", animationDelay: "0.35s" }}>
-          <Btn onClick={() => generate(mode === "fridge" ? "fridge" : "quick")}>Anderer Vorschlag 🔄</Btn>
+          <Btn onClick={() => {
+            // Learning signal: dislike when skipping (offline recipes)
+            if (suggestion?._offline && suggestion?._foodIds) {
+              recordDislike(suggestion, suggestion._foodIds, suggestion._templateId);
+            }
+            generate(mode === "fridge" ? "fridge" : "quick");
+          }}>Anderer Vorschlag 🔄</Btn>
           <Btn secondary onClick={reset}>← Zurück zum Start</Btn>
         </div>
       </Layout>

@@ -7,6 +7,10 @@
 
 import { orchestrate } from "./orchestrator";
 
+// Re-export enterprise modules for direct access
+export { generateOfflinePlan } from "./plan-generator";
+export { recordLike, recordDislike, getLearningStats, resetLearning } from "./learning-engine";
+
 /**
  * Generate an offline recipe suggestion
  *

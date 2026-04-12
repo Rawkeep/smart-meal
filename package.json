@@ -5,7 +5,15 @@
   "description": "AI-powered meal suggestion app with allergy awareness, fridge mode, and weekly meal planning",
   "author": "Smart Meal Contributors",
   "license": "MIT",
-  "keywords": ["meal-planner", "recipe", "ai", "claude", "react", "nutrition", "allergies"],
+  "keywords": [
+    "meal-planner",
+    "recipe",
+    "ai",
+    "claude",
+    "react",
+    "nutrition",
+    "allergies"
+  ],
   "type": "module",
   "engines": {
     "node": ">=18.0.0"
@@ -20,14 +28,15 @@
     "docker:up": "docker compose up -d"
   },
   "dependencies": {
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.1.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "express": "^5.1.0",
-    "cors": "^2.8.5",
-    "helmet": "^8.1.0",
-    "compression": "^1.8.0",
-    "dotenv": "^16.5.0",
-    "express-rate-limit": "^7.5.0"
+    "vite-plugin-pwa": "^1.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
