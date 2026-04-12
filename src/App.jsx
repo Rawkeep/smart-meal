@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { initDB, getAllFoods, getFoodsFiltered } from "./db";
 import { FOODS, FOOD_CATEGORIES } from "./data/foods";
 import { CROSS_ALLERGIES, ADDITIVES, ADDITIVE_CATEGORIES, NUTRIENT_DEFICIENCIES, METABOLISM_CONDITIONS, HEALTH_GOALS } from "./data/health";
+import { generateOfflineSuggestion } from "./swarm/index";
 
 // ─── Storage Keys ───
 const K = {
@@ -497,6 +498,7 @@ export default function App() {
   const [planLoading, setPlanLoading] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [showKeyInput, setShowKeyInput] = useState(false);
+  const [offlineMode, setOfflineMode] = useState(false);
   const mounted = useRef(false);
 
   // ─── Init ───
@@ -723,17 +725,34 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
   const generate = useCallback(async (m) => {
     setLoading(true);
     setSuggestion(null);
-    const msgs = ["Schaue in die Vorratskammer...", "Wähle die besten Zutaten...", "Kreiere dein Gericht...", "Perfektioniere das Rezept..."];
+    const useOffline = offlineMode || (!backendAvailable && !apiKey);
+    const msgs = useOffline
+      ? ["Schwarm-Agenten starten...", "Zutaten analysieren...", "Rezept zusammenstellen...", "Nährwerte berechnen..."]
+      : ["Schaue in die Vorratskammer...", "Wähle die besten Zutaten...", "Kreiere dein Gericht...", "Perfektioniere das Rezept..."];
     let mi = 0;
     setLoadMsg(msgs[0]);
     const iv = setInterval(() => { mi = (mi + 1) % msgs.length; setLoadMsg(msgs[mi]); }, 1800);
     try {
-      const r = await callAPI(buildPrompt(m || "quick"));
-      setSuggestion(r);
-      const nh = [...history, { name: r.name, date: new Date().toISOString(), emoji: r.emoji }].slice(-30);
-      setHistory(nh);
-      save(K.history, nh);
-      updateStreak();
+      let r;
+      if (useOffline && m !== "plan") {
+        const fridgeItems = [...selectedIngredients, ...(fridgeInput.trim() ? fridgeInput.split(/[,\n]+/).map(s => s.trim()).filter(Boolean) : [])];
+        r = await generateOfflineSuggestion({
+          profile, meal, cookTime, mood, budget, persons, history,
+          fridgeItems: m === "fridge" ? fridgeItems : [],
+          guestMode, guestAllergies, guestHistamin, guestDiet,
+        });
+      } else {
+        r = await callAPI(buildPrompt(m || "quick"));
+      }
+      if (r.error) {
+        setSuggestion(r);
+      } else {
+        setSuggestion(r);
+        const nh = [...history, { name: r.name, date: new Date().toISOString(), emoji: r.emoji }].slice(-30);
+        setHistory(nh);
+        save(K.history, nh);
+        updateStreak();
+      }
       setView("result");
     } catch (e) {
       setSuggestion({ error: true, message: e.message });
@@ -741,7 +760,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
     }
     clearInterval(iv);
     setLoading(false);
-  }, [apiKey, backendAvailable, callAPI, buildPrompt, history, updateStreak]);
+  }, [apiKey, backendAvailable, offlineMode, callAPI, buildPrompt, history, updateStreak, profile, meal, cookTime, mood, budget, persons, fridgeInput, selectedIngredients, guestMode, guestAllergies, guestHistamin, guestDiet]);
 
   const generatePlan = useCallback(async () => {
     setPlanLoading(true);
@@ -1271,6 +1290,22 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
                 <div style={{ marginTop: "2px" }}>{t.l}</div>
               </button>
             ))}
+          </div>
+
+          {/* Offline Intelligence Toggle */}
+          <div style={{ marginTop: "8px", display: "flex", justifyContent: "center" }}>
+            <button onClick={() => setOfflineMode(!offlineMode)} style={{
+              display: "flex", alignItems: "center", gap: "6px",
+              padding: "6px 14px", borderRadius: "20px",
+              border: offlineMode ? "2px solid var(--accent)" : "1px solid var(--card-border)",
+              background: offlineMode ? "linear-gradient(135deg,rgba(200,97,26,0.08),rgba(245,166,35,0.08))" : "var(--card)",
+              color: offlineMode ? "var(--accent)" : "var(--ink3)",
+              fontSize: "12px", fontWeight: offlineMode ? 600 : 400,
+              fontFamily: "'Outfit',sans-serif", cursor: "pointer", transition: "all 0.25s ease",
+            }}>
+              <span style={{ fontSize: "14px" }}>{offlineMode ? "🧠" : "📡"}</span>
+              {offlineMode ? "Offline-KI aktiv" : "Online-Modus"}
+            </button>
           </div>
         </div>
 
