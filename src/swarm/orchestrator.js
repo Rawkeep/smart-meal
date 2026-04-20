@@ -112,14 +112,45 @@ function selectTemplate(context) {
 /**
  * Fill a single slot with the best-scored ingredient
  */
-function fillSlot(slot, safeFoods, context, selectedFoods, templateCuisine) {
+function fillSlot(slot, safeFoods, context, selectedFoods, templateCuisine, template) {
   // Filter to matching category
   let candidates = safeFoods.filter((f) => f.category === slot.category);
 
-  // Handle preferred foods
+  // Explicit slot.preferred always wins — the template author knows the dish
+  // and a typed list of IDs is more authoritative than a generic meal gate.
   if (slot.preferred?.length > 0) {
     const preferred = candidates.filter((f) => slot.preferred.includes(f.id));
-    if (preferred.length > 0) candidates = preferred;
+    if (preferred.length > 0) {
+      candidates = preferred;
+    }
+  } else {
+    // Meal-type coherence gate (only runs when no explicit preferred list).
+    // Prevents "160g Nudeln" showing up as the grain in a breakfast granola
+    // bowl, or "Müsli" as the starch in a lunch pasta dish.
+    if (template?.mealType === "frühstück" && slot.category === "getreide") {
+      const breakfastGrains = candidates.filter((f) => f.tags?.includes("frühstück"));
+      if (breakfastGrains.length > 0) candidates = breakfastGrains;
+    }
+    if ((template?.mealType === "mittag" || template?.mealType === "abend") && slot.category === "getreide") {
+      const nonBreakfast = candidates.filter((f) => !f.tags?.includes("frühstück"));
+      if (nonBreakfast.length > 0) candidates = nonBreakfast;
+    }
+    // Milch gate: "milch" category lumps drinkable dairy (milch, joghurt,
+    // hafermilch) together with hard cheeses (parmesan, gouda). Breakfast
+    // bowls must never grab Parmesan — filter to the "milch-frühstück"
+    // subset for breakfast templates.
+    if (template?.mealType === "frühstück" && slot.category === "milch") {
+      const breakfastDairy = candidates.filter((f) => f.tags?.includes("milch-frühstück"));
+      if (breakfastDairy.length > 0) candidates = breakfastDairy;
+    }
+    // Obst gate: citrus like Zitrone/Limette works as a sauce flavor but
+    // reads absurd as "2 Stuck Zitrone" on a sweet breakfast bowl. Exclude
+    // pure citrus IDs from breakfast obst unless explicitly preferred.
+    if (template?.mealType === "frühstück" && slot.category === "obst") {
+      const citrusIds = ["zitrone", "limette"];
+      const nonCitrus = candidates.filter((f) => !citrusIds.includes(f.id));
+      if (nonCitrus.length > 0) candidates = nonCitrus;
+    }
   }
 
   // Handle fixed food
@@ -161,23 +192,45 @@ function fillTemplate(template, slotFills) {
     roleToNames[role] = foods.map((f) => f.name).join(" und ");
   }
 
+  // Whether a step depends on a slot that never got filled — used to drop
+  // orphan steps instead of leaving nonsense like "daruber streuen und ..."
+  // when an optional {NUSS} slot was skipped.
+  const hasUnfilledPlaceholder = (str) => {
+    const matches = str.match(/\{([A-Z]+\d?)\}/g) || [];
+    return matches.some((m) => {
+      const role = m.slice(1, -1);
+      return !roleToNames[role];
+    });
+  };
+
   const replace = (str) => {
     let result = str;
     for (const [role, names] of Object.entries(roleToNames)) {
       const placeholder = `{${role}}`;
       result = result.split(placeholder).join(names || "");
     }
-    // Clean up any remaining placeholders
+    // Strip any remaining orphan placeholders
     result = result.replace(/\{[A-Z]+\d?\}/g, "").replace(/\s+/g, " ").trim();
     // Clean up leading/trailing commas and empty constructs
     result = result.replace(/,\s*,/g, ",").replace(/,\s*$/g, "").replace(/^\s*,/g, "");
+    // Capitalize first letter so orphaned-placeholder steps don't start
+    // with lowercase like "daruber streuen..."
+    if (result.length > 0) result = result[0].toUpperCase() + result.slice(1);
     return result;
   };
+
+  // Drop steps that reference placeholders which were never filled (e.g. an
+  // optional {NUSS} slot that was skipped) — leaving them creates nonsense
+  // sentences like "daruber streuen und mit Honig sussen." without subject.
+  const schritte = template.stepsTemplate
+    .filter((s) => !hasUnfilledPlaceholder(s))
+    .map(replace)
+    .filter((s) => s.length > 5);
 
   return {
     name: replace(template.name),
     beschreibung: replace(template.beschreibung),
-    schritte: template.stepsTemplate.map(replace).filter((s) => s.length > 5),
+    schritte,
   };
 }
 
@@ -216,6 +269,14 @@ function generateHealthHint(selectedFoods, context) {
  * Generate wine/drink recommendation based on cuisine and meal
  */
 function generateWineHint(template, selectedFoods) {
+  // Breakfast never pairs with wine — pick context-appropriate morning drinks.
+  if (template.mealType === "frühstück") {
+    const sweet = template.tags?.includes("süß") || template.moods?.includes("süß");
+    if (sweet) return "Kaffee, Kakao oder Orangensaft";
+    return "Kaffee, Schwarztee oder frisch gepresster Saft";
+  }
+  if (template.mealType === "snack") return "Wasser, Tee oder ein Smoothie";
+
   const hasFish = selectedFoods.some((f) =>
     f.tags?.includes("fisch") || f.tags?.includes("pescetarisch")
   );
@@ -307,7 +368,8 @@ export async function orchestrate(context) {
       availableFoods,
       context,
       selectedFoods,
-      templateCuisine
+      templateCuisine,
+      template
     );
 
     if (fills.length === 0 && !slot.optional) {
@@ -317,7 +379,8 @@ export async function orchestrate(context) {
         safeFoods,
         context,
         selectedFoods,
-        templateCuisine
+        templateCuisine,
+        template
       );
       if (fallbackFills.length > 0) {
         selectedFoods.push(...fallbackFills);

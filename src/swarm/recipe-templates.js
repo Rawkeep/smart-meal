@@ -17,7 +17,7 @@ export const RECIPE_TEMPLATES = [
     zeit: "10 Min",
     schwierigkeit: "Leicht",
     slots: [
-      { category: "getreide", min: 1, max: 1, role: "BEILAGE" },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", preferred: ["haferflocken"] },
       { category: "obst", min: 1, max: 2, role: "OBST" },
       { category: "nüsse", min: 0, max: 1, role: "NUSS", optional: true },
     ],
@@ -33,8 +33,8 @@ export const RECIPE_TEMPLATES = [
   },
   {
     id: "eierspeise",
-    name: "Ruhrei mit {GEMUSE1} und {BEILAGE}",
-    beschreibung: "Fluffiges Ruhrei mit frischem Gemuse auf knusprigem Brot.",
+    name: "Rührei mit {GEMUSE1} und {BEILAGE}",
+    beschreibung: "Fluffiges Rührei mit frischem Gemüse auf knusprigem Brot.",
     cuisines: ["deutsch", "mediterran", "französisch"],
     mealType: "frühstück",
     moods: ["comfort", "proteinreich", "deftig"],
@@ -43,7 +43,7 @@ export const RECIPE_TEMPLATES = [
     slots: [
       { category: "protein", min: 1, max: 1, role: "PROTEIN", fixed: "ei" },
       { category: "gemüse", min: 1, max: 2, role: "GEMUSE1" },
-      { category: "getreide", min: 1, max: 1, role: "BEILAGE" },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", preferred: ["brot", "vollkornbrot", "roggenbrot"] },
     ],
     stepsTemplate: [
       "{GEMUSE1} waschen und klein schneiden.",
@@ -1090,7 +1090,7 @@ export const RECIPE_TEMPLATES = [
     zeit: "5 Min",
     schwierigkeit: "Leicht",
     slots: [
-      { category: "getreide", min: 1, max: 1, role: "BEILAGE" },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", preferred: ["haferflocken"] },
       { category: "obst", min: 1, max: 2, role: "OBST" },
       { category: "milch", min: 1, max: 1, role: "MILCH" },
       { category: "nüsse", min: 1, max: 1, role: "NUSS" },
@@ -1951,7 +1951,7 @@ export const RECIPE_TEMPLATES = [
     zeit: "10 Min",
     schwierigkeit: "Leicht",
     slots: [
-      { category: "getreide", min: 1, max: 1, role: "BEILAGE" },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", preferred: ["vollkornbrot", "brot", "roggenbrot"] },
       { category: "protein", min: 1, max: 1, role: "PROTEIN" },
       { category: "gewürze", min: 0, max: 1, role: "GEWURZ", optional: true },
     ],
@@ -1966,22 +1966,22 @@ export const RECIPE_TEMPLATES = [
   },
   {
     id: "granola-bowl",
-    name: "Knuspriges Granola mit {MILCH} und {OBST}",
-    beschreibung: "Hausgemachtes Granola mit Joghurt und Beeren.",
+    name: "Knuspriges {BEILAGE} mit {MILCH} und {OBST}",
+    beschreibung: "Knusprige Müsli-Bowl mit Joghurt und frischen Früchten.",
     cuisines: ["mediterran", "deutsch"],
     mealType: "frühstück",
     moods: ["gesund", "süß", "comfort"],
     zeit: "5 Min",
     schwierigkeit: "Leicht",
     slots: [
-      { category: "getreide", min: 1, max: 1, role: "BEILAGE" },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", preferred: ["granola", "müsli"] },
       { category: "milch", min: 1, max: 1, role: "MILCH" },
       { category: "obst", min: 1, max: 2, role: "OBST" },
       { category: "nüsse", min: 0, max: 1, role: "NUSS", optional: true },
     ],
     stepsTemplate: [
       "{MILCH} in eine Schale geben.",
-      "{BEILAGE}-Granola darüberstreuen.",
+      "{BEILAGE} darüberstreuen.",
       "Mit {OBST} und {NUSS} toppen.",
     ],
     emoji: "🥣",
@@ -1990,7 +1990,7 @@ export const RECIPE_TEMPLATES = [
   },
   {
     id: "congee-asia",
-    name: "Asiatischer {BEILAGE}-Congee mit {PROTEIN}",
+    name: "Asiatischer Reis-Congee mit {PROTEIN}",
     beschreibung: "Cremiger Reis-Brei mit Ei und würzigem Topping.",
     cuisines: ["asiatisch", "japanisch", "koreanisch"],
     mealType: "frühstück",
@@ -1998,7 +1998,7 @@ export const RECIPE_TEMPLATES = [
     zeit: "30 Min",
     schwierigkeit: "Mittel",
     slots: [
-      { category: "getreide", min: 1, max: 1, role: "BEILAGE" },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", preferred: ["reis"] },
       { category: "protein", min: 1, max: 1, role: "PROTEIN" },
       { category: "gemüse", min: 1, max: 2, role: "GEMUSE1" },
     ],
@@ -2049,7 +2049,7 @@ export const RECIPE_TEMPLATES = [
       { category: "protein", min: 2, max: 2, role: "PROTEIN" },
       { category: "gemüse", min: 1, max: 2, role: "GEMUSE1" },
       { category: "hülsenfrüchte", min: 1, max: 1, role: "HULSEN" },
-      { category: "getreide", min: 1, max: 1, role: "BEILAGE" },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", preferred: ["brot", "vollkornbrot", "roggenbrot"] },
     ],
     stepsTemplate: [
       "{PROTEIN} scharf anbraten.",
@@ -2141,7 +2141,7 @@ export const RECIPE_TEMPLATES = [
     zeit: "15 Min",
     schwierigkeit: "Leicht",
     slots: [
-      { category: "getreide", min: 1, max: 1, role: "BEILAGE" },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", preferred: ["brot", "vollkornbrot"] },
       { category: "obst", min: 1, max: 2, role: "OBST" },
       { category: "milch", min: 0, max: 1, role: "MILCH", optional: true },
     ],

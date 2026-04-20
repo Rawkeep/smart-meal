@@ -87,20 +87,20 @@ export const FOODS = [
   { id: "seitan", name: "Seitan", emoji: "🍖", category: "protein", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
 
   // ═══ MILCH & KÄSE ═══
-  { id: "milch", name: "Milch", emoji: "��", category: "milch", histamin: "none", allergies: ["laktose"], tags: ["vegetarisch"], season: [] },
+  { id: "milch", name: "Milch", emoji: "🥛", category: "milch", histamin: "none", allergies: ["laktose"], tags: ["vegetarisch", "milch-frühstück"], season: [] },
   { id: "sahne", name: "Sahne", emoji: "🥛", category: "milch", histamin: "none", allergies: ["laktose"], tags: ["vegetarisch", "keto"], season: [] },
   { id: "butter", name: "Butter", emoji: "🧈", category: "milch", histamin: "none", allergies: ["laktose"], tags: ["vegetarisch", "keto"], season: [] },
-  { id: "joghurt", name: "Joghurt", emoji: "🥛", category: "milch", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch"], season: [] },
-  { id: "quark", name: "Quark", emoji: "🥛", category: "milch", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch"], season: [] },
+  { id: "joghurt", name: "Joghurt", emoji: "🥛", category: "milch", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch", "milch-frühstück"], season: [] },
+  { id: "quark", name: "Quark", emoji: "🥛", category: "milch", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch", "milch-frühstück"], season: [] },
   { id: "frischkäse", name: "Frischkäse", emoji: "🧀", category: "milch", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch"], season: [] },
   { id: "mozzarella", name: "Mozzarella", emoji: "🧀", category: "milch", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch"], season: [] },
   { id: "parmesan", name: "Parmesan", emoji: "🧀", category: "milch", histamin: "high", allergies: ["laktose", "histamin"], tags: ["vegetarisch"], season: [] },
   { id: "gouda", name: "Gouda", emoji: "🧀", category: "milch", histamin: "high", allergies: ["laktose", "histamin"], tags: ["vegetarisch"], season: [] },
   { id: "feta", name: "Feta", emoji: "🧀", category: "milch", histamin: "medium", allergies: ["laktose"], tags: ["vegetarisch"], season: [] },
   { id: "cheddar", name: "Cheddar", emoji: "🧀", category: "milch", histamin: "high", allergies: ["laktose", "histamin"], tags: ["vegetarisch"], season: [] },
-  { id: "hafermilch", name: "Hafermilch", emoji: "🥛", category: "milch", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
-  { id: "kokosmilch", name: "Kokosmilch", emoji: "🥥", category: "milch", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "keto"], season: [] },
-  { id: "sojamilch", name: "Sojamilch", emoji: "🥛", category: "milch", histamin: "none", allergies: ["soja"], tags: ["vegan", "vegetarisch"], season: [] },
+  { id: "hafermilch", name: "Hafermilch", emoji: "🥛", category: "milch", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch", "milch-frühstück"], season: [] },
+  { id: "kokosmilch", name: "Kokosmilch", emoji: "🥥", category: "milch", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "keto", "milch-frühstück"], season: [] },
+  { id: "sojamilch", name: "Sojamilch", emoji: "🥛", category: "milch", histamin: "none", allergies: ["soja"], tags: ["vegan", "vegetarisch", "milch-frühstück"], season: [] },
 
   // ═══ GETREIDE & BEILAGEN ═══
   { id: "reis", name: "Reis", emoji: "🍚", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
@@ -109,7 +109,7 @@ export const FOODS = [
   { id: "couscous", name: "Couscous", emoji: "🫘", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
   { id: "bulgur", name: "Bulgur", emoji: "🫘", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
   { id: "quinoa", name: "Quinoa", emoji: "🫘", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
-  { id: "haferflocken", name: "Haferflocken", emoji: "🥣", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
+  { id: "haferflocken", name: "Haferflocken", emoji: "🥣", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch", "frühstück"], season: [] },
   { id: "tortilla", name: "Tortilla/Wraps", emoji: "🫓", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
   { id: "kartoffelpüree", name: "Kartoffelpüree", emoji: "🥔", category: "getreide", histamin: "none", allergies: ["laktose"], tags: ["vegetarisch"], season: [] },
   { id: "glasnudeln", name: "Glasnudeln", emoji: "🍜", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
@@ -201,21 +201,20 @@ export const FOODS = [
   { id: "seitan", name: "Seitan", emoji: "🟫", category: "protein", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch", "proteinreich"], season: [] },
   { id: "halloumi", name: "Halloumi", emoji: "🧀", category: "protein", histamin: "medium", allergies: ["laktose"], tags: ["vegetarisch", "lowcarb", "keto"], season: [] },
 
-  // Milch
-  { id: "quark", name: "Magerquark", emoji: "🥛", category: "milch", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch", "proteinreich"], season: [] },
-  { id: "ricotta", name: "Ricotta", emoji: "🧀", category: "milch", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch"], season: [] },
-  { id: "skyr", name: "Skyr", emoji: "🥛", category: "milch", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch", "proteinreich"], season: [] },
-  { id: "hafermilch", name: "Hafermilch", emoji: "🥛", category: "milch", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
-  { id: "mandelmilch", name: "Mandelmilch", emoji: "🥛", category: "milch", histamin: "none", allergies: ["mandel"], tags: ["vegan", "vegetarisch"], season: [] },
-  { id: "sojamilch", name: "Sojamilch", emoji: "🥛", category: "milch", histamin: "none", allergies: ["soja"], tags: ["vegan", "vegetarisch"], season: [] },
+  // Milch extras — tag "milch-frühstück" for yogurts/drinkable dairy used in
+  // breakfast bowls (granola/porridge) so cheese types like Parmesan never
+  // land in a müsli bowl. hafermilch/sojamilch are already defined above.
+  { id: "ricotta", name: "Ricotta", emoji: "🧀", category: "milch", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch", "milch-frühstück"], season: [] },
+  { id: "skyr", name: "Skyr", emoji: "🥛", category: "milch", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch", "proteinreich", "milch-frühstück"], season: [] },
+  { id: "mandelmilch", name: "Mandelmilch", emoji: "🥛", category: "milch", histamin: "none", allergies: ["mandel"], tags: ["vegan", "vegetarisch", "milch-frühstück"], season: [] },
 
-  // Getreide
-  { id: "couscous", name: "Couscous", emoji: "🌾", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
-  { id: "bulgur", name: "Bulgur", emoji: "🌾", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
+  // Getreide — breakfast-appropriate (müsli, granola) explicitly tagged
+  { id: "müsli", name: "Müsli", emoji: "🥣", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch", "frühstück"], season: [] },
+  { id: "granola", name: "Granola", emoji: "🥣", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch", "frühstück"], season: [] },
+  { id: "vollkornbrot", name: "Vollkornbrot", emoji: "🍞", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch", "frühstück"], season: [] },
+  { id: "roggenbrot", name: "Roggenbrot", emoji: "🍞", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch", "frühstück"], season: [] },
   { id: "polenta", name: "Polenta", emoji: "🌽", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
   { id: "nori", name: "Nori-Blätter", emoji: "🟢", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "lowcarb"], season: [] },
-  { id: "reisnudeln", name: "Reisnudeln", emoji: "🍜", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
-  { id: "glasnudeln", name: "Glasnudeln", emoji: "🍜", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
 
   // Hülsenfrüchte
   { id: "weisse_bohnen", name: "Weiße Bohnen", emoji: "🫘", category: "hülsenfrüchte", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
