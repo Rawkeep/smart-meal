@@ -706,9 +706,6 @@ ${addInfo.length ? `\nZUSATZSTOFFE VERMEIDEN:\n- ${addInfo.join(", ")}\n- Rezept
 SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
 
     const fridgeItems = [...selectedIngredients, ...(fridgeInput.trim() ? fridgeInput.split(/[,\n]+/).map(s => s.trim()).filter(Boolean) : [])];
-    if (m === "fridge") return `${base}\n\nKÜHLSCHRANK-MODUS: Zutaten: ${fridgeItems.join(", ")}\nNur diese + Grundzutaten verwenden.\n${recent ? `Nicht wiederholen: ${recent}` : ""}\n\nNUR JSON (kein Markdown):\n{"name":"...","beschreibung":"1 Satz","zutaten":["..."],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","gesundheitshinweis":"..."}`;
-
-    if (m === "plan") return `${base}\n\nWOCHENPLAN: 5 Werktage (Mo–Fr), je Frühstück/Mittag/Abend. Budget: ${BUDGETS.find(b => b.id === budget)?.label || "normal"}. Abwechslungsreich!\n\nNUR JSON:\n{"plan":[{"tag":"Montag","frühstück":{"name":"...","emoji":"...","zeit":"XX Min"},"mittag":{"name":"...","emoji":"...","zeit":"XX Min"},"abend":{"name":"...","emoji":"...","zeit":"XX Min"}},...],  "einkaufsliste":["Zutat 1","Zutat 2",...]}`;
 
     const mealLabel = MEALS.find(x => x.id === meal)?.label || "";
     const mealRule = meal === "frühstück"
@@ -720,7 +717,15 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
       : meal === "snack"
       ? "STRIKT ein SNACK – kleine Portion, keine vollständige Hauptmahlzeit."
       : "";
-    return `${base}\n\n- Mahlzeit: ${mealLabel} → ${mealRule}\n- Kochzeit: ${TIMES.find(x => x.id === cookTime)?.label || ""}\n- Stimmung: ${MOODS.find(x => x.id === mood)?.label || ""}\n- Budget: ${BUDGETS.find(x => x.id === budget)?.label || ""}\n${recent ? `- NICHT wiederholen: ${recent}` : ""}\n\nNUR JSON:\n{"name":"...","beschreibung":"1 Satz","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","weinempfehlung":"passender Wein/Getränk","gesundheitshinweis":"..."}`;
+
+    // Shared rule block: every mode must honor meal-type + ingredient coherence.
+    const coherenceRule = `\n\nKONSISTENZREGELN (STRIKT):\n- Jede in "zutaten" genannte Zutat MUSS in "schritte" vorkommen. Jede in "schritte" erwähnte Zutat MUSS in "zutaten" stehen.\n- Alle zutaten im Format "Menge + Einheit + Zutat" (z.B. "200 g Haferflocken").\n- Schritte konkret und chronologisch, 4–7 Stück.\n- Gericht-Name muss zum Mahlzeitentyp passen.`;
+
+    if (m === "fridge") return `${base}\n\nKÜHLSCHRANK-MODUS: Zutaten: ${fridgeItems.join(", ")}\nNur diese + Grundzutaten verwenden.${meal ? `\n- Mahlzeit: ${mealLabel} → ${mealRule}` : ""}\n${recent ? `Nicht wiederholen: ${recent}` : ""}${coherenceRule}\n\nNUR JSON (kein Markdown):\n{"name":"...","beschreibung":"1 Satz","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","gesundheitshinweis":"..."}`;
+
+    if (m === "plan") return `${base}\n\nWOCHENPLAN: 5 Werktage (Mo–Fr), je Frühstück/Mittag/Abend. Budget: ${BUDGETS.find(b => b.id === budget)?.label || "normal"}. Abwechslungsreich!\n- Frühstück: NUR typische Frühstücksgerichte (Oats, Bowl, Toast, Rührei).\n- Mittag: sättigende Hauptgerichte.\n- Abend: eher leichter als Mittag.\n\nNUR JSON:\n{"plan":[{"tag":"Montag","frühstück":{"name":"...","emoji":"...","zeit":"XX Min"},"mittag":{"name":"...","emoji":"...","zeit":"XX Min"},"abend":{"name":"...","emoji":"...","zeit":"XX Min"}},...],  "einkaufsliste":["Zutat 1","Zutat 2",...]}`;
+
+    return `${base}\n\n- Mahlzeit: ${mealLabel} → ${mealRule}\n- Kochzeit: ${TIMES.find(x => x.id === cookTime)?.label || ""}\n- Stimmung: ${MOODS.find(x => x.id === mood)?.label || ""}\n- Budget: ${BUDGETS.find(x => x.id === budget)?.label || ""}\n${recent ? `- NICHT wiederholen: ${recent}` : ""}${coherenceRule}\n\nNUR JSON:\n{"name":"...","beschreibung":"1 Satz","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","weinempfehlung":"passender Wein/Getränk","gesundheitshinweis":"..."}`;
   }, [profile, guestMode, guestAllergies, guestHistamin, guestDiet, history, persons, fridgeInput, selectedIngredients, budget, meal, cookTime, mood]);
 
   // ─── Backend availability check ───
@@ -788,21 +793,39 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
     const useOffline = offlineMode || (!backendAvailable && !apiKey);
     const msgs = useOffline
       ? ["Schwarm-Agenten starten...", "Zutaten analysieren...", "Rezept zusammenstellen...", "Nährwerte berechnen..."]
-      : ["Schaue in die Vorratskammer...", "Wähle die besten Zutaten...", "Kreiere dein Gericht...", "Perfektioniere das Rezept..."];
+      : ["KI-Anfrage läuft (Offline-Fallback bereit)...", "Zutaten werden ausgewählt...", "Rezept wird erstellt...", "Falls offline: Schwarm-Intelligenz übernimmt..."];
     let mi = 0;
     setLoadMsg(msgs[0]);
     const iv = setInterval(() => { mi = (mi + 1) % msgs.length; setLoadMsg(msgs[mi]); }, 1800);
+
+    // Run offline swarm engine with current context. Shared by primary and
+    // fallback paths so the API-failure retry never drifts from user input.
+    const runOffline = () => {
+      const fridgeItems = [...selectedIngredients, ...(fridgeInput.trim() ? fridgeInput.split(/[,\n]+/).map(s => s.trim()).filter(Boolean) : [])];
+      return generateOfflineSuggestion({
+        profile, meal, cookTime, mood, budget, persons, history,
+        fridgeItems: m === "fridge" ? fridgeItems : [],
+        guestMode, guestAllergies, guestHistamin, guestDiet,
+      });
+    };
+
     try {
       let r;
       if (useOffline && m !== "plan") {
-        const fridgeItems = [...selectedIngredients, ...(fridgeInput.trim() ? fridgeInput.split(/[,\n]+/).map(s => s.trim()).filter(Boolean) : [])];
-        r = await generateOfflineSuggestion({
-          profile, meal, cookTime, mood, budget, persons, history,
-          fridgeItems: m === "fridge" ? fridgeItems : [],
-          guestMode, guestAllergies, guestHistamin, guestDiet,
-        });
+        r = await runOffline();
       } else {
-        r = await callAPI(buildPrompt(m || "quick"));
+        try {
+          r = await callAPI(buildPrompt(m || "quick"));
+        } catch (apiErr) {
+          // Graceful API → Offline-AI fallback so the user never hits a dead end.
+          if (m !== "plan") {
+            setLoadMsg("API nicht erreichbar – wechsle zu Offline-KI...");
+            r = await runOffline();
+            r._fallbackFromApi = true;
+          } else {
+            throw apiErr;
+          }
+        }
       }
       if (r.error) {
         setSuggestion(r);
@@ -1615,6 +1638,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
           {suggestion.protein && <Badge icon="💪" text={suggestion.protein} />}
           {suggestion.schwierigkeit && <Badge icon="📊" text={suggestion.schwierigkeit} />}
           {suggestion.herkunft && <Badge icon="🌍" text={suggestion.herkunft} />}
+          {suggestion._fallbackFromApi && <Badge icon="🧠" text="Offline-Fallback" />}
         </div>
 
         {/* Actions */}
