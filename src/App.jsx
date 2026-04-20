@@ -1729,6 +1729,27 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
               </div>
             ))}
           </div>
+          {suggestion.allergene?.length > 0 && (
+            <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--card-border)" }}>
+              <p style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 600, marginBottom: "8px", letterSpacing: "0.3px", textTransform: "uppercase" }}>
+                Allergenkennzeichnung (EU-LMIV)
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                {suggestion.allergene.map(a => (
+                  <span key={a.code} style={{
+                    display: "inline-flex", alignItems: "center", gap: "6px",
+                    padding: "4px 10px", borderRadius: "999px",
+                    background: "rgba(200,97,26,0.08)",
+                    border: "1px solid rgba(200,97,26,0.18)",
+                    fontSize: "11px", color: "var(--ink2)", fontWeight: 500,
+                  }}>
+                    <strong style={{ color: "var(--accent)", fontFamily: "'Fraunces',serif", fontWeight: 700 }}>{a.code}</strong>
+                    {a.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Steps */}

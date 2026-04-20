@@ -21,6 +21,7 @@ import { scoreCuisine } from "./cuisine-agent";
 import { scorePairing } from "./combination-agent";
 import { findMatchingTemplates } from "./recipe-templates";
 import { estimateNutrition } from "./nutrition-data";
+import { getFoodAllergenCodes, summarizeAllergens } from "./allergen-codes";
 import { getIngredientPreference, getTemplatePreference, recordGeneration } from "./learning-engine";
 import { NUTRIENT_DEFICIENCIES, HEALTH_GOALS } from "../data/health";
 
@@ -441,13 +442,21 @@ export async function orchestrate(context) {
   // Build ingredient list with approximate quantities and keep the exact
   // gram figure so the nutrition calc matches the plate (no more 100 g
   // reference values when the recipe actually uses 300 g).
+  // EU LMIV allergen codes are appended to each line so the user sees
+  // A/C/D/G/H1/... style flags just like on a German restaurant menu.
   const zutaten = [];
+  const zutatenDetail = [];
   const portionRecords = [];
   for (const f of selectedFoods) {
     const { label, grams } = getApproxPortion(f, persons);
-    zutaten.push(`${label} ${f.name}`);
+    const codes = getFoodAllergenCodes(f);
+    const suffix = codes.length > 0 ? ` (${codes.join(",")})` : "";
+    zutaten.push(`${label} ${f.name}${suffix}`);
+    zutatenDetail.push({ name: f.name, portion: label, allergens: codes });
     portionRecords.push({ id: f.id, grams });
   }
+
+  const allergenLegend = summarizeAllergens(selectedFoods);
 
   const nutrition = estimateNutrition(portionRecords, persons);
   const allFoodIds = selectedFoods.map((f) => f.id);
@@ -485,6 +494,8 @@ export async function orchestrate(context) {
       salt: nutrition.saltPerPerson,
       coverage: nutrition.coverage,
     },
+    allergene: allergenLegend,
+    zutatenDetail,
     tipp: generateCookingTip(template, selectedFoods),
     emoji: template.emoji,
     schwierigkeit: template.schwierigkeit,
