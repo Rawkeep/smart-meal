@@ -79,12 +79,12 @@ export const FOODS = [
   { id: "garnelen", name: "Garnelen", emoji: "🦐", category: "protein", histamin: "high", allergies: ["fisch", "histamin"], tags: ["fisch", "lowcarb", "keto", "pescetarisch"], season: [] },
   { id: "kabeljau", name: "Kabeljau", emoji: "🐟", category: "protein", histamin: "none", allergies: ["fisch"], tags: ["fisch", "lowcarb", "keto", "pescetarisch"], season: [] },
   { id: "forelle", name: "Forelle", emoji: "🐟", category: "protein", histamin: "none", allergies: ["fisch"], tags: ["fisch", "lowcarb", "keto", "pescetarisch"], season: [] },
-  { id: "tofu", name: "Tofu", emoji: "🧈", category: "protein", histamin: "none", allergies: ["soja"], tags: ["vegan", "vegetarisch", "lowcarb"], season: [] },
-  { id: "tempeh", name: "Tempeh", emoji: "🧈", category: "protein", histamin: "high", allergies: ["soja", "histamin"], tags: ["vegan", "vegetarisch"], season: [] },
-  { id: "ei", name: "Eier", emoji: "🥚", category: "protein", histamin: "none", allergies: ["ei"], tags: ["vegetarisch", "lowcarb", "keto"], season: [] },
-  { id: "wurst", name: "Wurst/Aufschnitt", emoji: "🌭", category: "protein", histamin: "high", allergies: ["histamin"], tags: ["fleisch"], season: [] },
-  { id: "speck", name: "Speck/Bacon", emoji: "🥓", category: "protein", histamin: "high", allergies: ["histamin"], tags: ["fleisch", "keto", "lowcarb"], season: [] },
-  { id: "seitan", name: "Seitan", emoji: "🍖", category: "protein", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
+  { id: "tofu", name: "Tofu", emoji: "🧈", category: "protein", histamin: "none", allergies: ["soja"], tags: ["vegan", "vegetarisch", "lowcarb", "protein-frühstück"], season: [] },
+  { id: "tempeh", name: "Tempeh", emoji: "🧈", category: "protein", histamin: "high", allergies: ["soja", "histamin"], tags: ["vegan", "vegetarisch", "proteinreich"], season: [] },
+  { id: "ei", name: "Eier", emoji: "🥚", category: "protein", histamin: "none", allergies: ["ei"], tags: ["vegetarisch", "lowcarb", "keto", "protein-frühstück"], season: [] },
+  { id: "wurst", name: "Wurst/Aufschnitt", emoji: "🌭", category: "protein", histamin: "high", allergies: ["histamin"], tags: ["fleisch", "protein-frühstück"], season: [] },
+  { id: "speck", name: "Speck/Bacon", emoji: "🥓", category: "protein", histamin: "high", allergies: ["histamin"], tags: ["fleisch", "keto", "lowcarb", "protein-frühstück"], season: [] },
+  { id: "seitan", name: "Seitan", emoji: "🍖", category: "protein", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch", "proteinreich"], season: [] },
 
   // ═══ MILCH & KÄSE ═══
   { id: "milch", name: "Milch", emoji: "🥛", category: "milch", histamin: "none", allergies: ["laktose"], tags: ["vegetarisch", "milch-frühstück"], season: [] },
@@ -105,7 +105,7 @@ export const FOODS = [
   // ═══ GETREIDE & BEILAGEN ═══
   { id: "reis", name: "Reis", emoji: "🍚", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
   { id: "nudeln", name: "Nudeln", emoji: "🍝", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
-  { id: "brot", name: "Brot", emoji: "🍞", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
+  { id: "brot", name: "Brot", emoji: "🍞", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch", "frühstück"], season: [] },
   { id: "couscous", name: "Couscous", emoji: "🫘", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
   { id: "bulgur", name: "Bulgur", emoji: "🫘", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
   { id: "quinoa", name: "Quinoa", emoji: "🫘", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
@@ -191,15 +191,15 @@ export const FOODS = [
   { id: "limette", name: "Limette", emoji: "🟢", category: "obst", histamin: "high", allergies: ["histamin"], tags: ["vegan", "vegetarisch", "lowcarb"], season: [] },
   { id: "papaya", name: "Papaya", emoji: "🟠", category: "obst", histamin: "medium", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
 
-  // Protein
-  { id: "pute", name: "Putenbrust", emoji: "🦃", category: "protein", histamin: "none", allergies: [], tags: ["fleisch", "lowcarb", "keto", "halal"], season: [] },
+  // Protein (forelle/tempeh/seitan already defined above — no duplicates here)
+  { id: "pute", name: "Putenbrust", emoji: "🦃", category: "protein", histamin: "none", allergies: [], tags: ["fleisch", "lowcarb", "keto", "halal", "protein-frühstück"], season: [] },
   { id: "ente", name: "Ente", emoji: "🦆", category: "protein", histamin: "low", allergies: [], tags: ["fleisch", "lowcarb", "keto"], season: [] },
-  { id: "forelle", name: "Forelle", emoji: "🐟", category: "protein", histamin: "low", allergies: ["fisch"], tags: ["fisch", "lowcarb", "keto", "pescetarisch"], season: [] },
   { id: "seelachs", name: "Seelachs", emoji: "🐟", category: "protein", histamin: "low", allergies: ["fisch"], tags: ["fisch", "lowcarb", "keto", "pescetarisch"], season: [] },
   { id: "miesmuschel", name: "Miesmuscheln", emoji: "🐚", category: "protein", histamin: "high", allergies: ["fisch", "histamin"], tags: ["fisch", "lowcarb", "pescetarisch"], season: [8, 9, 10, 11, 0, 1] },
-  { id: "tempeh", name: "Tempeh", emoji: "🫘", category: "protein", histamin: "high", allergies: ["soja", "histamin"], tags: ["vegan", "vegetarisch", "proteinreich"], season: [] },
-  { id: "seitan", name: "Seitan", emoji: "🟫", category: "protein", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch", "proteinreich"], season: [] },
   { id: "halloumi", name: "Halloumi", emoji: "🧀", category: "protein", histamin: "medium", allergies: ["laktose"], tags: ["vegetarisch", "lowcarb", "keto"], season: [] },
+  { id: "räucherlachs", name: "Räucherlachs", emoji: "🐟", category: "protein", histamin: "high", allergies: ["fisch", "histamin"], tags: ["fisch", "lowcarb", "pescetarisch", "protein-frühstück"], season: [] },
+  { id: "schinken", name: "Kochschinken", emoji: "🍖", category: "protein", histamin: "medium", allergies: [], tags: ["fleisch", "lowcarb", "keto", "protein-frühstück"], season: [] },
+  { id: "frischkäse_p", name: "Frischkäse-Aufstrich", emoji: "🧀", category: "protein", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch", "lowcarb", "protein-frühstück"], season: [] },
 
   // Milch extras — tag "milch-frühstück" for yogurts/drinkable dairy used in
   // breakfast bowls (granola/porridge) so cheese types like Parmesan never

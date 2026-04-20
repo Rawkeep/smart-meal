@@ -151,6 +151,13 @@ function fillSlot(slot, safeFoods, context, selectedFoods, templateCuisine, temp
       const nonCitrus = candidates.filter((f) => !citrusIds.includes(f.id));
       if (nonCitrus.length > 0) candidates = nonCitrus;
     }
+    // Protein gate: a breakfast toast should not pull Hähnchenbrust or Lamm.
+    // Prefer proteins tagged "protein-frühstück" (ei, wurst, speck, tofu,
+    // räucherlachs, schinken, frischkäse) for breakfast templates.
+    if (template?.mealType === "frühstück" && slot.category === "protein") {
+      const breakfastProteins = candidates.filter((f) => f.tags?.includes("protein-frühstück"));
+      if (breakfastProteins.length > 0) candidates = breakfastProteins;
+    }
   }
 
   // Handle fixed food
@@ -450,9 +457,53 @@ export async function orchestrate(context) {
 }
 
 /**
- * Get approximate portion string for a food
+ * Get approximate portion string for a food. Per-food overrides take
+ * precedence over the category default, so "Wurst" shows "4 Scheiben"
+ * instead of the generic "300g" pasta-sized portion.
  */
+const PORTION_OVERRIDES = {
+  // proteins sold in slices/pieces
+  wurst: (p) => `${2 * p} Scheiben`,
+  schinken: (p) => `${2 * p} Scheiben`,
+  speck: (p) => `${2 * p} Scheiben`,
+  räucherlachs: (p) => `${60 * p}g`,
+  ei: (p) => `${p} Stück`,
+  frischkäse_p: (p) => `${30 * p}g`,
+  halloumi: (p) => `${80 * p}g`,
+  // cheeses (milch cat) sold in grams, not ml
+  parmesan: (p) => `${20 * p}g (gerieben)`,
+  feta: (p) => `${50 * p}g`,
+  mozzarella: (p) => `${60 * p}g`,
+  gouda: (p) => `${40 * p}g (gerieben)`,
+  cheddar: (p) => `${40 * p}g (gerieben)`,
+  frischkäse: (p) => `${30 * p}g`,
+  ricotta: (p) => `${60 * p}g`,
+  butter: () => `1 EL`,
+  sahne: (p) => `${50 * p}ml`,
+  // breakfast grains
+  haferflocken: (p) => `${50 * p}g`,
+  müsli: (p) => `${50 * p}g`,
+  granola: (p) => `${40 * p}g`,
+  brot: (p) => `${2 * p} Scheiben`,
+  vollkornbrot: (p) => `${2 * p} Scheiben`,
+  roggenbrot: (p) => `${2 * p} Scheiben`,
+  tortilla: (p) => `${p} Stück`,
+  nori: (p) => `${p} Blätter`,
+  // fruit and veg with piece-based portions
+  avocado: (p) => `${Math.max(1, Math.ceil(p / 2))} Stück`,
+  banane: (p) => `${p} Stück`,
+  zitrone: () => `1/2 Stück`,
+  limette: () => `1/2 Stück`,
+  ingwer_food: () => `ein Stück (~2 cm)`,
+  knoblauch: (p) => `${p} Zehen`,
+  zwiebel: (p) => `${Math.ceil(p / 2)} Stück`,
+  frühlingszwiebel: (p) => `${p} Stück`,
+};
+
 function getApproxPortion(food, persons) {
+  if (PORTION_OVERRIDES[food.id]) {
+    return PORTION_OVERRIDES[food.id](persons);
+  }
   const portionMap = {
     protein: (p) => `${150 * p}g`,
     gemüse: (p) => `${200 * p}g`,
@@ -461,7 +512,7 @@ function getApproxPortion(food, persons) {
     hülsenfrüchte: (p) => `${100 * p}g`,
     nüsse: (p) => `${20 * p}g`,
     gewürze: () => "nach Geschmack",
-    obst: (p) => `${p} Stuck`,
+    obst: (p) => `${p} Stück`,
     sonstiges: () => "nach Bedarf",
   };
   const fn = portionMap[food.category] || (() => "nach Bedarf");
@@ -469,20 +520,48 @@ function getApproxPortion(food, persons) {
 }
 
 /**
- * Generate a cooking tip
+ * Generate a context-aware cooking tip. Pool is scoped by meal type and
+ * by what's actually on the plate, so breakfast porridges no longer get
+ * "Die Pfanne richtig heiss werden lassen" and sweet dishes no longer
+ * get salt-tasting advice.
  */
 function generateCookingTip(template, selectedFoods) {
-  const tips = [
-    "Alle Zutaten vor dem Kochen vorbereiten (Mise en Place) spart Zeit und Stress.",
-    "Frische Krauter erst am Ende hinzufugen, damit sie ihr Aroma behalten.",
-    "Die Pfanne richtig heiss werden lassen, bevor du das Protein hineingibst.",
-    "Gemuse nicht zu lange garen - knackig ist gesunder und schmeckt besser.",
-    "Ein Schuss Zitronensaft am Ende hebt alle Aromen.",
-    "Salz schrittweise zugeben und immer wieder abschmecken.",
-    "Olivenol nicht zu stark erhitzen - fur heisses Braten Sonnenblumenol nehmen.",
-    "Reste eignen sich perfekt als Meal Prep fur den nachsten Tag.",
-    "Frisch gemahlener Pfeffer macht geschmacklich einen grossen Unterschied.",
-    "Das Gericht mit frischen Krautern oder Nussen garnieren fur den Wow-Effekt.",
-  ];
-  return tips[Math.floor(Math.random() * tips.length)];
+  const mealType = template?.mealType;
+  const hasFish = selectedFoods.some((f) => f.tags?.includes("fisch"));
+  const hasMeat = selectedFoods.some((f) => f.tags?.includes("fleisch"));
+  const hasFresh = selectedFoods.some((f) => f.category === "gemüse");
+  const hasNuts = selectedFoods.some((f) => f.category === "nüsse");
+  const isSweet = template?.moods?.includes("süß") || template?.tags?.includes("süß");
+  const isBowl = template?.emoji === "🥣" || template?.emoji === "🍚" || template?.tags?.includes("bowl");
+
+  const pool = [];
+
+  if (mealType === "frühstück") {
+    pool.push(
+      "Am Vorabend vorbereiten spart morgens 10 Min Zeit.",
+      "Warme Haferflocken mit einer Prise Zimt bekommen Tiefe.",
+      "Toast goldbraun — lieber ein Auge zu viel auf dem Toaster als ein verkohltes Frühstück.",
+    );
+    if (isSweet) pool.push("Ahornsirup oder Honig erst am Schluss drauf, nicht mitkochen.");
+    if (hasNuts) pool.push("Nüsse kurz in der trockenen Pfanne rösten — das hebt das Aroma spürbar.");
+    if (isBowl) pool.push("Toppings immer erst kurz vor dem Servieren — so bleibt alles knackig.");
+  } else if (mealType === "snack") {
+    pool.push(
+      "Kleine Portionen — lieber oft nachlegen als einmal zu viel.",
+      "Snacks lassen sich gut im Voraus portionieren, perfekt fürs Büro.",
+    );
+  } else {
+    pool.push(
+      "Alle Zutaten vor dem Kochen vorbereiten (Mise en Place) spart Zeit und Nerven.",
+      "Salz schrittweise zugeben und immer wieder abschmecken.",
+      "Frisch gemahlener Pfeffer macht geschmacklich einen großen Unterschied.",
+    );
+    if (hasFresh) pool.push("Gemüse nicht zu lange garen — knackig ist gesünder und schmeckt besser.");
+    if (hasMeat) pool.push("Die Pfanne richtig heiß werden lassen, bevor das Fleisch hineinkommt.");
+    if (hasFish) pool.push("Fisch nur kurz braten — lieber zu kurz als zu lang, er gart nach.");
+    if (hasNuts) pool.push("Nüsse am Ende drüber — so bleiben sie knackig und rösten nicht durch.");
+    pool.push("Frische Kräuter erst am Ende einrühren, damit sie ihr Aroma behalten.");
+  }
+
+  return pool[Math.floor(Math.random() * pool.length)];
 }
