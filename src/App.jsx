@@ -14,7 +14,17 @@ const K = {
   streak: "wei-streak-v2",
   shoplist: "wei-shoplist-v2",
   apiKey: "wei-api-key",
+  reviewed: "wei-reviewed-v1",
 };
+
+// LMIV / data-source footer shown beside every allergen/nutrition block
+const DATA_SOURCES = [
+  "Allergene nach LMIV / FIC Reg. (EU) Nr. 1169/2011, Anhang II",
+  "Nährwerte: BLS (Bundeslebensmittelschlüssel) und USDA FoodData Central (Referenzwerte pro 100 g)",
+  "Saisonkalender: BZfE (Bundeszentrum für Ernährung)",
+  "Kreuzallergien: DAAB (Deutscher Allergie- und Asthmabund)",
+];
+const DATA_DISCLAIMER = "Alle Angaben ohne Gewähr. Werte basieren auf Referenz-Datenbanken und sind keine Ersatz für eine individuelle Beratung. Bei Allergien und Unverträglichkeiten IMMER die Originalverpackung / den Hersteller verifizieren, insbesondere bei Gastronomie-Einsatz.";
 
 // ─── Constants ───
 const ALLERGIES = [
@@ -513,6 +523,7 @@ export default function App() {
   const [loadMsg, setLoadMsg] = useState("");
   const [history, setHistory] = useState([]);
   const [favorites, setFavorites] = useState([]);
+  const [reviewedRecipes, setReviewedRecipes] = useState({});
   const [streak, setStreak] = useState({ count: 0, lastDate: "" });
   const [shopList, setShopList] = useState([]);
   const [mode, setMode] = useState("quick");
@@ -575,6 +586,8 @@ export default function App() {
     if (s) setStreak(s);
     if (sh) setShopList(sh);
     if (key) setApiKey(key);
+    const rv = load(K.reviewed);
+    if (rv) setReviewedRecipes(rv);
     setMeal(autoMeal());
 
     // Init IndexedDB
@@ -1791,6 +1804,126 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
             </p>
           </Card>
         )}
+
+        {/* Sources, disclaimer and manual verification — required for
+            serious nutrition and Gastro use. See DATA_SOURCES and
+            DATA_DISCLAIMER constants. */}
+        {(suggestion.makros || suggestion.allergene?.length > 0) && (() => {
+          const reviewKey = suggestion._templateId
+            ? `${suggestion._templateId}::${suggestion.name}`
+            : suggestion.name;
+          const review = reviewedRecipes[reviewKey];
+          const isReviewed = !!review;
+
+          const exportText = () => {
+            const lines = [];
+            lines.push(`REZEPT: ${suggestion.name}`);
+            lines.push(`Portionen: ${persons}  |  Zeit: ${suggestion.zeit}  |  ${suggestion.schwierigkeit || ""}`);
+            lines.push("");
+            lines.push("ZUTATEN (inkl. Allergenkennzeichnung nach LMIV):");
+            (suggestion.zutaten || []).forEach(z => lines.push(`  - ${z}`));
+            if (suggestion.allergene?.length) {
+              lines.push("");
+              lines.push("ALLERGENE:");
+              suggestion.allergene.forEach(a => lines.push(`  ${a.code} = ${a.label}`));
+            }
+            if (suggestion.makros) {
+              lines.push("");
+              lines.push("NÄHRWERTE PRO PORTION:");
+              lines.push(`  Energie: ${suggestion.makros.kcal} kcal`);
+              lines.push(`  Eiweiß: ${suggestion.makros.protein} g`);
+              lines.push(`  Fett: ${suggestion.makros.fat} g (davon gesättigt ${suggestion.makros.satFat} g)`);
+              lines.push(`  Kohlenhydrate: ${suggestion.makros.carbs} g (davon Zucker ${suggestion.makros.sugar} g)`);
+              lines.push(`  Ballaststoffe: ${suggestion.makros.fiber} g`);
+              lines.push(`  Salz: ${suggestion.makros.salt} g`);
+            }
+            if (suggestion.warnungen?.length) {
+              lines.push("");
+              lines.push("ERNÄHRUNGSHINWEISE:");
+              suggestion.warnungen.forEach(w => lines.push(`  • ${w.text}`));
+            }
+            lines.push("");
+            lines.push("QUELLEN:");
+            DATA_SOURCES.forEach(s => lines.push(`  - ${s}`));
+            lines.push("");
+            lines.push(`HAFTUNGSAUSSCHLUSS: ${DATA_DISCLAIMER}`);
+            if (isReviewed) {
+              lines.push("");
+              lines.push(`MANUELL GEPRÜFT: ${new Date(review.date).toLocaleString("de-DE")}`);
+              if (review.by) lines.push(`VON: ${review.by}`);
+            }
+            return lines.join("\n");
+          };
+
+          const toggleReview = () => {
+            const next = { ...reviewedRecipes };
+            if (isReviewed) {
+              delete next[reviewKey];
+            } else {
+              next[reviewKey] = {
+                date: new Date().toISOString(),
+                by: profile.name || "Nutzer",
+              };
+            }
+            setReviewedRecipes(next);
+            save(K.reviewed, next);
+          };
+
+          const exportToClipboard = async () => {
+            try {
+              await navigator.clipboard.writeText(exportText());
+              alert("Gastro-Kennzeichnung in Zwischenablage kopiert ✓");
+            } catch {
+              alert("Kopieren fehlgeschlagen – bitte manuell markieren.");
+            }
+          };
+
+          return (
+            <Card anim="fadeUp" delay="0.36s" style={{ marginBottom: "12px", background: "rgba(0,0,0,0.02)", border: "1px solid var(--card-border)" }}>
+              <ST sub="LMIV-konform, für Gastronomie und Privatgebrauch">📋 Quellen & Nachweis</ST>
+
+              <div style={{ marginTop: "10px", fontSize: "11px", color: "var(--ink3)", lineHeight: 1.55 }}>
+                <p style={{ margin: 0, fontWeight: 600, color: "var(--ink2)", marginBottom: "4px" }}>Datenquellen:</p>
+                <ul style={{ margin: 0, paddingLeft: "16px" }}>
+                  {DATA_SOURCES.map((s, i) => <li key={i} style={{ marginBottom: "2px" }}>{s}</li>)}
+                </ul>
+              </div>
+
+              <div style={{ marginTop: "12px", padding: "10px 12px", borderRadius: "8px", background: "rgba(196,64,64,0.06)", border: "1px solid rgba(196,64,64,0.15)", fontSize: "11px", color: "var(--ink2)", lineHeight: 1.5 }}>
+                <strong style={{ color: "#C44040" }}>⚠️ Haftungsausschluss:</strong> {DATA_DISCLAIMER}
+              </div>
+
+              <div style={{ marginTop: "12px", display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                <button onClick={toggleReview} style={{
+                  display: "inline-flex", alignItems: "center", gap: "6px",
+                  padding: "8px 14px", borderRadius: "20px",
+                  border: isReviewed ? "2px solid #228B22" : "1px solid var(--card-border)",
+                  background: isReviewed ? "rgba(34,139,34,0.1)" : "var(--card)",
+                  color: isReviewed ? "#228B22" : "var(--ink3)",
+                  fontSize: "12px", fontWeight: isReviewed ? 600 : 500,
+                  fontFamily: "'Outfit',sans-serif", cursor: "pointer",
+                }}>
+                  {isReviewed ? "✓ Manuell geprüft" : "☐ Manuell prüfen & freigeben"}
+                </button>
+                <button onClick={exportToClipboard} style={{
+                  display: "inline-flex", alignItems: "center", gap: "6px",
+                  padding: "8px 14px", borderRadius: "20px",
+                  border: "1px solid var(--card-border)",
+                  background: "var(--card)",
+                  color: "var(--ink2)",
+                  fontSize: "12px", fontWeight: 500,
+                  fontFamily: "'Outfit',sans-serif", cursor: "pointer",
+                }}>📄 Gastro-Export</button>
+              </div>
+
+              {isReviewed && (
+                <p style={{ marginTop: "10px", fontSize: "11px", color: "#228B22", fontWeight: 500 }}>
+                  Geprüft am {new Date(review.date).toLocaleDateString("de-DE")} von {review.by || "Nutzer"}
+                </p>
+              )}
+            </Card>
+          );
+        })()}
 
         {/* Bottom actions */}
         <div style={{ display: "flex", flexDirection: "column", gap: "8px", animation: "fadeUp 0.5s ease both", animationDelay: "0.35s" }}>
