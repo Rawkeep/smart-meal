@@ -191,6 +191,27 @@ const ChipGrid = ({ options, selected, onToggle, multi = true, showSub, colorMap
   </div>
 );
 
+// Select-all / clear toggle for multi-select chip lists (e.g. allergies)
+const BulkToggle = ({ options, selected, onSelectAll, onClear, label = "Allergien" }) => {
+  const allSelected = options.length > 0 && options.every(o => selected.includes(o.id));
+  const noneSelected = selected.length === 0;
+  return (
+    <div style={{ display: "flex", gap: "8px", marginBottom: "10px", flexWrap: "wrap" }}>
+      <Chip
+        small
+        active={allSelected}
+        onClick={allSelected ? onClear : onSelectAll}
+        color="#C44040"
+      >
+        {allSelected ? `✓ Alle ${label} ausgewählt` : `✅ Alle ${label} auswählen`}
+      </Chip>
+      {!noneSelected && !allSelected && (
+        <Chip small onClick={onClear} color="#8A8070">✕ Zurücksetzen</Chip>
+      )}
+    </div>
+  );
+};
+
 const Card = ({ children, style, anim, delay }) => (
   <div style={{
     background: "var(--card)",
@@ -501,7 +522,30 @@ export default function App() {
   const [apiKey, setApiKey] = useState("");
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [offlineMode, setOfflineMode] = useState(false);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
   const mounted = useRef(false);
+
+  // ─── Network status listener ───
+  // Auto-flip to offline AI when the device drops connectivity, and flip back
+  // to online mode when the network returns (but only if the user didn't
+  // explicitly pin offline mode during the session).
+  const offlinePinnedByUser = useRef(false);
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      if (!offlinePinnedByUser.current) setOfflineMode(false);
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      setOfflineMode(true);
+    };
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   // ─── Init ───
   useEffect(() => {
@@ -666,7 +710,17 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
 
     if (m === "plan") return `${base}\n\nWOCHENPLAN: 5 Werktage (Mo–Fr), je Frühstück/Mittag/Abend. Budget: ${BUDGETS.find(b => b.id === budget)?.label || "normal"}. Abwechslungsreich!\n\nNUR JSON:\n{"plan":[{"tag":"Montag","frühstück":{"name":"...","emoji":"...","zeit":"XX Min"},"mittag":{"name":"...","emoji":"...","zeit":"XX Min"},"abend":{"name":"...","emoji":"...","zeit":"XX Min"}},...],  "einkaufsliste":["Zutat 1","Zutat 2",...]}`;
 
-    return `${base}\n\n- Mahlzeit: ${MEALS.find(x => x.id === meal)?.label || ""}\n- Kochzeit: ${TIMES.find(x => x.id === cookTime)?.label || ""}\n- Stimmung: ${MOODS.find(x => x.id === mood)?.label || ""}\n- Budget: ${BUDGETS.find(x => x.id === budget)?.label || ""}\n${recent ? `- NICHT wiederholen: ${recent}` : ""}\n\nNUR JSON:\n{"name":"...","beschreibung":"1 Satz","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","weinempfehlung":"passender Wein/Getränk","gesundheitshinweis":"..."}`;
+    const mealLabel = MEALS.find(x => x.id === meal)?.label || "";
+    const mealRule = meal === "frühstück"
+      ? "STRIKT ein FRÜHSTÜCK – typische Frühstücksgerichte (Porridge, Müsli, Overnight Oats, Bowl, Joghurt, Toast, Rührei, Pancakes, Shakshuka, Croque). KEIN Mittag- oder Abendessen, KEINE Pasta/Pizza/Eintöpfe/Currys/Steaks als Hauptgericht."
+      : meal === "mittag"
+      ? "STRIKT ein MITTAGESSEN – sättigend, ausgewogen. KEIN Frühstück (keine Porridge/Pancakes/Müsli)."
+      : meal === "abend"
+      ? "STRIKT ein ABENDESSEN – warm oder kalt, eher leichter als Mittag. KEIN Frühstück."
+      : meal === "snack"
+      ? "STRIKT ein SNACK – kleine Portion, keine vollständige Hauptmahlzeit."
+      : "";
+    return `${base}\n\n- Mahlzeit: ${mealLabel} → ${mealRule}\n- Kochzeit: ${TIMES.find(x => x.id === cookTime)?.label || ""}\n- Stimmung: ${MOODS.find(x => x.id === mood)?.label || ""}\n- Budget: ${BUDGETS.find(x => x.id === budget)?.label || ""}\n${recent ? `- NICHT wiederholen: ${recent}` : ""}\n\nNUR JSON:\n{"name":"...","beschreibung":"1 Satz","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","weinempfehlung":"passender Wein/Getränk","gesundheitshinweis":"..."}`;
   }, [profile, guestMode, guestAllergies, guestHistamin, guestDiet, history, persons, fridgeInput, selectedIngredients, budget, meal, cookTime, mood]);
 
   // ─── Backend availability check ───
@@ -869,6 +923,13 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
       {
         t: "Unverträglichkeiten", s: "Was verträgst du nicht?",
         c: <>
+          <BulkToggle
+            options={ALLERGIES}
+            selected={profile.allergies}
+            onSelectAll={() => setProfile(p => ({ ...p, allergies: ALLERGIES.map(a => a.id) }))}
+            onClear={() => setProfile(p => ({ ...p, allergies: [] }))}
+            label="Allergien"
+          />
           <ChipGrid options={ALLERGIES} selected={profile.allergies} onToggle={id => setProfile(p => ({ ...p, allergies: toggle(p.allergies, id) }))} />
           <div style={{ marginTop: "14px" }}>
             <Chip active={profile.histamin} onClick={() => setProfile(p => ({ ...p, histamin: !p.histamin }))} color="#C44040">⚠️ Histaminintoleranz</Chip>
@@ -877,7 +938,16 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
       },
       {
         t: "Nussallergien", s: "Welche Nüsse verträgst du nicht? (Einzeln wählbar)",
-        c: <ChipGrid options={NUT_ALLERGIES} selected={profile.nutAllergies || []} onToggle={id => setProfile(p => ({ ...p, nutAllergies: toggle(p.nutAllergies || [], id) }))} />,
+        c: <>
+          <BulkToggle
+            options={NUT_ALLERGIES}
+            selected={profile.nutAllergies || []}
+            onSelectAll={() => setProfile(p => ({ ...p, nutAllergies: NUT_ALLERGIES.map(n => n.id) }))}
+            onClear={() => setProfile(p => ({ ...p, nutAllergies: [] }))}
+            label="Nüsse"
+          />
+          <ChipGrid options={NUT_ALLERGIES} selected={profile.nutAllergies || []} onToggle={id => setProfile(p => ({ ...p, nutAllergies: toggle(p.nutAllergies || [], id) }))} />
+        </>,
       },
       {
         t: "Ernährungsform", s: "Wie ernährst du dich?",
@@ -1120,6 +1190,13 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
         </Card>
         <Card anim="fadeUp" delay="0.05s">
           <ST sub="Was du nicht verträgst">⚠️ Allergien</ST>
+          <BulkToggle
+            options={ALLERGIES}
+            selected={profile.allergies}
+            onSelectAll={() => setProfile(p => ({ ...p, allergies: ALLERGIES.map(a => a.id) }))}
+            onClear={() => setProfile(p => ({ ...p, allergies: [] }))}
+            label="Allergien"
+          />
           <ChipGrid options={ALLERGIES} selected={profile.allergies} onToggle={id => setProfile(p => ({ ...p, allergies: toggle(p.allergies, id) }))} />
           <div style={{ marginTop: "12px" }}>
             <Chip active={profile.histamin} onClick={() => setProfile(p => ({ ...p, histamin: !p.histamin }))} color="#C44040">⚠️ Histaminintoleranz</Chip>
@@ -1127,6 +1204,13 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
         </Card>
         <Card anim="fadeUp" delay="0.08s">
           <ST sub="Einzeln auswählbar">🥜 Nussallergien</ST>
+          <BulkToggle
+            options={NUT_ALLERGIES}
+            selected={profile.nutAllergies || []}
+            onSelectAll={() => setProfile(p => ({ ...p, nutAllergies: NUT_ALLERGIES.map(n => n.id) }))}
+            onClear={() => setProfile(p => ({ ...p, nutAllergies: [] }))}
+            label="Nüsse"
+          />
           <ChipGrid options={NUT_ALLERGIES} selected={profile.nutAllergies || []} onToggle={id => setProfile(p => ({ ...p, nutAllergies: toggle(p.nutAllergies || [], id) }))} />
         </Card>
         <Card anim="fadeUp" delay="0.1s">
@@ -1195,6 +1279,13 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
           Füge die Einschränkungen deiner Gäste hinzu. Diese werden mit deinen kombiniert.
         </p>
         <ST>Gäste-Allergien</ST>
+        <BulkToggle
+          options={ALLERGIES}
+          selected={guestAllergies}
+          onSelectAll={() => setGuestAllergies(ALLERGIES.map(a => a.id))}
+          onClear={() => setGuestAllergies([])}
+          label="Allergien"
+        />
         <ChipGrid options={ALLERGIES} selected={guestAllergies} onToggle={id => setGuestAllergies(a => toggle(a, id))} />
         <div style={{ marginTop: "12px" }}>
           <Chip active={guestHistamin} onClick={() => setGuestHistamin(h => !h)} color="#C44040">⚠️ Histaminintoleranz</Chip>
@@ -1309,19 +1400,41 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
           </div>
 
           {/* Offline Intelligence Toggle */}
-          <div style={{ marginTop: "8px", display: "flex", justifyContent: "center" }}>
-            <button onClick={() => setOfflineMode(!offlineMode)} style={{
-              display: "flex", alignItems: "center", gap: "6px",
-              padding: "6px 14px", borderRadius: "20px",
-              border: offlineMode ? "2px solid var(--accent)" : "1px solid var(--card-border)",
-              background: offlineMode ? "linear-gradient(135deg,rgba(200,97,26,0.08),rgba(245,166,35,0.08))" : "var(--card)",
-              color: offlineMode ? "var(--accent)" : "var(--ink3)",
-              fontSize: "12px", fontWeight: offlineMode ? 600 : 400,
-              fontFamily: "'Outfit',sans-serif", cursor: "pointer", transition: "all 0.25s ease",
-            }}>
+          <div style={{ marginTop: "8px", display: "flex", justifyContent: "center", gap: "8px", flexWrap: "wrap" }}>
+            <button
+              onClick={() => {
+                const next = !offlineMode;
+                setOfflineMode(next);
+                offlinePinnedByUser.current = next;
+              }}
+              disabled={!isOnline}
+              style={{
+                display: "flex", alignItems: "center", gap: "6px",
+                padding: "6px 14px", borderRadius: "20px",
+                border: offlineMode ? "2px solid var(--accent)" : "1px solid var(--card-border)",
+                background: offlineMode ? "linear-gradient(135deg,rgba(200,97,26,0.08),rgba(245,166,35,0.08))" : "var(--card)",
+                color: offlineMode ? "var(--accent)" : "var(--ink3)",
+                fontSize: "12px", fontWeight: offlineMode ? 600 : 400,
+                fontFamily: "'Outfit',sans-serif",
+                cursor: isOnline ? "pointer" : "not-allowed",
+                opacity: isOnline ? 1 : 0.85,
+                transition: "all 0.25s ease",
+              }}
+            >
               <span style={{ fontSize: "14px" }}>{offlineMode ? "🧠" : "📡"}</span>
               {offlineMode ? "Offline-KI aktiv" : "Online-Modus"}
             </button>
+            {!isOnline && (
+              <span style={{
+                display: "flex", alignItems: "center", gap: "4px",
+                padding: "6px 12px", borderRadius: "20px",
+                background: "rgba(196,64,64,0.1)", color: "#C44040",
+                fontSize: "11px", fontWeight: 600, fontFamily: "'Outfit',sans-serif",
+                border: "1px solid rgba(196,64,64,0.25)",
+              }}>
+                🔌 Kein Netz – Offline-Modus
+              </span>
+            )}
           </div>
         </div>
 

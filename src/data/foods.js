@@ -163,4 +163,62 @@ export const FOODS = [
   { id: "mandelmus", name: "Mandelmus", emoji: "🌰", category: "sonstiges", histamin: "none", allergies: ["mandel"], tags: ["vegan", "vegetarisch"], season: [] },
   { id: "mehl", name: "Mehl", emoji: "🌾", category: "sonstiges", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
   { id: "backpulver", name: "Backpulver", emoji: "🧂", category: "sonstiges", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
+
+  // ═══ DATABASE EXPANSION v1.1 — 40 additional foods ═══
+
+  // Gemüse
+  { id: "artischocke", name: "Artischocke", emoji: "🌿", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "lowcarb"], season: [4, 5, 6, 7, 8] },
+  { id: "okra", name: "Okra", emoji: "🌶️", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "lowcarb"], season: [6, 7, 8, 9] },
+  { id: "rucola", name: "Rucola", emoji: "🌿", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "lowcarb"], season: [3, 4, 5, 6, 7, 8] },
+  { id: "feldsalat", name: "Feldsalat", emoji: "🥬", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "lowcarb"], season: [0, 1, 2, 9, 10, 11] },
+  { id: "eisbergsalat", name: "Eisbergsalat", emoji: "🥬", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "lowcarb"], season: [4, 5, 6, 7, 8, 9] },
+  { id: "endivie", name: "Endivie", emoji: "🥬", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "lowcarb"], season: [8, 9, 10, 11] },
+  { id: "pastinake", name: "Pastinake", emoji: "🥕", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [0, 1, 9, 10, 11] },
+  { id: "topinambur", name: "Topinambur", emoji: "🥔", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [0, 1, 10, 11] },
+  { id: "chinakohl_napa", name: "Napa-Kohl", emoji: "🥬", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "lowcarb"], season: [8, 9, 10, 11] },
+  { id: "ingwer_food", name: "Ingwer", emoji: "🫚", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "lowcarb"], season: [] },
+  { id: "kurkuma_food", name: "Kurkuma (frisch)", emoji: "🫚", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "lowcarb"], season: [] },
+  { id: "frühlingszwiebel", name: "Frühlingszwiebel", emoji: "🧅", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "lowcarb"], season: [3, 4, 5, 6, 7, 8, 9] },
+  { id: "edamame", name: "Edamame", emoji: "🫛", category: "gemüse", histamin: "none", allergies: ["soja"], tags: ["vegan", "vegetarisch", "lowcarb"], season: [] },
+
+  // Obst
+  { id: "granatapfel", name: "Granatapfel", emoji: "🔴", category: "obst", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [9, 10, 11] },
+  { id: "feige", name: "Feige", emoji: "🟣", category: "obst", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [7, 8, 9] },
+  { id: "dattel", name: "Dattel", emoji: "🟤", category: "obst", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
+  { id: "brombeere", name: "Brombeeren", emoji: "🫐", category: "obst", histamin: "medium", allergies: [], tags: ["vegan", "vegetarisch"], season: [6, 7, 8] },
+  { id: "johannisbeere", name: "Johannisbeeren", emoji: "🔴", category: "obst", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [5, 6, 7] },
+  { id: "rhabarber", name: "Rhabarber", emoji: "🥬", category: "obst", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [3, 4, 5] },
+  { id: "limette", name: "Limette", emoji: "🟢", category: "obst", histamin: "high", allergies: ["histamin"], tags: ["vegan", "vegetarisch", "lowcarb"], season: [] },
+  { id: "papaya", name: "Papaya", emoji: "🟠", category: "obst", histamin: "medium", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
+
+  // Protein
+  { id: "pute", name: "Putenbrust", emoji: "🦃", category: "protein", histamin: "none", allergies: [], tags: ["fleisch", "lowcarb", "keto", "halal"], season: [] },
+  { id: "ente", name: "Ente", emoji: "🦆", category: "protein", histamin: "low", allergies: [], tags: ["fleisch", "lowcarb", "keto"], season: [] },
+  { id: "forelle", name: "Forelle", emoji: "🐟", category: "protein", histamin: "low", allergies: ["fisch"], tags: ["fisch", "lowcarb", "keto", "pescetarisch"], season: [] },
+  { id: "seelachs", name: "Seelachs", emoji: "🐟", category: "protein", histamin: "low", allergies: ["fisch"], tags: ["fisch", "lowcarb", "keto", "pescetarisch"], season: [] },
+  { id: "miesmuschel", name: "Miesmuscheln", emoji: "🐚", category: "protein", histamin: "high", allergies: ["fisch", "histamin"], tags: ["fisch", "lowcarb", "pescetarisch"], season: [8, 9, 10, 11, 0, 1] },
+  { id: "tempeh", name: "Tempeh", emoji: "🫘", category: "protein", histamin: "high", allergies: ["soja", "histamin"], tags: ["vegan", "vegetarisch", "proteinreich"], season: [] },
+  { id: "seitan", name: "Seitan", emoji: "🟫", category: "protein", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch", "proteinreich"], season: [] },
+  { id: "halloumi", name: "Halloumi", emoji: "🧀", category: "protein", histamin: "medium", allergies: ["laktose"], tags: ["vegetarisch", "lowcarb", "keto"], season: [] },
+
+  // Milch
+  { id: "quark", name: "Magerquark", emoji: "🥛", category: "milch", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch", "proteinreich"], season: [] },
+  { id: "ricotta", name: "Ricotta", emoji: "🧀", category: "milch", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch"], season: [] },
+  { id: "skyr", name: "Skyr", emoji: "🥛", category: "milch", histamin: "low", allergies: ["laktose"], tags: ["vegetarisch", "proteinreich"], season: [] },
+  { id: "hafermilch", name: "Hafermilch", emoji: "🥛", category: "milch", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
+  { id: "mandelmilch", name: "Mandelmilch", emoji: "🥛", category: "milch", histamin: "none", allergies: ["mandel"], tags: ["vegan", "vegetarisch"], season: [] },
+  { id: "sojamilch", name: "Sojamilch", emoji: "🥛", category: "milch", histamin: "none", allergies: ["soja"], tags: ["vegan", "vegetarisch"], season: [] },
+
+  // Getreide
+  { id: "couscous", name: "Couscous", emoji: "🌾", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
+  { id: "bulgur", name: "Bulgur", emoji: "🌾", category: "getreide", histamin: "none", allergies: ["gluten"], tags: ["vegan", "vegetarisch"], season: [] },
+  { id: "polenta", name: "Polenta", emoji: "🌽", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
+  { id: "nori", name: "Nori-Blätter", emoji: "🟢", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "lowcarb"], season: [] },
+  { id: "reisnudeln", name: "Reisnudeln", emoji: "🍜", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
+  { id: "glasnudeln", name: "Glasnudeln", emoji: "🍜", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
+
+  // Hülsenfrüchte
+  { id: "weisse_bohnen", name: "Weiße Bohnen", emoji: "🫘", category: "hülsenfrüchte", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
+  { id: "schwarze_bohnen", name: "Schwarze Bohnen", emoji: "🫘", category: "hülsenfrüchte", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
+  { id: "gruene_linsen", name: "Grüne Linsen", emoji: "🫘", category: "hülsenfrüchte", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
 ];
