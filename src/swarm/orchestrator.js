@@ -158,6 +158,23 @@ function fillSlot(slot, safeFoods, context, selectedFoods, templateCuisine, temp
       const breakfastProteins = candidates.filter((f) => f.tags?.includes("protein-frühstück"));
       if (breakfastProteins.length > 0) candidates = breakfastProteins;
     }
+
+    // Cuisine coherence: a Ramen or Pad Thai must never pick Kohlrabi,
+    // Rosenkohl or Rote Bete as its vegetable. Exclude central-European
+    // winter vegetables from clearly Asian templates unless explicitly
+    // preferred.
+    const asianCuisines = ["asiatisch", "japanisch", "koreanisch", "thai", "indisch"];
+    if (slot.category === "gemüse" && template?.cuisines?.some((c) => asianCuisines.includes(c))) {
+      const nonEuropean = ["kohlrabi", "rosenkohl", "rote_bete", "grünkohl", "sellerie", "mangold", "pastinake", "topinambur", "rhabarber", "spargel"];
+      const filtered = candidates.filter((f) => !nonEuropean.includes(f.id));
+      if (filtered.length > 0) candidates = filtered;
+    }
+    // Same idea for Mexican/West-African where those veggies never feature.
+    if (slot.category === "gemüse" && template?.cuisines?.some((c) => ["mexikanisch", "westafrikanisch", "karibisch"].includes(c))) {
+      const nonEuropean = ["kohlrabi", "rosenkohl", "rote_bete", "grünkohl", "sellerie", "mangold", "pastinake", "rhabarber", "spargel"];
+      const filtered = candidates.filter((f) => !nonEuropean.includes(f.id));
+      if (filtered.length > 0) candidates = filtered;
+    }
   }
 
   // Handle fixed food
@@ -195,8 +212,17 @@ function fillSlot(slot, safeFoods, context, selectedFoods, templateCuisine, temp
 function fillTemplate(template, slotFills) {
   const roleToNames = {};
 
+  // Natural German list joining: "A", "A und B", "A, B und C" — instead of
+  // the clumsy "A und B und C und D" from a naive join.
+  const joinNames = (names) => {
+    if (names.length === 0) return "";
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return `${names[0]} und ${names[1]}`;
+    return `${names.slice(0, -1).join(", ")} und ${names[names.length - 1]}`;
+  };
+
   for (const [role, foods] of Object.entries(slotFills)) {
-    roleToNames[role] = foods.map((f) => f.name).join(" und ");
+    roleToNames[role] = joinNames(foods.map((f) => f.name));
   }
 
   // Whether a step depends on a slot that never got filled — used to drop
@@ -410,14 +436,21 @@ export async function orchestrate(context) {
 
   // 6. Assemble the suggestion
   const filled = fillTemplate(template, slotFills);
-  const allFoodIds = selectedFoods.map((f) => f.id);
-  const nutrition = estimateNutrition(allFoodIds, context.persons || 2);
+  const persons = context.persons || 2;
 
-  // Build ingredient list with approximate quantities
-  const zutaten = selectedFoods.map((f) => {
-    const portion = getApproxPortion(f, context.persons || 2);
-    return `${portion} ${f.name}`;
-  });
+  // Build ingredient list with approximate quantities and keep the exact
+  // gram figure so the nutrition calc matches the plate (no more 100 g
+  // reference values when the recipe actually uses 300 g).
+  const zutaten = [];
+  const portionRecords = [];
+  for (const f of selectedFoods) {
+    const { label, grams } = getApproxPortion(f, persons);
+    zutaten.push(`${label} ${f.name}`);
+    portionRecords.push({ id: f.id, grams });
+  }
+
+  const nutrition = estimateNutrition(portionRecords, persons);
+  const allFoodIds = selectedFoods.map((f) => f.id);
 
   // Diet tags
   const tags = [];
@@ -426,6 +459,9 @@ export async function orchestrate(context) {
   if (selectedFoods.some((f) => f.tags?.includes("lowcarb"))) tags.push("lowcarb");
   if (selectedFoods.some((f) => f.tags?.includes("keto"))) tags.push("keto");
   tags.push(...(template.tags || []).filter((t) => !tags.includes(t)));
+
+  // Health warnings surfaced directly on the card so the user sees them.
+  const warnings = buildHealthWarnings(template, selectedFoods, nutrition);
 
   const healthHint = generateHealthHint(selectedFoods, context);
   const wineHint = generateWineHint(template, selectedFoods);
@@ -436,8 +472,19 @@ export async function orchestrate(context) {
     zutaten,
     schritte: filled.schritte,
     zeit: template.zeit,
-    kalorien: `ca. ${nutrition.kcal} kcal`,
-    protein: `ca. ${nutrition.protein} g`,
+    kalorien: `ca. ${nutrition.kcalPerPerson} kcal / Person`,
+    protein: `ca. ${nutrition.proteinPerPerson} g / Person`,
+    makros: {
+      kcal: nutrition.kcalPerPerson,
+      protein: nutrition.proteinPerPerson,
+      fat: nutrition.fatPerPerson,
+      satFat: Math.round((nutrition.satFat / persons) * 10) / 10,
+      carbs: nutrition.carbsPerPerson,
+      sugar: Math.round((nutrition.sugar / persons) * 10) / 10,
+      fiber: nutrition.fiberPerPerson,
+      salt: nutrition.saltPerPerson,
+      coverage: nutrition.coverage,
+    },
     tipp: generateCookingTip(template, selectedFoods),
     emoji: template.emoji,
     schwierigkeit: template.schwierigkeit,
@@ -445,6 +492,7 @@ export async function orchestrate(context) {
     herkunft: template.herkunft,
     weinempfehlung: wineHint,
     gesundheitshinweis: healthHint,
+    warnungen: warnings,
     _offline: true,
     _templateId: template.id,
     _foodIds: allFoodIds,
@@ -457,66 +505,137 @@ export async function orchestrate(context) {
 }
 
 /**
- * Get approximate portion string for a food. Per-food overrides take
- * precedence over the category default, so "Wurst" shows "4 Scheiben"
- * instead of the generic "300g" pasta-sized portion.
+ * Per-food portion overrides. Each entry returns BOTH the display label
+ * shown in the ingredient list AND the actual grams consumed so the
+ * nutrition engine sees the same quantity the reader sees.
+ *
+ * Values tuned to realistic single-portion chef standards (Ei: 2/Person
+ * for breakfast-size scramble, Hähnchen: 150g/Person raw, Parmesan: 15g
+ * grated per plate, Olivenöl: 1 EL = 10g total for searing).
  */
 const PORTION_OVERRIDES = {
-  // proteins sold in slices/pieces
-  wurst: (p) => `${2 * p} Scheiben`,
-  schinken: (p) => `${2 * p} Scheiben`,
-  speck: (p) => `${2 * p} Scheiben`,
-  räucherlachs: (p) => `${60 * p}g`,
-  ei: (p) => `${p} Stück`,
-  frischkäse_p: (p) => `${30 * p}g`,
-  halloumi: (p) => `${80 * p}g`,
-  // cheeses (milch cat) sold in grams, not ml
-  parmesan: (p) => `${20 * p}g (gerieben)`,
-  feta: (p) => `${50 * p}g`,
-  mozzarella: (p) => `${60 * p}g`,
-  gouda: (p) => `${40 * p}g (gerieben)`,
-  cheddar: (p) => `${40 * p}g (gerieben)`,
-  frischkäse: (p) => `${30 * p}g`,
-  ricotta: (p) => `${60 * p}g`,
-  butter: () => `1 EL`,
-  sahne: (p) => `${50 * p}ml`,
-  // breakfast grains
-  haferflocken: (p) => `${50 * p}g`,
-  müsli: (p) => `${50 * p}g`,
-  granola: (p) => `${40 * p}g`,
-  brot: (p) => `${2 * p} Scheiben`,
-  vollkornbrot: (p) => `${2 * p} Scheiben`,
-  roggenbrot: (p) => `${2 * p} Scheiben`,
-  tortilla: (p) => `${p} Stück`,
-  nori: (p) => `${p} Blätter`,
-  // fruit and veg with piece-based portions
-  avocado: (p) => `${Math.max(1, Math.ceil(p / 2))} Stück`,
-  banane: (p) => `${p} Stück`,
-  zitrone: () => `1/2 Stück`,
-  limette: () => `1/2 Stück`,
-  ingwer_food: () => `ein Stück (~2 cm)`,
-  knoblauch: (p) => `${p} Zehen`,
-  zwiebel: (p) => `${Math.ceil(p / 2)} Stück`,
-  frühlingszwiebel: (p) => `${p} Stück`,
+  // Proteins in slices/pieces
+  wurst:         (p) => ({ label: `${2 * p} Scheiben`, grams: 60 * p }),
+  schinken:      (p) => ({ label: `${2 * p} Scheiben`, grams: 30 * p }),
+  speck:         (p) => ({ label: `${2 * p} Scheiben`, grams: 20 * p }),
+  räucherlachs:  (p) => ({ label: `${60 * p} g`,       grams: 60 * p }),
+  ei:            (p) => ({ label: `${3 * p} Stück`,    grams: 60 * p * 3 / p }), // 3 eggs/person, ~60g each
+  frischkäse_p:  (p) => ({ label: `${30 * p} g`,       grams: 30 * p }),
+  halloumi:      (p) => ({ label: `${80 * p} g`,       grams: 80 * p }),
+  // Hard cheeses (milch cat) sold grated, not drunk
+  parmesan:      (p) => ({ label: `${15 * p} g (gerieben)`, grams: 15 * p }),
+  feta:          (p) => ({ label: `${50 * p} g`,       grams: 50 * p }),
+  mozzarella:    (p) => ({ label: `${60 * p} g`,       grams: 60 * p }),
+  gouda:         (p) => ({ label: `${30 * p} g (gerieben)`, grams: 30 * p }),
+  cheddar:       (p) => ({ label: `${30 * p} g (gerieben)`, grams: 30 * p }),
+  frischkäse:    (p) => ({ label: `${30 * p} g`,       grams: 30 * p }),
+  ricotta:       (p) => ({ label: `${60 * p} g`,       grams: 60 * p }),
+  butter:        (p) => ({ label: `1 EL`,              grams: 15 }),
+  sahne:         (p) => ({ label: `${50 * p} ml`,      grams: 50 * p }),
+  // Breakfast grains — single-portion realism
+  haferflocken:  (p) => ({ label: `${50 * p} g`,       grams: 50 * p }),
+  müsli:         (p) => ({ label: `${50 * p} g`,       grams: 50 * p }),
+  granola:       (p) => ({ label: `${40 * p} g`,       grams: 40 * p }),
+  brot:          (p) => ({ label: `${2 * p} Scheiben`, grams: 50 * p }),
+  vollkornbrot:  (p) => ({ label: `${2 * p} Scheiben`, grams: 50 * p }),
+  roggenbrot:    (p) => ({ label: `${2 * p} Scheiben`, grams: 50 * p }),
+  tortilla:      (p) => ({ label: `${p} Stück`,        grams: 60 * p }),
+  nori:          (p) => ({ label: `${p} Blätter`,      grams: 3 * p }),
+  // Fruit & veg sold by piece
+  avocado:       (p) => ({ label: `${Math.max(1, Math.ceil(p / 2))} Stück`, grams: 80 * Math.max(1, Math.ceil(p / 2)) }),
+  banane:        (p) => ({ label: `${p} Stück`,        grams: 120 * p }),
+  zitrone:       (p) => ({ label: `1/2 Stück`,         grams: 30 }),
+  limette:       (p) => ({ label: `1/2 Stück`,         grams: 20 }),
+  ingwer_food:   (p) => ({ label: `ein Stück (~2 cm)`, grams: 10 }),
+  knoblauch:     (p) => ({ label: `${p} Zehen`,        grams: 3 * p }),
+  zwiebel:       (p) => ({ label: `${Math.ceil(p / 2)} Stück`, grams: 80 * Math.ceil(p / 2) }),
+  frühlingszwiebel:(p)=> ({ label: `${p} Stück`,       grams: 20 * p }),
+  rhabarber:     (p) => ({ label: `${150 * p} g (1-2 Stangen)`, grams: 150 * p }),
+  // Rich oils priced per tablespoon
+  olivenöl:      () => ({ label: `1-2 EL`,             grams: 15 }),
+  sesamöl:       () => ({ label: `1 TL`,               grams: 5 }),
 };
 
+/**
+ * @param {Object} food
+ * @param {number} persons
+ * @returns {{ label: string, grams: number }} — label is for the UI,
+ * grams feeds the nutrition engine.
+ */
 function getApproxPortion(food, persons) {
   if (PORTION_OVERRIDES[food.id]) {
     return PORTION_OVERRIDES[food.id](persons);
   }
-  const portionMap = {
-    protein: (p) => `${150 * p}g`,
-    gemüse: (p) => `${200 * p}g`,
-    getreide: (p) => `${80 * p}g`,
-    milch: (p) => `${100 * p}ml`,
-    hülsenfrüchte: (p) => `${100 * p}g`,
-    nüsse: (p) => `${20 * p}g`,
-    gewürze: () => "nach Geschmack",
-    obst: (p) => `${p} Stück`,
-    sonstiges: () => "nach Bedarf",
+  // Category defaults kept conservative and realistic for one meal.
+  const categoryMap = {
+    protein:       (p) => ({ label: `${150 * p} g`,   grams: 150 * p }),
+    gemüse:        (p) => ({ label: `${200 * p} g`,   grams: 200 * p }),
+    getreide:      (p) => ({ label: `${60 * p} g (roh)`, grams: 60 * p }),
+    milch:         (p) => ({ label: `${150 * p} ml`,  grams: 150 * p }),
+    hülsenfrüchte: (p) => ({ label: `${100 * p} g`,   grams: 100 * p }),
+    nüsse:         (p) => ({ label: `${20 * p} g`,    grams: 20 * p }),
+    gewürze:       () => ({ label: `nach Geschmack`,  grams: 5 }),
+    obst:          (p) => ({ label: `${p} Stück`,     grams: 120 * p }),
+    sonstiges:     () => ({ label: `nach Bedarf`,     grams: 10 }),
   };
-  const fn = portionMap[food.category] || (() => "nach Bedarf");
+  const fn = categoryMap[food.category] || (() => ({ label: "nach Bedarf", grams: 10 }));
   return fn(persons);
+}
+
+/**
+ * Surface medical/health warnings the dish should carry. Kept terse so
+ * they render inline on the card.
+ *
+ * - Processed meat (WHO Gruppe 1 carcinogen): advise moderation.
+ * - Multiple high-GI starches together: flag for diabetics.
+ * - High salt (>2.5 g/Person): surface a warning.
+ * - Large saturated fat dose (>15 g/Person): flag for heart health.
+ */
+function buildHealthWarnings(template, selectedFoods, nutrition) {
+  const warnings = [];
+  const ids = selectedFoods.map((f) => f.id);
+
+  const processedMeats = ["wurst", "speck", "schinken", "räucherlachs"];
+  const hasProcessedMeat = ids.some((id) => processedMeats.includes(id));
+  if (hasProcessedMeat) {
+    warnings.push({
+      level: "info",
+      text: "Verarbeitetes Fleisch (WHO Gruppe 1) — maximal 1-2×/Woche empfohlen.",
+    });
+  }
+
+  const highGI = ["reis", "nudeln", "kartoffel", "brot", "vollkornbrot", "roggenbrot", "couscous", "kartoffelpüree", "tortilla"];
+  const giCount = ids.filter((id) => highGI.includes(id)).length;
+  if (giCount >= 2) {
+    warnings.push({
+      level: "info",
+      text: "Mehrere stärkehaltige Komponenten — für Diabetiker ggf. Portion reduzieren.",
+    });
+  }
+
+  if ((nutrition.saltPerPerson ?? 0) > 2.5) {
+    warnings.push({
+      level: "info",
+      text: `Salzgehalt hoch (${nutrition.saltPerPerson} g/Person) — Richtwert WHO: < 5 g/Tag gesamt.`,
+    });
+  }
+
+  const satFatPerPerson = nutrition.satFat / Math.max(1, (selectedFoods.length > 0 ? (nutrition.kcal / (nutrition.kcalPerPerson || nutrition.kcal)) : 2));
+  if ((nutrition.satFat ?? 0) / Math.max(1, (nutrition.kcal / (nutrition.kcalPerPerson || 1))) > 10) {
+    warnings.push({
+      level: "info",
+      text: "Reich an gesättigten Fetten — bei Herz-Risiko seltener einplanen.",
+    });
+  }
+
+  if (ids.includes("rhabarber")) {
+    warnings.push({
+      level: "note",
+      text: "Rhabarber immer dünsten oder kochen — roh enthält er Oxalsäure.",
+    });
+  }
+
+  return warnings;
 }
 
 /**

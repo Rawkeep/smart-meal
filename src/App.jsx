@@ -1641,6 +1641,55 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
           {suggestion._fallbackFromApi && <Badge icon="🧠" text="Offline-Fallback" />}
         </div>
 
+        {/* Full macros panel */}
+        {suggestion.makros && (
+          <Card anim="fadeUp" delay="0.12s" style={{ marginBottom: "12px" }}>
+            <ST sub="pro Person">🥗 Nährwerte</ST>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: "8px", marginTop: "8px" }}>
+              {[
+                { label: "Energie", value: `${suggestion.makros.kcal} kcal` },
+                { label: "Protein", value: `${suggestion.makros.protein} g` },
+                { label: "Fett", value: `${suggestion.makros.fat} g`, sub: `davon ges. ${suggestion.makros.satFat} g` },
+                { label: "Kohlenhydrate", value: `${suggestion.makros.carbs} g`, sub: `davon Zucker ${suggestion.makros.sugar} g` },
+                { label: "Ballaststoffe", value: `${suggestion.makros.fiber} g` },
+                { label: "Salz", value: `${suggestion.makros.salt} g` },
+              ].map(m => (
+                <div key={m.label} style={{
+                  padding: "10px", borderRadius: "10px",
+                  background: "rgba(200,97,26,0.05)",
+                  border: "1px solid rgba(200,97,26,0.1)",
+                }}>
+                  <div style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 500 }}>{m.label}</div>
+                  <div style={{ fontSize: "15px", color: "var(--ink)", fontWeight: 700, fontFamily: "'Fraunces',serif" }}>{m.value}</div>
+                  {m.sub && <div style={{ fontSize: "10px", color: "var(--ink3)", marginTop: "2px" }}>{m.sub}</div>}
+                </div>
+              ))}
+            </div>
+            {suggestion.makros.coverage < 0.8 && (
+              <p style={{ fontSize: "11px", color: "var(--ink3)", marginTop: "8px" }}>
+                ⚠️ Einige Zutaten ohne Nährwert-Referenz — Werte geschätzt.
+              </p>
+            )}
+          </Card>
+        )}
+
+        {/* Health warnings */}
+        {suggestion.warnungen?.length > 0 && (
+          <Card anim="fadeUp" delay="0.13s" style={{ marginBottom: "12px" }}>
+            <ST sub="Von unserem Ernährungsberater">⚠️ Hinweise</ST>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "8px" }}>
+              {suggestion.warnungen.map((w, i) => (
+                <div key={i} style={{
+                  padding: "8px 12px", borderRadius: "8px",
+                  background: w.level === "warn" ? "rgba(196,64,64,0.08)" : "rgba(232,148,58,0.07)",
+                  border: `1px solid ${w.level === "warn" ? "rgba(196,64,64,0.18)" : "rgba(232,148,58,0.15)"}`,
+                  fontSize: "12px", color: "var(--ink2)", lineHeight: 1.5,
+                }}>{w.text}</div>
+              ))}
+            </div>
+          </Card>
+        )}
+
         {/* Actions */}
         <div style={{ display: "flex", gap: "8px", marginBottom: "12px", animation: "fadeUp 0.5s ease both", animationDelay: "0.15s" }}>
           <button onClick={() => toggleFav(suggestion)} style={{

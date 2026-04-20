@@ -103,7 +103,7 @@ export const RECIPE_TEMPLATES = [
   },
   {
     id: "toast-deluxe",
-    name: "{BEILAGE}-Toast mit {PROTEIN} und {GEMUSE1}",
+    name: "Belegter Toast mit {PROTEIN} und {GEMUSE1}",
     beschreibung: "Vollwertiger Toast mit herzhaftem Belag.",
     cuisines: ["deutsch", "mediterran"],
     mealType: "frühstück",
@@ -111,9 +111,9 @@ export const RECIPE_TEMPLATES = [
     zeit: "15 Min",
     schwierigkeit: "Leicht",
     slots: [
-      { category: "getreide", min: 1, max: 1, role: "BEILAGE" },
-      { category: "protein", min: 1, max: 1, role: "PROTEIN" },
-      { category: "gemüse", min: 1, max: 1, role: "GEMUSE1" },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", preferred: ["vollkornbrot", "brot", "roggenbrot"] },
+      { category: "protein", min: 1, max: 1, role: "PROTEIN", preferred: ["schinken", "räucherlachs", "ei", "frischkäse_p", "wurst"] },
+      { category: "gemüse", min: 1, max: 1, role: "GEMUSE1", preferred: ["tomate", "gurke", "rucola", "feldsalat", "avocado"] },
     ],
     stepsTemplate: [
       "{BEILAGE} toasten.",
