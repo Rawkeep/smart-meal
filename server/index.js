@@ -368,7 +368,7 @@ app.post("/api/recognize", apiLimiter, freemiumGuard, async (req, res) => {
 if (isProd) {
   const distPath = join(__dirname, "..", "dist");
   app.use("/smart-meal", express.static(distPath));
-  app.get("/smart-meal/*", (_req, res) => {
+  app.get("/smart-meal/*splat", (_req, res) => {
     res.sendFile(join(distPath, "index.html"));
   });
   app.get("/", (_req, res) => res.redirect("/smart-meal/"));
