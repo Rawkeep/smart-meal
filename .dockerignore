@@ -1,0 +1,11 @@
+# Lokale (Host-)Artefakte NICHT ins Build-Image — sonst werden im build-stage
+# die frisch per `npm ci` installierten Linux-node_modules überschrieben.
+node_modules
+.git
+dist
+.env
+*.log
+.github
+.claude
+docker-compose.yml
+README.md

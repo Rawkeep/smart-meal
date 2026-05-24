@@ -1,0 +1,28 @@
+# ===============================================================
+# Smart Meal — Fly.io App (Express-Server + Vite-PWA, eine Origin)
+# Kein Volume nötig (Freemium-Zähler ist In-Memory). Secrets via
+# `fly secrets set` (ACCESS_GATE_PASS, GATE_SECRET, ANTHROPIC_API_KEY).
+# ===============================================================
+app = "smart-meal"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3001"
+  FREE_DAILY_LIMIT = "10"
+  APP_URL = "https://smartmeal.rawkeep.com"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
