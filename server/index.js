@@ -147,6 +147,8 @@ if (GATE_PASS) {
   app.use(express.urlencoded({ extended: false, limit: "4kb" }));
   app.use((req, res, next) => {
     if (req.path === "/api/health") return next();
+    // Öffentlich (auch für Store-Reviewer / TWA-Verifikation): Datenschutz + Asset-Links.
+    if (req.path === "/privacy" || req.path === "/.well-known/assetlinks.json") return next();
     if (req.path === "/__gate") {
       if (req.method === "POST") {
         if (_safeEq((req.body && req.body.password) || "", GATE_PASS)) {
@@ -294,6 +296,50 @@ app.get("/api/health", (req, res) => {
     remaining: ANTHROPIC_API_KEY ? getRemainingFree(req.ip) : 0,
     dailyLimit: FREE_DAILY_LIMIT,
   });
+});
+
+// ─── Digital Asset Links (Android TWA / Play) ───
+// Muss öffentlich unter https://<domain>/.well-known/assetlinks.json liegen.
+// Fingerprint nach dem TWA-Build via `fly secrets set ANDROID_CERT_SHA256=...`.
+app.get("/.well-known/assetlinks.json", (_req, res) => {
+  res.json([
+    {
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: process.env.ANDROID_PACKAGE || "com.rawkeep.smartmeal",
+        sha256_cert_fingerprints: [
+          process.env.ANDROID_CERT_SHA256 || "REPLACE_WITH_SHA256_FINGERPRINT_AFTER_TWA_BUILD",
+        ],
+      },
+    },
+  ]);
+});
+
+// ─── Datenschutzerklärung (öffentlich, Store-Pflicht) ───
+app.get("/privacy", (_req, res) => {
+  res.setHeader("Content-Security-Policy", "default-src 'self'; style-src 'unsafe-inline'");
+  res.type("html").send(`<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Meal — Datenschutz</title></head>
+<body style="margin:0;background:#FFF8F0;color:#2a2a2a;font-family:system-ui,-apple-system,sans-serif;line-height:1.6">
+<main style="max-width:720px;margin:0 auto;padding:40px 22px">
+<h1 style="color:#C8611A">Datenschutzerklärung — Smart Meal</h1>
+<p>Smart Meal ist ein KI-gestützter Rezept-/Ernährungsassistent. Wir halten die Datenverarbeitung minimal.</p>
+<h2>Verantwortlicher</h2>
+<p>Rawkeep (Betreiber). Kontakt: <a href="mailto:datenschutz@rawkeep.com">datenschutz@rawkeep.com</a></p>
+<h2>Welche Daten verarbeitet werden</h2>
+<ul>
+<li><strong>Keine Konten, kein Tracking, keine Werbung.</strong> Es werden keine Cookies zu Analysezwecken gesetzt.</li>
+<li><strong>KI-Anfragen:</strong> Deine Eingaben (z. B. Zutaten, Vorlieben, optional Foto) werden zur Rezept-Generierung an <a href="https://www.anthropic.com/legal/privacy" rel="noopener">Anthropic (Claude API, USA)</a> übermittelt. Anthropic verarbeitet sie als Auftragsverarbeiter und nutzt API-Daten nicht zum Modelltraining.</li>
+<li><strong>Eigener API-Schlüssel (BYOK):</strong> Falls du einen eigenen Anthropic-Key eingibst, wird er nur für deine Anfragen an Anthropic verwendet und nicht serverseitig gespeichert.</li>
+<li><strong>Nutzungslimit:</strong> Für das kostenlose Kontingent wird die Anzahl Anfragen pro Tag flüchtig pro IP im Arbeitsspeicher gezählt (kein dauerhaftes Protokoll, Reset täglich).</li>
+<li><strong>Lokale Speicherung:</strong> Einstellungen, Vorlieben und Verlauf bleiben über den Browser-Speicher (localStorage) auf deinem Gerät und werden nicht an uns übertragen.</li>
+</ul>
+<h2>Weitergabe</h2>
+<p>Außer der genannten Übermittlung an Anthropic zur KI-Verarbeitung geben wir keine Daten an Dritte weiter.</p>
+<h2>Hinweis</h2>
+<p>Smart Meal ersetzt keine medizinische oder ernährungswissenschaftliche Beratung. Bei Allergien/Unverträglichkeiten Angaben stets selbst prüfen.</p>
+<p style="color:#888;font-size:13px;margin-top:28px">Stand: 2026-05. Hosting: Fly.io (Frankfurt).</p>
+</main></body></html>`);
 });
 
 // ─── Helper: call Claude with freemium or BYOK ───
