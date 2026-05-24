@@ -62,11 +62,12 @@ const allowedOrigins = isProd
   : ["http://localhost:5173", "http://localhost:3001"];
 
 app.use(cors({
+  // Nie werfen (würde 500 verursachen — auch bei Same-Origin-Form-POST wie /__gate,
+  // weil der Browser dort einen Origin-Header sendet). Erlaubte Origins bekommen
+  // CORS-Header; alle anderen laufen ohne CORS-Header durch (Same-Origin bleibt ok,
+  // echtes Cross-Origin blockt der Browser selbst).
   origin: isProd
-    ? (origin, cb) => {
-        if (!origin || allowedOrigins.includes(origin)) cb(null, true);
-        else cb(new Error("CORS not allowed"));
-      }
+    ? (origin, cb) => cb(null, !origin || allowedOrigins.includes(origin))
     : true,
   credentials: true,
 }));
