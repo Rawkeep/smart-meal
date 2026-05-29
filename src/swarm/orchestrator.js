@@ -269,6 +269,25 @@ function fillTemplate(template, slotFills) {
 }
 
 /**
+ * Pick the dish emoji from the actually chosen main ingredient instead of the
+ * template's fixed emoji. A template like "Gebratenes {PROTEIN}" with a fish
+ * emoji could get filled with chicken — without this, the card would show a
+ * fish picture on a chicken dish. The protein the user/scorer actually picked
+ * wins; templates with a fixed protein (e.g. Rührei → ei) or no swappable
+ * protein slot (breakfast bowls) keep their hand-tuned emoji.
+ */
+function resolveEmoji(template, slotFills) {
+  const proteinSlot = (template.slots || []).find(
+    (s) => s.category === "protein" && !s.fixed,
+  );
+  if (proteinSlot) {
+    const foods = slotFills[proteinSlot.role];
+    if (foods && foods.length > 0 && foods[0].emoji) return foods[0].emoji;
+  }
+  return template.emoji;
+}
+
+/**
  * Generate health hint based on profile
  */
 function generateHealthHint(selectedFoods, context) {
@@ -497,7 +516,7 @@ export async function orchestrate(context) {
     allergene: allergenLegend,
     zutatenDetail,
     tipp: generateCookingTip(template, selectedFoods),
-    emoji: template.emoji,
+    emoji: resolveEmoji(template, slotFills),
     schwierigkeit: template.schwierigkeit,
     tags,
     herkunft: template.herkunft,

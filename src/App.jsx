@@ -5,6 +5,7 @@ import { CROSS_ALLERGIES, ADDITIVES, ADDITIVE_CATEGORIES, NUTRIENT_DEFICIENCIES,
 import { generateOfflineSuggestion } from "./swarm/index";
 import { recordLike, recordDislike } from "./swarm/learning-engine";
 import { generateOfflinePlan } from "./swarm/plan-generator";
+import { PROVIDERS, DEFAULT_PROVIDER, getProvider, isValidKey, callTextProvider, callVisionProvider } from "./ai/providers";
 
 // ─── Storage Keys ───
 const K = {
@@ -14,6 +15,7 @@ const K = {
   streak: "wei-streak-v2",
   shoplist: "wei-shoplist-v2",
   apiKey: "wei-api-key",
+  provider: "wei-provider",
   reviewed: "wei-reviewed-v1",
 };
 
@@ -167,6 +169,28 @@ const save = (key, data) => {
 };
 
 // ─── UI Components ───
+const ProviderSelect = ({ value, onChange }) => (
+  <div style={{ marginBottom: "10px" }}>
+    <label style={{ display: "block", fontSize: "12px", color: "var(--ink3)", fontWeight: 500, marginBottom: "4px" }}>
+      KI-Anbieter
+    </label>
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      style={{
+        width: "100%", padding: "10px 12px", borderRadius: "var(--r)",
+        border: "2px solid var(--card-border)", background: "var(--card)",
+        fontFamily: "'Outfit',sans-serif", fontSize: "14px", color: "var(--ink)",
+        outline: "none", boxSizing: "border-box", cursor: "pointer",
+      }}
+    >
+      {PROVIDERS.map(p => (
+        <option key={p.id} value={p.id}>{p.emoji} {p.label}</option>
+      ))}
+    </select>
+  </div>
+);
+
 const Chip = ({ active, onClick, children, color, small }) => (
   <button onClick={onClick} style={{
     padding: small ? "6px 12px" : "9px 16px",
@@ -397,7 +421,7 @@ const IngredientPicker = ({ selected, onToggle, profile }) => {
 };
 
 // ─── Photo Upload Component ───
-const PhotoUpload = ({ onResult, apiKey, backendAvailable }) => {
+const PhotoUpload = ({ onResult, apiKey, backendAvailable, provider = "claude", onNeedKey }) => {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(null);
   const fileRef = useRef(null);
@@ -424,33 +448,18 @@ const PhotoUpload = ({ onResult, apiKey, backendAvailable }) => {
           body: JSON.stringify({ image: base64, mediaType: file.type }),
         });
         const d = await r.json();
-        if (d.needsKey) { setShowKeyInput(true); setUploading(false); return; }
+        if (d.needsKey) { onNeedKey?.(); setUploading(false); return; }
         items = JSON.parse(d.text.replace(/```json|```/g, "").trim());
       } else {
-        if (!apiKey) { setShowKeyInput(true); setUploading(false); return; }
-        const r = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
-            "anthropic-dangerous-direct-browser-access": "true",
-          },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 500,
-            messages: [{
-              role: "user",
-              content: [
-                { type: "image", source: { type: "base64", media_type: file.type, data: base64 } },
-                { type: "text", text: "Erkenne alle Lebensmittel/Zutaten auf diesem Foto. Antworte NUR mit einem JSON-Array der Zutatennamen auf Deutsch, z.B. [\"Tomaten\",\"Käse\",\"Hähnchenbrust\"]. Keine Erklärung, nur das Array." },
-              ],
-            }],
-          }),
+        if (!apiKey) { onNeedKey?.(); setUploading(false); return; }
+        const t = await callVisionProvider({
+          providerId: provider,
+          apiKey,
+          base64,
+          mediaType: file.type,
+          prompt: "Erkenne alle Lebensmittel/Zutaten auf diesem Foto. Antworte NUR mit einem JSON-Array der Zutatennamen auf Deutsch, z.B. [\"Tomaten\",\"Käse\",\"Hähnchenbrust\"]. Keine Erklärung, nur das Array.",
         });
-        const d = await r.json();
-        const t = d.content?.map(c => c.type === "text" ? c.text : "").join("") || "[]";
-        items = JSON.parse(t.replace(/```json|```/g, "").trim());
+        items = JSON.parse((t || "[]").replace(/```json|```/g, "").trim());
       }
       onResult(items);
     } catch (e) {
@@ -531,6 +540,7 @@ export default function App() {
   const [weekPlan, setWeekPlan] = useState(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [apiKey, setApiKey] = useState("");
+  const [provider, setProvider] = useState(DEFAULT_PROVIDER);
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [offlineMode, setOfflineMode] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
@@ -586,6 +596,8 @@ export default function App() {
     if (s) setStreak(s);
     if (sh) setShopList(sh);
     if (key) setApiKey(key);
+    const prov = load(K.provider);
+    if (prov && PROVIDERS.some(p => p.id === prov)) setProvider(prov);
     const rv = load(K.reviewed);
     if (rv) setReviewedRecipes(rv);
     setMeal(autoMeal());
@@ -652,6 +664,7 @@ export default function App() {
   const clearShopList = useCallback(() => { setShopList([]); save(K.shoplist, []); }, []);
 
   const saveApiKey = useCallback((key) => { setApiKey(key); save(K.apiKey, key); }, []);
+  const saveProvider = useCallback((id) => { setProvider(id); save(K.provider, id); }, []);
 
   // ─── Prompt Builder ───
   const buildPrompt = useCallback((m) => {
@@ -774,30 +787,12 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
       return JSON.parse(d.text.replace(/```json|```/g, "").trim());
     }
 
-    // Fallback: direct browser access (demo / GitHub Pages mode)
+    // Fallback: direct browser access (demo / GitHub Pages mode), routed to the
+    // user-selected provider (Claude / OpenAI / Gemini).
     if (!apiKey) { setShowKeyInput(true); throw new Error("Kein API-Key"); }
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1500,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    if (!r.ok) {
-      const err = await r.json().catch(() => ({}));
-      throw new Error(err.error?.message || `API Fehler: ${r.status}`);
-    }
-    const d = await r.json();
-    const t = d.content.map(c => c.type === "text" ? c.text : "").join("");
+    const t = await callTextProvider({ providerId: provider, apiKey, prompt, maxTokens: 1500 });
     return JSON.parse(t.replace(/```json|```/g, "").trim());
-  }, [apiKey, backendAvailable]);
+  }, [apiKey, backendAvailable, provider]);
 
   // ─── Generate ───
   const generate = useCallback(async (m) => {
@@ -899,13 +894,27 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
             </p>
           </div>
 
+          <div style={{
+            background: "linear-gradient(135deg,rgba(200,97,26,0.08),rgba(245,166,35,0.08))",
+            border: "1px solid rgba(200,97,26,0.15)", borderRadius: "var(--r)",
+            padding: "12px 14px", marginBottom: "16px",
+          }}>
+            <p style={{ fontSize: "12px", color: "var(--ink2)", lineHeight: 1.5, margin: 0 }}>
+              🧠 <strong>Kein Key nötig:</strong> Die App funktioniert komplett ohne API-Key.
+              Die eingebaute Offline-KI (Schwarm-Intelligenz) erstellt Rezepte direkt auf
+              deinem Gerät. Ein eigener Key schaltet zusätzlich die KI-Anbieter unten frei.
+            </p>
+          </div>
+
+          <ProviderSelect value={provider} onChange={saveProvider} />
+
           <div style={{ background: "var(--bg2)", borderRadius: "var(--r)", padding: "14px", marginBottom: "16px" }}>
             <p style={{ fontSize: "13px", color: "var(--ink)", fontWeight: 600, marginBottom: "8px" }}>So geht's (2 Minuten):</p>
             <ol style={{ paddingLeft: "18px", fontSize: "12px", color: "var(--ink2)", lineHeight: 1.8, margin: 0 }}>
-              <li>Erstelle einen Account auf <strong>console.anthropic.com</strong></li>
-              <li>Gehe zu <strong>API Keys</strong> im Menü</li>
-              <li>Klicke auf <strong>"Create Key"</strong></li>
-              <li>Kopiere den Key und füge ihn unten ein</li>
+              <li>Account auf <strong>{getProvider(provider).console}</strong> erstellen</li>
+              <li>Zu den <strong>API Keys</strong> gehen</li>
+              <li>Neuen Key erstellen</li>
+              <li>Key kopieren und unten einfügen</li>
             </ol>
           </div>
 
@@ -913,7 +922,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
             type="password"
             value={apiKey}
             onChange={e => setApiKey(e.target.value)}
-            placeholder="sk-ant-api03-..."
+            placeholder={getProvider(provider).placeholder}
             style={{
               width: "100%", padding: "12px 14px", borderRadius: "var(--r)",
               border: "2px solid var(--card-border)", background: "var(--card)",
@@ -924,14 +933,14 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
           <p style={{ fontSize: "11px", color: "var(--ink3)", marginBottom: "12px" }}>
             🔒 Dein Key bleibt lokal in deinem Browser. Er wird nie an uns gesendet.
           </p>
-          <Btn onClick={() => { saveApiKey(apiKey); setShowKeyInput(false); }} disabled={!apiKey.startsWith("sk-")}>
+          <Btn onClick={() => { saveApiKey(apiKey); setShowKeyInput(false); }} disabled={!isValidKey(provider, apiKey)}>
             Verbinden & Loslegen
           </Btn>
-          {view !== "loading" && (
-            <div style={{ marginTop: "8px" }}>
-              <Btn secondary onClick={() => setShowKeyInput(false)}>Später einrichten</Btn>
-            </div>
-          )}
+          <div style={{ marginTop: "8px" }}>
+            <Btn secondary onClick={() => { offlinePinnedByUser.current = true; setOfflineMode(true); setShowKeyInput(false); }}>
+              🧠 Ohne API-Key nutzen (Offline-KI)
+            </Btn>
+          </div>
         </Card>
       </div>
     </Layout>
@@ -1290,8 +1299,13 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
           <ChipGrid options={HEALTH_GOALS} selected={profile.goals || []} onToggle={id => setProfile(p => ({ ...p, goals: toggle(p.goals || [], id) }))} />
         </Card>
         <Card anim="fadeUp" delay="0.45s">
-          <ST sub={apiKey ? "Eigener Key aktiv — unbegrenzte Nutzung" : freemiumInfo.freemium ? `Kostenlos: ${freemiumInfo.remaining}/${freemiumInfo.dailyLimit} Anfragen heute` : "Für KI-Rezepte wird ein Key benötigt"}>🔑 API-Key (optional)</ST>
-          <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-ant-... (leer lassen für Freemium)" style={{
+          <ST sub={apiKey ? `${getProvider(provider).label} aktiv — unbegrenzte Nutzung` : freemiumInfo.freemium ? `Kostenlos: ${freemiumInfo.remaining}/${freemiumInfo.dailyLimit} Anfragen heute` : "Optional — die App läuft auch ohne Key mit Offline-KI"}>🔑 KI-Anbieter & API-Key (optional)</ST>
+          <p style={{ fontSize: "12px", color: "var(--ink3)", lineHeight: 1.5, marginBottom: "10px" }}>
+            🧠 Ohne Key erstellt die <strong>Offline-KI</strong> Rezepte direkt auf deinem Gerät.
+            Mit eigenem Key nutzt du den gewählten Anbieter für noch kreativere Vorschläge.
+          </p>
+          <ProviderSelect value={provider} onChange={saveProvider} />
+          <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder={`${getProvider(provider).placeholder} (leer lassen für Offline-KI)`} style={{
             width: "100%", padding: "10px 14px", borderRadius: "var(--r)",
             border: "2px solid var(--card-border)", background: "var(--card)",
             fontFamily: "'Outfit',sans-serif", fontSize: "14px", color: "var(--ink)",
@@ -1300,7 +1314,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
           {apiKey && <button onClick={() => { setApiKey(""); save(K.apiKey, ""); }} style={{
             marginTop: "6px", background: "none", border: "none", color: "var(--ink3)",
             fontSize: "12px", cursor: "pointer", padding: "4px 0",
-          }}>Key entfernen (zurück zu Freemium)</button>}
+          }}>Key entfernen (zurück zu Offline-KI / Freemium)</button>}
         </Card>
         <Btn onClick={() => { saveProfile(profile); saveApiKey(apiKey); setOverlay(null); }}>💾 Profil speichern</Btn>
       </div>
@@ -1369,7 +1383,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
             {guestMode && <Badge icon="👥" text="Gäste aktiv" />}
             {apiKey ? <Badge icon="🔓" text="Eigener Key" /> :
               freemiumInfo.freemium ? <Badge icon="✨" text={`${freemiumInfo.remaining}/${freemiumInfo.dailyLimit} frei`} /> :
-              <Badge icon="🔑" text="Key fehlt" />}
+              <Badge icon="🧠" text="Offline-KI" />}
           </div>
         </div>
 
@@ -1534,7 +1548,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
                 </>
               )}
               {fridgeInputMode === "photo" && (
-                <PhotoUpload apiKey={apiKey} backendAvailable={backendAvailable} onResult={addIngredientsFromPhoto} />
+                <PhotoUpload apiKey={apiKey} backendAvailable={backendAvailable} provider={provider} onNeedKey={() => setShowKeyInput(true)} onResult={addIngredientsFromPhoto} />
               )}
             </Card>
             <div style={{ animation: "fadeUp 0.4s ease both", animationDelay: "0.2s" }}>
