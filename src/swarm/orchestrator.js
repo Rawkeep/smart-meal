@@ -480,13 +480,24 @@ export async function orchestrate(context) {
   const nutrition = estimateNutrition(portionRecords, persons);
   const allFoodIds = selectedFoods.map((f) => f.id);
 
-  // Diet tags
+  // Diet tags. lowcarb/keto are gated on the ACTUAL carbs per portion, not on
+  // whether a single ingredient carries the tag — otherwise a rice paella
+  // inherits "keto" from its chicken. This also strips lowcarb/keto if a
+  // template wrongly declares them on a carb-heavy dish. keto ⊂ lowcarb.
+  const LOWCARB_MAX_CARBS = 30; // g carbs per person/meal
+  const KETO_MAX_CARBS = 15;
+  const carbsPerPerson = nutrition.carbsPerPerson;
+  const carbsAllow = (t) => {
+    if (t === "keto") return carbsPerPerson <= KETO_MAX_CARBS;
+    if (t === "lowcarb") return carbsPerPerson <= LOWCARB_MAX_CARBS;
+    return true;
+  };
   const tags = [];
   if (selectedFoods.every((f) => f.tags?.includes("vegan"))) tags.push("vegan");
   else if (selectedFoods.every((f) => !f.tags?.includes("fleisch"))) tags.push("vegetarisch");
-  if (selectedFoods.some((f) => f.tags?.includes("lowcarb"))) tags.push("lowcarb");
-  if (selectedFoods.some((f) => f.tags?.includes("keto"))) tags.push("keto");
-  tags.push(...(template.tags || []).filter((t) => !tags.includes(t)));
+  if (carbsAllow("lowcarb")) tags.push("lowcarb");
+  if (carbsAllow("keto")) tags.push("keto");
+  tags.push(...(template.tags || []).filter((t) => !tags.includes(t) && carbsAllow(t)));
 
   // Health warnings surfaced directly on the card so the user sees them.
   const warnings = buildHealthWarnings(template, selectedFoods, nutrition);
