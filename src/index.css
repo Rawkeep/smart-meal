@@ -1,27 +1,98 @@
 :root {
-  --bg1: #FAF5EE;
-  --bg2: #F5EDE0;
-  --bg3: #EDE3D2;
-  --ink: #2C2016;
-  --ink2: #5A4A38;
-  --ink3: #9A8A76;
-  --accent: #C8611A;
+  /* ─── Surfaces (warm cream, layered) ─── */
+  --bg1: #FBF6EF;
+  --bg2: #F4EADC;
+  --bg3: #E9DDC9;
+  /* ─── Ink (deeper for sharper hierarchy & AA contrast) ─── */
+  --ink: #271B11;
+  --ink2: #574836;
+  --ink3: #978573;
+  /* ─── Accent (burnt orange family) ─── */
+  --accent: #C2611A;
   --accent2: #E07A2E;
   --accent3: #F5A623;
-  --card: rgba(255, 253, 250, 0.78);
-  --card-border: rgba(200, 185, 165, 0.25);
-  --R: 20px;
-  --r: 12px;
-  --shadow: 0 8px 32px rgba(60, 40, 20, 0.07), 0 2px 8px rgba(60, 40, 20, 0.04);
+  --accent-deep: #A8500F;
+  --accent-soft: rgba(200, 97, 26, 0.08);
+  /* ─── Cards & lines ─── */
+  --card: rgba(255, 253, 249, 0.82);
+  --card-border: rgba(190, 170, 145, 0.30);
+  --line: rgba(190, 170, 145, 0.22);
+  /* ─── Radii ─── */
+  --R: 22px;
+  --r: 13px;
+  /* ─── Elevation (warm-tinted, layered) ─── */
+  --shadow-sm: 0 1px 2px rgba(58, 38, 18, 0.05), 0 2px 6px rgba(58, 38, 18, 0.04);
+  --shadow: 0 4px 14px rgba(58, 38, 18, 0.06), 0 14px 34px rgba(58, 38, 18, 0.07);
+  --shadow-lg: 0 10px 28px rgba(58, 38, 18, 0.10), 0 28px 60px rgba(58, 38, 18, 0.12);
+  --ring: 0 0 0 3px rgba(200, 97, 26, 0.32);
+  /* ─── Motion ─── */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scrollbar-color: rgba(200, 97, 26, 0.35) transparent; }
 
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: 'Outfit', sans-serif;
+  font-optical-sizing: auto;
   background: var(--bg1);
+  text-rendering: optimizeLegibility;
+}
+
+/* ─── Subtle paper grain for atmosphere (sits behind app content) ─── */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+}
+
+/* ─── Typography rhythm ─── */
+h1, h2, h3, h4 { text-wrap: balance; }
+p { text-wrap: pretty; }
+
+/* ─── Designed interaction states (work around inline styles) ─── */
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+@media (hover: hover) {
+  button:hover { filter: brightness(1.035) saturate(1.04); }
+}
+button:active { transform: scale(0.975); }
+
+/* Accessible focus ring — overrides inline outline:none on inputs/buttons */
+:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 1px;
+  box-shadow: var(--ring);
+}
+
+/* ─── Text selection ─── */
+::selection { background: rgba(200, 97, 26, 0.22); color: var(--ink); }
+
+/* ─── Custom scrollbar (warm) ─── */
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(200, 97, 26, 0.32);
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(200, 97, 26, 0.5);
+  background-clip: content-box;
 }
 
 @keyframes fadeUp {
@@ -55,4 +126,19 @@ body {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
+}
+/* Soft breathing glow used behind the result hero */
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.08); }
+}
+
+/* ─── Respect reduced-motion preferences ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

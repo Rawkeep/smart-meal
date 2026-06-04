@@ -2144,10 +2144,17 @@ NUR JSON (kein Markdown):
     return (
       <Layout>
         {/* Hero */}
-        <div style={{ textAlign: "center", padding: "24px 0 12px", animation: "scaleIn 0.5s cubic-bezier(0.16,1,0.3,1) both" }}>
-          <div style={{ fontSize: "72px", animation: "float 3s ease infinite", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.1))" }}>{suggestion.emoji || "🍽️"}</div>
-          <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: "26px", fontWeight: 900, color: "var(--ink)", marginTop: "8px", letterSpacing: "-0.5px", lineHeight: 1.2, padding: "0 16px" }}>{suggestion.name}</h1>
-          <p style={{ fontSize: "14px", color: "var(--ink3)", marginTop: "6px", lineHeight: 1.5, padding: "0 20px" }}>{suggestion.beschreibung}</p>
+        <div style={{ textAlign: "center", padding: "28px 0 12px", animation: "scaleIn 0.5s cubic-bezier(0.16,1,0.3,1) both", position: "relative" }}>
+          {/* Soft warm glow behind the dish emoji */}
+          <div style={{
+            position: "absolute", top: "10px", left: "50%", transform: "translateX(-50%)",
+            width: "180px", height: "180px", borderRadius: "50%", pointerEvents: "none",
+            background: "radial-gradient(circle, rgba(245,166,35,0.35) 0%, rgba(200,97,26,0.12) 45%, transparent 70%)",
+            filter: "blur(8px)", animation: "glowPulse 5s ease-in-out infinite", zIndex: 0,
+          }} />
+          <div style={{ position: "relative", fontSize: "76px", animation: "float 3s ease infinite", filter: "drop-shadow(0 8px 18px rgba(120,70,20,0.18))" }}>{suggestion.emoji || "🍽️"}</div>
+          <h1 style={{ position: "relative", fontFamily: "'Fraunces',serif", fontSize: "27px", fontWeight: 900, color: "var(--ink)", marginTop: "10px", letterSpacing: "-0.5px", lineHeight: 1.15, padding: "0 16px" }}>{suggestion.name}</h1>
+          <p style={{ position: "relative", fontSize: "14px", color: "var(--ink2)", marginTop: "8px", lineHeight: 1.55, padding: "0 22px", fontStyle: "italic", fontFamily: "'Fraunces',serif", fontWeight: 400 }}>{suggestion.beschreibung}</p>
         </div>
 
         {/* Meta */}
