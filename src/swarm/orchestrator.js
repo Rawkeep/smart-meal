@@ -24,6 +24,7 @@ import { estimateNutrition } from "./nutrition-data";
 import { getFoodAllergenCodes, summarizeAllergens } from "./allergen-codes";
 import { getIngredientPreference, getTemplatePreference, recordGeneration } from "./learning-engine";
 import { NUTRIENT_DEFICIENCIES, HEALTH_GOALS } from "../data/health";
+import { enrichSteps } from "./step-detail";
 
 // Recently used template tracker (session-level)
 const recentTemplateIds = [];
@@ -509,7 +510,7 @@ export async function orchestrate(context) {
     name: filled.name,
     beschreibung: filled.beschreibung,
     zutaten,
-    schritte: filled.schritte,
+    schritte: enrichSteps(filled.schritte, context.profile),
     zeit: template.zeit,
     kalorien: `ca. ${nutrition.kcalPerPerson} kcal / Person`,
     protein: `ca. ${nutrition.proteinPerPerson} g / Person`,
