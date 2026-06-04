@@ -13,6 +13,9 @@ import { PROVIDERS, DEFAULT_PROVIDER, getProvider, isValidKey, callTextProvider,
 // so they set VITE_API_BASE to the absolute backend origin at build time.
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 const api = (path) => `${API_BASE}${path}`;
+// Store-app bypass token for the server access gate (set only in native builds).
+const APP_TOKEN = import.meta.env.VITE_APP_TOKEN || "";
+const withAppToken = (headers = {}) => (APP_TOKEN ? { ...headers, "x-app-token": APP_TOKEN } : headers);
 
 // ─── Storage Keys ───
 const K = {
@@ -25,6 +28,7 @@ const K = {
   apiKey: "wei-api-key",
   provider: "wei-provider",
   reviewed: "wei-reviewed-v1",
+  reminder: "wei-reminder-v1",
 };
 
 // Map a free-text ingredient line (e.g. "200 g Hähnchenbrust") to a food
@@ -466,7 +470,7 @@ const PhotoUpload = ({ onResult, apiKey, backendAvailable, provider = "claude", 
 
       let items;
       if (backendAvailable) {
-        const headers = { "Content-Type": "application/json" };
+        const headers = withAppToken({ "Content-Type": "application/json" });
         if (apiKey) headers["x-user-api-key"] = apiKey;
         const r = await fetch(api("/api/recognize"), {
           method: "POST",
@@ -590,6 +594,7 @@ export default function App() {
   const [importText, setImportText] = useState("");
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
+  const [reminder, setReminder] = useState({ enabled: false, time: "18:00" });
   const [weekPlan, setWeekPlan] = useState(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [apiKey, setApiKey] = useState("");
@@ -655,6 +660,8 @@ export default function App() {
     if (prov && PROVIDERS.some(p => p.id === prov)) setProvider(prov);
     const rv = load(K.reviewed);
     if (rv) setReviewedRecipes(rv);
+    const rem = load(K.reminder);
+    if (rem) setReminder(rem);
     setMeal(autoMeal());
 
     // Deep links / PWA app-shortcuts (?mode=plan|fridge|quick, ?view=shop|wellness)
@@ -776,6 +783,58 @@ export default function App() {
   const saveApiKey = useCallback((key) => { setApiKey(key); save(K.apiKey, key); }, []);
   const saveProvider = useCallback((id) => { setProvider(id); save(K.provider, id); }, []);
 
+  // ─── Daily cooking reminder (local notification, no server) ───
+  const updateReminder = useCallback(async (next) => {
+    // When enabling, ask for notification permission first.
+    if (next.enabled && !reminder.enabled) {
+      if (typeof Notification === "undefined") {
+        alert("Dieses Gerät unterstützt keine Benachrichtigungen.");
+        return;
+      }
+      if (Notification.permission !== "granted") {
+        const perm = await Notification.requestPermission();
+        if (perm !== "granted") {
+          alert("Benachrichtigungen wurden nicht erlaubt. Du kannst sie in den Geräte-Einstellungen freigeben.");
+          return;
+        }
+      }
+    }
+    setReminder(next);
+    save(K.reminder, next);
+  }, [reminder.enabled]);
+
+  // Schedule the reminder while the app/tab is alive. Reliable scheduling in
+  // the background needs the installed PWA or the native app; this is a
+  // best-effort timer that re-arms for the next day after firing.
+  useEffect(() => {
+    if (!reminder.enabled) return;
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    let timer;
+    const arm = () => {
+      const [h, m] = (reminder.time || "18:00").split(":").map(Number);
+      const now = new Date();
+      const next = new Date();
+      next.setHours(h || 18, m || 0, 0, 0);
+      if (next <= now) next.setDate(next.getDate() + 1);
+      timer = setTimeout(async () => {
+        try {
+          const opts = {
+            body: "Zeit zu kochen! Brauchst du eine Idee für heute? 🍳",
+            icon: "/smart-meal/icons/icon-192.png",
+            badge: "/smart-meal/icons/icon-192.png",
+            tag: "smart-meal-reminder",
+          };
+          const reg = await navigator.serviceWorker?.getRegistration();
+          if (reg?.showNotification) await reg.showNotification("Smart Meal 🍽️", opts);
+          else new Notification("Smart Meal 🍽️", opts);
+        } catch { /* notifications are best-effort */ }
+        arm(); // re-arm for the next day
+      }, next.getTime() - now.getTime());
+    };
+    arm();
+    return () => clearTimeout(timer);
+  }, [reminder]);
+
   // ─── Prompt Builder ───
   const buildPrompt = useCallback((m) => {
     const allAllergies = [...profile.allergies, ...(guestMode ? guestAllergies : [])];
@@ -888,7 +947,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
   const callAPI = useCallback(async (prompt, endpoint = "/api/suggest") => {
     // Try backend first (freemium or BYOK)
     if (backendAvailable) {
-      const headers = { "Content-Type": "application/json" };
+      const headers = withAppToken({ "Content-Type": "application/json" });
       if (apiKey) headers["x-user-api-key"] = apiKey;
       const r = await fetch(api(endpoint), {
         method: "POST",
@@ -1665,6 +1724,32 @@ NUR JSON (kein Markdown):
         <Card anim="fadeUp" delay="0.4s">
           <ST sub="Was du erreichen möchtest">🎯 Gesundheitsziele</ST>
           <ChipGrid options={HEALTH_GOALS} selected={profile.goals || []} onToggle={id => setProfile(p => ({ ...p, goals: toggle(p.goals || [], id) }))} />
+        </Card>
+        <Card anim="fadeUp" delay="0.42s">
+          <ST sub="Tägliche Erinnerung ans Kochen">🔔 Koch-Erinnerung</ST>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+            <Chip active={reminder.enabled} onClick={() => updateReminder({ ...reminder, enabled: !reminder.enabled })} color="#4A9A5A">
+              {reminder.enabled ? "✓ Aktiv" : "Erinnerung aktivieren"}
+            </Chip>
+            {reminder.enabled && (
+              <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "var(--ink2)" }}>
+                um
+                <input
+                  type="time"
+                  value={reminder.time}
+                  onChange={e => updateReminder({ ...reminder, time: e.target.value })}
+                  style={{
+                    padding: "8px 10px", borderRadius: "var(--r)", border: "2px solid var(--card-border)",
+                    background: "var(--card)", color: "var(--ink)", fontFamily: "'Outfit',sans-serif", fontSize: "14px",
+                  }}
+                />
+                Uhr
+              </label>
+            )}
+          </div>
+          <p style={{ fontSize: "11px", color: "var(--ink3)", marginTop: "10px", lineHeight: 1.5 }}>
+            Funktioniert am zuverlässigsten als <strong>installierte App</strong> (zum Home-Bildschirm hinzufügen). Es werden keine Daten gesendet — die Erinnerung läuft lokal auf deinem Gerät.
+          </p>
         </Card>
         <Card anim="fadeUp" delay="0.45s">
           <ST sub={apiKey ? `${getProvider(provider).label} aktiv — unbegrenzte Nutzung` : freemiumInfo.freemium ? `Kostenlos: ${freemiumInfo.remaining}/${freemiumInfo.dailyLimit} Anfragen heute` : "Optional — die App läuft auch ohne Key mit Offline-KI"}>🔑 KI-Anbieter & API-Key (optional)</ST>

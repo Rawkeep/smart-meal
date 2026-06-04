@@ -104,12 +104,19 @@ Das Passwort-Gate (`ACCESS_GATE_PASS`) schützt aktuell die **gesamte** Live-Sit
 - **TWA (Android)** lädt die Live-Site → würde im Store das Passwort verlangen ❌.
 - **Capacitor (iOS)** bündelt zwar das Frontend, ruft aber `/api` auf → Gate blockt die Calls ❌.
 
-**Entscheidung vor dem Store-Launch nötig — eine Option wählen:**
-1. **Gate ausschalten**, wenn die App öffentlich in den Stores ist: `fly secrets unset ACCESS_GATE_PASS -a smart-meal`.
-2. **Gate nur fürs Web behalten** und Store-Apps gegen einen separaten, ungegateten Backend-Host laufen lassen.
-3. Gate so anpassen, dass App-Requests (eigener Header/Token) den Türsteher passieren.
+**Gelöst: App-Token-Bypass (bereits eingebaut).** Das Gate bleibt fürs Web (Passwort),
+die Store-Apps kommen mit einem geteilten Token durch. Aktivieren:
+```bash
+# 1. Token serverseitig setzen:
+fly secrets set APP_BYPASS_TOKEN="ein-langes-zufalls-token" -a smart-meal
+```
+- **iOS (Capacitor):** mit demselben Token bauen → `VITE_APP_TOKEN` wird als `x-app-token`-Header an `/api` gesendet:
+  ```bash
+  VITE_API_BASE=https://smartmeal.rawkeep.com VITE_APP_TOKEN="…" npm run build:native
+  ```
+- **Android (TWA):** Start-URL in `twa-manifest.json` auf `"/smart-meal/?app=<TOKEN>"` setzen → der erste Aufruf setzt das Gate-Cookie, danach passieren alle Navigationen.
 
-> Sag Bescheid, welche Variante — Option 3 kann ich serverseitig umsetzen (z. B. ein App-Shared-Token statt Passwort für `/api`).
+> Hinweis: Der Token steckt im App-Bundle und ist damit kein Hochsicherheits-Geheimnis — er ist eine Komfort-Brücke. Das Web-Passwort bleibt die eigentliche Zugangskontrolle. Wer den Store-Apps gar keinen Schutz geben will, schaltet das Gate beim Launch einfach ganz aus (`fly secrets unset ACCESS_GATE_PASS`).
 
 ---
 
@@ -126,13 +133,17 @@ Optional `VITE_APP_VERSION` für Release-Tracking setzen. Es werden keine PII ge
 
 ---
 
-## 5. Push / Notifications
+## 5. Notifications
 
-Aktuell **nicht** eingebaut (bewusst — siehe README-Hinweis). Optionen:
-- **Lokale Erinnerung** (z. B. „Was kochst du heute?"): im Web unzuverlässig (kein Hintergrund-Scheduling). Im **nativen** Build sauber via `@capacitor/local-notifications`.
-- **Echte Push-Nachrichten**: brauchen VAPID-Keys + Subscription-Speicher serverseitig (Web Push) bzw. APNs/FCM (nativ).
+**Eingebaut: lokale Koch-Erinnerung.** Unter Profil → „🔔 Koch-Erinnerung" kann eine
+tägliche Erinnerung zu einer Wunschzeit aktiviert werden (fragt Notification-
+Berechtigung an, läuft komplett lokal, kein Server/VAPID). Am zuverlässigsten als
+installierte PWA / native App.
 
-→ Welche Variante gewünscht ist, kann ich gezielt umsetzen.
+**Native Upgrade (empfohlen für die Stores):** Für hintergrund-zuverlässige
+Erinnerungen im iOS/Android-Build `@capacitor/local-notifications` ergänzen und im
+Reminder-Effekt verwenden, wenn `Capacitor.isNativePlatform()` true ist. Echte
+Push-Kampagnen (Server-getrieben) bräuchten zusätzlich FCM/APNs bzw. Web-Push (VAPID).
 
 ---
 

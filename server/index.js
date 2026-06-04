@@ -94,6 +94,11 @@ const GATE_PASS = process.env.ACCESS_GATE_PASS || "";
 const GATE_SECRET = (process.env.GATE_SECRET || GATE_PASS || "dev-gate-secret") + "::" + GATE_PASS;
 const GATE_COOKIE = "sm_gate";
 const GATE_TTL_MS = 30 * 24 * 3600 * 1000;
+// Optional bypass for the published store apps (TWA/iOS): a shared token lets
+// the apps through the gate while the password still protects the shared web
+// link. Inert unless APP_BYPASS_TOKEN is set. Apps pass it via the
+// `x-app-token` header (native fetch) or `?app=<token>` query (TWA start URL).
+const APP_TOKEN = process.env.APP_BYPASS_TOKEN || "";
 const GATE_CSP = "default-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:";
 
 const _b64u = (buf) => Buffer.from(buf).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -149,6 +154,12 @@ ${msg ? `<div style="background:#7f1d1d;color:#fecaca;font-size:12px;padding:8px
 </form></body></html>`;
 }
 
+const _validAppToken = (req) => {
+  if (!APP_TOKEN) return false;
+  const t = req.get("x-app-token") || (req.query && req.query.app) || "";
+  return !!t && _safeEq(t, APP_TOKEN);
+};
+
 if (GATE_PASS) {
   app.use(express.urlencoded({ extended: false, limit: "4kb" }));
   app.use((req, res, next) => {
@@ -173,6 +184,14 @@ if (GATE_PASS) {
       if (_hasGate(req)) return res.redirect(302, "/smart-meal/");
       res.setHeader("Content-Security-Policy", GATE_CSP);
       return res.send(_gatePage(null, req.query.returnTo));
+    }
+    // Store-App-Bypass: gültiger App-Token → durchlassen und (für TWA-Navigation)
+    // Gate-Cookie setzen, damit Folge-Requests ohne Token passieren.
+    if (_validAppToken(req)) {
+      if (!_hasGate(req)) {
+        res.cookie(GATE_COOKIE, _gateToken(), { httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: GATE_TTL_MS });
+      }
+      return next();
     }
     if (_hasGate(req)) return next();
     if (req.method === "GET" && (req.get("accept") || "").includes("text/html")) {
