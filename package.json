@@ -21,13 +21,19 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:native": "vite build --base=./",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "node server/index.js",
     "docker:build": "docker build -t smart-meal .",
-    "docker:up": "docker compose up -d"
+    "docker:up": "docker compose up -d",
+    "cap:sync": "npm run build:native && npx cap sync ios",
+    "cap:ios": "npm run build:native && npx cap sync ios && npx cap open ios",
+    "twa:init": "npx @bubblewrap/cli init --manifest=https://smartmeal.rawkeep.com/smart-meal/manifest.json",
+    "twa:build": "npx @bubblewrap/cli build"
   },
   "dependencies": {
+    "@sentry/react": "^8.55.2",
     "compression": "^1.8.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -39,6 +45,9 @@
     "vite-plugin-pwa": "^1.2.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/ios": "^6.2.1",
     "@eslint/js": "^9.39.4",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

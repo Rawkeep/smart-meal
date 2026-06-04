@@ -13,6 +13,14 @@ dist-ssr
 *.local
 .env
 
+# Native store wrappers (generated locally; keystores must never be committed)
+ios/
+android/
+*.keystore
+*.jks
+*.keystore.properties
+twa-manifest.json.bak
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

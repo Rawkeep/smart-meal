@@ -8,6 +8,12 @@ import { recordLike, recordDislike } from "./swarm/learning-engine";
 import { generateOfflinePlan } from "./swarm/plan-generator";
 import { PROVIDERS, DEFAULT_PROVIDER, getProvider, isValidKey, callTextProvider, callVisionProvider } from "./ai/providers";
 
+// Backend base URL. Empty on the web (same-origin relative /api). The native
+// builds (Capacitor iOS) bundle the assets and load from capacitor://localhost,
+// so they set VITE_API_BASE to the absolute backend origin at build time.
+const API_BASE = import.meta.env.VITE_API_BASE || "";
+const api = (path) => `${API_BASE}${path}`;
+
 // ─── Storage Keys ───
 const K = {
   profile: "wei-profile-v2",
@@ -462,7 +468,7 @@ const PhotoUpload = ({ onResult, apiKey, backendAvailable, provider = "claude", 
       if (backendAvailable) {
         const headers = { "Content-Type": "application/json" };
         if (apiKey) headers["x-user-api-key"] = apiKey;
-        const r = await fetch("/api/recognize", {
+        const r = await fetch(api("/api/recognize"), {
           method: "POST",
           headers,
           body: JSON.stringify({ image: base64, mediaType: file.type }),
@@ -650,6 +656,17 @@ export default function App() {
     const rv = load(K.reviewed);
     if (rv) setReviewedRecipes(rv);
     setMeal(autoMeal());
+
+    // Deep links / PWA app-shortcuts (?mode=plan|fridge|quick, ?view=shop|wellness)
+    if (p && typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const qpMode = params.get("mode");
+      if (["quick", "fridge", "plan"].includes(qpMode)) setMode(qpMode);
+      const qpView = params.get("view");
+      if (qpView === "shop") { setShopTab("list"); setOverlay("shop"); }
+      else if (qpView === "wellness") setOverlay("wellness");
+      else if (qpView === "favs") setOverlay("favs");
+    }
 
     // Init IndexedDB
     initDB(FOODS).catch(() => {});
@@ -859,7 +876,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
   const [backendAvailable, setBackendAvailable] = useState(null);
   const [freemiumInfo, setFreemiumInfo] = useState({ remaining: 0, dailyLimit: 10, freemium: false });
   useEffect(() => {
-    fetch("/api/health").then(r => r.json())
+    fetch(api("/api/health")).then(r => r.json())
       .then(d => {
         setBackendAvailable(d.status === "ok" && (d.hasApiKey || d.freemium));
         setFreemiumInfo({ remaining: d.remaining ?? 0, dailyLimit: d.dailyLimit ?? 10, freemium: !!d.freemium });
@@ -873,7 +890,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
     if (backendAvailable) {
       const headers = { "Content-Type": "application/json" };
       if (apiKey) headers["x-user-api-key"] = apiKey;
-      const r = await fetch(endpoint, {
+      const r = await fetch(api(endpoint), {
         method: "POST",
         headers,
         body: JSON.stringify({ prompt }),

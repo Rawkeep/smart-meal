@@ -6,11 +6,14 @@
   "start_url": "/smart-meal/",
   "scope": "/smart-meal/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#FFF8F0",
-  "theme_color": "#C8611A",
+  "theme_color": "#FAF5EE",
   "lang": "de",
+  "dir": "ltr",
   "categories": ["food", "health", "lifestyle"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icons/icon-192.png",
@@ -29,6 +32,52 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Wochenplan",
+      "short_name": "Plan",
+      "description": "Wochenplan für 5 Tage erstellen",
+      "url": "/smart-meal/?mode=plan",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Kühlschrank-Check",
+      "short_name": "Kühlschrank",
+      "description": "Rezept aus vorhandenen Zutaten",
+      "url": "/smart-meal/?mode=fridge",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Einkaufsliste",
+      "short_name": "Einkauf",
+      "description": "Deine Einkaufsliste öffnen",
+      "url": "/smart-meal/?view=shop",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/home.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Wähle Mahlzeit, Zeit und Stimmung"
+    },
+    {
+      "src": "screenshots/result.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Personalisiertes Rezept mit Nährwerten"
+    },
+    {
+      "src": "screenshots/wellness.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Gesundheitsblog: Ernährung, Sport, Hausmittel"
     }
   ]
 }

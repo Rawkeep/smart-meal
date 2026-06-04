@@ -1,0 +1,14 @@
+{
+  "appId": "com.rawkeep.smartmeal",
+  "appName": "Smart Meal",
+  "webDir": "dist",
+  "backgroundColor": "#FFF8F0",
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#FFF8F0",
+    "limitsNavigationsToAppBoundDomains": true
+  },
+  "server": {
+    "iosScheme": "https"
+  }
+}
