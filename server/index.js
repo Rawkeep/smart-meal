@@ -155,6 +155,12 @@ if (GATE_PASS) {
     if (req.path === "/api/health") return next();
     // Öffentlich (auch für Store-Reviewer / TWA-Verifikation): Datenschutz + Asset-Links.
     if (req.path === "/privacy" || req.path === "/.well-known/assetlinks.json") return next();
+    // Öffentliche, nicht-sensible PWA-Metadaten: Manifest, Icons, Screenshots.
+    // Nötig für Installierbarkeit, Lighthouse/PWA-Audits und Bubblewrap (das die
+    // Manifest-URL öffentlich abruft). Die App-Shell selbst bleibt gegated.
+    if (req.path === "/smart-meal/manifest.json" ||
+        req.path.startsWith("/smart-meal/icons/") ||
+        req.path.startsWith("/smart-meal/screenshots/")) return next();
     if (req.path === "/__gate") {
       if (req.method === "POST") {
         if (_safeEq((req.body && req.body.password) || "", GATE_PASS)) {
