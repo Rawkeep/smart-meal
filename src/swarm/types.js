@@ -76,13 +76,13 @@ export const PANTRY_STAPLES = [
 
 // Category display names
 export const CATEGORY_LABELS = {
-  gemuse: "Gemuse",
+  gemuse: "Gemüse",
   obst: "Obst",
   protein: "Protein",
-  milch: "Milch & Kase",
+  milch: "Milch & Käse",
   getreide: "Getreide & Beilagen",
-  hulsenfruchte: "Hulsenfruchte",
-  nusse: "Nusse & Samen",
-  gewurze: "Gewurze & Saucen",
+  hulsenfruchte: "Hülsenfrüchte",
+  nusse: "Nüsse & Samen",
+  gewurze: "Gewürze & Saucen",
   sonstiges: "Sonstiges",
 };

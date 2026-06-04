@@ -342,10 +342,10 @@ function generateWineHint(template, selectedFoods) {
 
   if (isAsian) return "Jasmin-Tee oder ein leichtes Bier";
   if (hasFish && (isItalian || isMediterran)) return "Pinot Grigio oder Vermentino";
-  if (hasFish) return "Trockener Weisswein oder Riesling";
+  if (hasFish) return "Trockener Weißwein oder Riesling";
   if (hasMeat && isItalian) return "Chianti oder Primitivo";
-  if (hasMeat) return "Spatburgunder oder ein kraftiger Rotwein";
-  return "Mineralwasser mit Zitrone oder Krautertee";
+  if (hasMeat) return "Spätburgunder oder ein kräftiger Rotwein";
+  return "Mineralwasser mit Zitrone oder Kräutertee";
 }
 
 /**
@@ -386,7 +386,7 @@ export async function orchestrate(context) {
 
   if (safeFoods.length < 3) {
     throw new Error(
-      "Zu wenige sichere Zutaten gefunden. Uberprufe dein Allergie-Profil."
+      "Zu wenige sichere Zutaten gefunden. Überprüfe dein Allergie-Profil."
     );
   }
 
@@ -450,7 +450,7 @@ export async function orchestrate(context) {
 
   if (selectedFoods.length < 2) {
     throw new Error(
-      "Konnte nicht genug Zutaten fur dieses Rezept finden."
+      "Konnte nicht genug Zutaten für dieses Rezept finden."
     );
   }
 
