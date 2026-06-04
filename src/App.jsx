@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { initDB, getAllFoods, getFoodsFiltered } from "./db";
 import { FOODS, FOOD_CATEGORIES } from "./data/foods";
 import { CROSS_ALLERGIES, ADDITIVES, ADDITIVE_CATEGORIES, NUTRIENT_DEFICIENCIES, METABOLISM_CONDITIONS, HEALTH_GOALS } from "./data/health";
+import { WELLNESS_CATEGORIES, WELLNESS_DISCLAIMER, NUTRITION_ARTICLES, SPORT_TIPS, HOME_REMEDIES, HEALTH_TIPS } from "./data/wellness";
 import { generateOfflineSuggestion } from "./swarm/index";
 import { recordLike, recordDislike } from "./swarm/learning-engine";
 import { generateOfflinePlan } from "./swarm/plan-generator";
@@ -14,9 +15,28 @@ const K = {
   favorites: "wei-favorites-v2",
   streak: "wei-streak-v2",
   shoplist: "wei-shoplist-v2",
+  shophistory: "wei-shophistory-v1",
   apiKey: "wei-api-key",
   provider: "wei-provider",
   reviewed: "wei-reviewed-v1",
+};
+
+// Map a free-text ingredient line (e.g. "200 g Hähnchenbrust") to a food
+// category id for grouping the shopping list. Falls back to "sonstiges".
+const categorizeIngredient = (raw) => {
+  const s = (raw || "").toLowerCase();
+  // Strip leading quantity/unit so the food name is easier to match.
+  const cleaned = s.replace(/^[\d.,/\s]*(g|kg|ml|l|el|tl|stk|stück|prise|bund|dose|packung|pck|tasse|cup)?\.?\s*/i, "");
+  const hit = FOODS.find(f => cleaned.includes(f.name.toLowerCase()) || s.includes(f.name.toLowerCase()));
+  if (hit) return hit.category;
+  // Heuristic keyword fallbacks for common pantry items not in FOODS.
+  if (/(salz|pfeffer|öl|essig|sauce|soße|gewürz|paprikapulver|kreuzkümmel|curry|brühe|senf|honig|zucker)/.test(s)) return "gewürze";
+  if (/(mehl|reis|nudel|pasta|brot|haferflocken|couscous|bulgur|quinoa|tortilla|wrap)/.test(s)) return "getreide";
+  if (/(milch|käse|joghurt|quark|sahne|butter|skyr|frischkäse)/.test(s)) return "milch";
+  if (/(huhn|hähnchen|rind|schwein|hack|fleisch|fisch|lachs|thunfisch|garnele|tofu|ei\b|eier|wurst|schinken)/.test(s)) return "protein";
+  if (/(linse|bohne|kichererbse|erbse|hülsen)/.test(s)) return "hülsenfrüchte";
+  if (/(nuss|nüsse|mandel|cashew|walnuss|samen|kerne)/.test(s)) return "nüsse";
+  return "sonstiges";
 };
 
 // LMIV / data-source footer shown beside every allergen/nutrition block
@@ -508,7 +528,24 @@ const defaultProfile = {
   dislikes: "", name: "", persons: 2,
   crossAllergies: [], avoidAdditives: [], deficiencies: [],
   metabolism: [], goals: [],
+  // Personalization
+  avatar: "🧑‍🍳", age: "", activity: "", cookSkill: "normal", favoriteDish: "",
 };
+
+// Cooking experience levels — drive how detailed the steps are written.
+const COOK_SKILLS = [
+  { id: "anfänger", label: "Anfänger", emoji: "🐣", sub: "Erklär mir alles" },
+  { id: "normal", label: "Geübt", emoji: "🍳", sub: "Solide Basics" },
+  { id: "profi", label: "Profi", emoji: "👨‍🍳", sub: "Knapp & schnell" },
+];
+
+const ACTIVITY_LEVELS = [
+  { id: "niedrig", label: "Wenig aktiv", emoji: "🪑" },
+  { id: "mittel", label: "Mäßig aktiv", emoji: "🚶" },
+  { id: "hoch", label: "Sehr aktiv", emoji: "🏃" },
+];
+
+const AVATARS = ["🧑‍🍳", "👩‍🍳", "👨‍🍳", "🦊", "🐻", "🐰", "🦉", "🌻", "🥑", "🌶️", "🍋", "🫐"];
 
 // ─── Main App ───
 export default function App() {
@@ -535,8 +572,18 @@ export default function App() {
   const [reviewedRecipes, setReviewedRecipes] = useState({});
   const [streak, setStreak] = useState({ count: 0, lastDate: "" });
   const [shopList, setShopList] = useState([]);
+  const [shopHistory, setShopHistory] = useState([]);
+  const [shopTab, setShopTab] = useState("list");      // list | history
+  const [shopGroupBy, setShopGroupBy] = useState("category"); // category | recipe
   const [mode, setMode] = useState("quick");
   const [overlay, setOverlay] = useState(null);
+  const [sourcesOpen, setSourcesOpen] = useState(false); // Quellen & Nachweis collapsed by default
+  const [viewingSaved, setViewingSaved] = useState(false); // true when viewing a saved/imported recipe
+  const recipeReturn = useRef(null); // where "back" returns to after viewing a saved recipe
+  const [wellnessTab, setWellnessTab] = useState("ernährung");
+  const [importText, setImportText] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState("");
   const [weekPlan, setWeekPlan] = useState(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [apiKey, setApiKey] = useState("");
@@ -578,6 +625,7 @@ export default function App() {
     const f = load(K.favorites);
     const s = load(K.streak);
     const sh = load(K.shoplist);
+    const shh = load(K.shophistory);
     const key = load(K.apiKey);
 
     if (p) {
@@ -595,6 +643,7 @@ export default function App() {
     if (f) setFavorites(f);
     if (s) setStreak(s);
     if (sh) setShopList(sh);
+    if (shh) setShopHistory(shh);
     if (key) setApiKey(key);
     const prov = load(K.provider);
     if (prov && PROVIDERS.some(p => p.id === prov)) setProvider(prov);
@@ -646,22 +695,66 @@ export default function App() {
     save(K.favorites, u);
   }, [favorites]);
 
-  const addToShopList = useCallback((items) => {
+  // Add items to the shopping list, tagging each with its source recipe and
+  // a food category so the list can be grouped meaningfully.
+  const addToShopList = useCallback((items, recipeName = "") => {
     const nl = [
       ...shopList,
-      ...items.filter(i => !shopList.find(s => s.name === i)).map(i => ({ name: i, checked: false })),
+      ...items
+        .filter(i => !shopList.find(s => s.name === i))
+        .map(i => ({ name: i, checked: false, recipe: recipeName, category: categorizeIngredient(i) })),
     ];
     setShopList(nl);
     save(K.shoplist, nl);
   }, [shopList]);
 
-  const toggleShopItem = useCallback((i) => {
-    const u = shopList.map((item, j) => j === i ? { ...item, checked: !item.checked } : item);
+  const toggleShopItem = useCallback((name) => {
+    const u = shopList.map(item => item.name === name ? { ...item, checked: !item.checked } : item);
+    setShopList(u);
+    save(K.shoplist, u);
+  }, [shopList]);
+
+  const removeShopItem = useCallback((name) => {
+    const u = shopList.filter(item => item.name !== name);
     setShopList(u);
     save(K.shoplist, u);
   }, [shopList]);
 
   const clearShopList = useCallback(() => { setShopList([]); save(K.shoplist, []); }, []);
+
+  // Archive the current list into history (e.g. "shopping done") and start fresh.
+  const archiveShopList = useCallback(() => {
+    if (shopList.length === 0) return;
+    const entry = {
+      date: new Date().toISOString(),
+      items: shopList,
+      total: shopList.length,
+      checked: shopList.filter(s => s.checked).length,
+      recipes: [...new Set(shopList.map(s => s.recipe).filter(Boolean))],
+    };
+    const nh = [entry, ...shopHistory].slice(0, 20);
+    setShopHistory(nh);
+    save(K.shophistory, nh);
+    setShopList([]);
+    save(K.shoplist, []);
+  }, [shopList, shopHistory]);
+
+  // Restore an archived shopping list back into the active list.
+  const restoreShopList = useCallback((entry) => {
+    const merged = [...shopList];
+    entry.items.forEach(it => {
+      if (!merged.find(s => s.name === it.name)) merged.push({ ...it, checked: false });
+    });
+    setShopList(merged);
+    save(K.shoplist, merged);
+    setShopTab("list");
+  }, [shopList]);
+
+  const deleteShopHistory = useCallback((date) => {
+    const nh = shopHistory.filter(e => e.date !== date);
+    setShopHistory(nh);
+    save(K.shophistory, nh);
+  }, [shopHistory]);
 
   const saveApiKey = useCallback((key) => { setApiKey(key); save(K.apiKey, key); }, []);
   const saveProvider = useCallback((id) => { setProvider(id); save(K.provider, id); }, []);
@@ -744,8 +837,16 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
       ? "STRIKT ein SNACK – kleine Portion, keine vollständige Hauptmahlzeit."
       : "";
 
+    // Step detail scales with the user's self-rated cooking experience.
+    const skill = profile.cookSkill || "normal";
+    const stepRule = skill === "anfänger"
+      ? `Schritte ausführlich und anfängerfreundlich, 6–9 Stück. Erkläre Technik-Begriffe kurz (z.B. "anschwitzen = bei mittlerer Hitze glasig braten"), nenne konkrete Temperaturen/Stufen, Zeiten ("ca. 5 Min, bis goldbraun") und woran man erkennt, dass etwas fertig ist. Keine Roman-Sätze – klar und schrittweise.`
+      : skill === "profi"
+      ? `Schritte knapp und effizient, 4–6 Stück. Setze Grundtechniken voraus, keine Erklärungen von Basics.`
+      : `Schritte konkret und chronologisch, 5–7 Stück. Mit Zeiten und Hitzestufen, kurze Hinweise auf Gar-Erkennung. Nicht übererklären.`;
+
     // Shared rule block: every mode must honor meal-type + ingredient coherence.
-    const coherenceRule = `\n\nKONSISTENZREGELN (STRIKT):\n- Jede in "zutaten" genannte Zutat MUSS in "schritte" vorkommen. Jede in "schritte" erwähnte Zutat MUSS in "zutaten" stehen.\n- Alle zutaten im Format "Menge + Einheit + Zutat" (z.B. "200 g Haferflocken").\n- Schritte konkret und chronologisch, 4–7 Stück.\n- Gericht-Name muss zum Mahlzeitentyp passen.`;
+    const coherenceRule = `\n\nKONSISTENZREGELN (STRIKT):\n- Jede in "zutaten" genannte Zutat MUSS in "schritte" vorkommen. Jede in "schritte" erwähnte Zutat MUSS in "zutaten" stehen.\n- Alle zutaten im Format "Menge + Einheit + Zutat" (z.B. "200 g Haferflocken").\n- ${stepRule}\n- Gib bei jedem Schritt, wo sinnvoll, Zeit und Hitze an.\n- Gericht-Name muss zum Mahlzeitentyp passen.`;
 
     if (m === "fridge") return `${base}\n\nKÜHLSCHRANK-MODUS: Zutaten: ${fridgeItems.join(", ")}\nNur diese + Grundzutaten verwenden.${meal ? `\n- Mahlzeit: ${mealLabel} → ${mealRule}` : ""}\n${recent ? `Nicht wiederholen: ${recent}` : ""}${coherenceRule}\n\nNUR JSON (kein Markdown):\n{"name":"...","beschreibung":"1 Satz","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","gesundheitshinweis":"..."}`;
 
@@ -798,6 +899,8 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
   const generate = useCallback(async (m) => {
     setLoading(true);
     setSuggestion(null);
+    setViewingSaved(false);
+    setSourcesOpen(false);
     const useOffline = offlineMode || (!backendAvailable && !apiKey);
     const msgs = useOffline
       ? ["Schwarm-Agenten starten...", "Zutaten analysieren...", "Rezept zusammenstellen...", "Nährwerte berechnen..."]
@@ -875,7 +978,141 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
     setMeal(autoMeal()); setCookTime(""); setMood(""); setBudget("egal");
     setSuggestion(null); setView("home"); setFridgeInput(""); setSelectedIngredients([]);
     setGuestMode(false); setGuestAllergies([]); setGuestHistamin(false); setGuestDiet([]);
+    setViewingSaved(false);
   }, []);
+
+  // ─── Open a saved / imported / plan recipe in the result detail view ───
+  const openRecipe = useCallback((recipe, ret = { view: "home" }) => {
+    if (!recipe) return;
+    recipeReturn.current = ret;
+    setSuggestion(recipe);
+    setViewingSaved(true);
+    setSourcesOpen(false);
+    setOverlay(null);
+    setView("result");
+    if (typeof window !== "undefined") window.scrollTo(0, 0);
+  }, []);
+
+  // Return from a saved-recipe detail view to wherever it was opened from.
+  const closeRecipe = useCallback(() => {
+    const ret = recipeReturn.current;
+    setViewingSaved(false);
+    setSuggestion(null);
+    if (ret?.overlay) { setView("home"); setOverlay(ret.overlay); }
+    else if (ret?.mode) { setMode(ret.mode); setView("home"); }
+    else setView("home");
+    recipeReturn.current = null;
+  }, []);
+
+  // ─── PDF export via print window (no external dependency) ───
+  const downloadRecipePDF = useCallback((r) => {
+    if (!r) return;
+    const esc = (t) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const li = (arr) => (arr || []).map(x => `<li>${esc(x)}</li>`).join("");
+    const steps = (r.schritte || []).map((s, i) => `<li><span class="num">${i + 1}</span>${esc(s)}</li>`).join("");
+    const allerg = r.allergene?.length
+      ? `<p class="meta"><strong>Allergene:</strong> ${r.allergene.map(a => `${esc(a.code)} ${esc(a.label)}`).join(", ")}</p>` : "";
+    const makros = r.makros
+      ? `<table class="macros"><tr><td>Energie</td><td>${r.makros.kcal} kcal</td></tr><tr><td>Protein</td><td>${r.makros.protein} g</td></tr><tr><td>Fett</td><td>${r.makros.fat} g</td></tr><tr><td>Kohlenhydrate</td><td>${r.makros.carbs} g</td></tr><tr><td>Ballaststoffe</td><td>${r.makros.fiber} g</td></tr><tr><td>Salz</td><td>${r.makros.salt} g</td></tr></table>`
+      : (r.kalorien ? `<p class="meta">${esc(r.kalorien)}${r.protein ? " · " + esc(r.protein) : ""}</p>` : "");
+    const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${esc(r.name)}</title>
+<style>
+  @page { margin: 18mm; }
+  body { font-family: Georgia, 'Times New Roman', serif; color: #2C2016; line-height: 1.55; max-width: 720px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .emoji { font-size: 40px; }
+  .desc { color: #5A4A38; font-style: italic; margin-bottom: 12px; }
+  .meta { font-size: 13px; color: #5A4A38; margin: 4px 0; }
+  h2 { font-size: 16px; border-bottom: 2px solid #C8611A; padding-bottom: 4px; margin: 22px 0 10px; color: #A8500F; }
+  ul, ol { padding-left: 20px; } li { margin-bottom: 6px; }
+  ol { list-style: none; padding-left: 0; }
+  ol li { display: flex; gap: 10px; align-items: flex-start; }
+  .num { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 50%; background: #C8611A; color: #fff; font-size: 12px; font-family: sans-serif; flex-shrink: 0; }
+  table.macros { border-collapse: collapse; font-size: 13px; }
+  table.macros td { border: 1px solid #ddd; padding: 4px 12px; }
+  .tip { background: #FBF3E9; border-left: 3px solid #C8611A; padding: 10px 14px; margin: 14px 0; font-size: 14px; }
+  .footer { margin-top: 28px; font-size: 10px; color: #9A8A76; border-top: 1px solid #ccc; padding-top: 8px; }
+</style></head><body>
+  <div class="emoji">${esc(r.emoji || "🍽️")}</div>
+  <h1>${esc(r.name)}</h1>
+  ${r.beschreibung ? `<p class="desc">${esc(r.beschreibung)}</p>` : ""}
+  <p class="meta">⏱️ ${esc(r.zeit || "")}${r.schwierigkeit ? " · 📊 " + esc(r.schwierigkeit) : ""}${r.herkunft ? " · 🌍 " + esc(r.herkunft) : ""} · 👤 ${persons} Portion(en)</p>
+  ${allerg}
+  <h2>Zutaten</h2><ul>${li(r.zutaten)}</ul>
+  <h2>Zubereitung</h2><ol>${steps}</ol>
+  ${r.tipp ? `<div class="tip">💡 ${esc(r.tipp)}</div>` : ""}
+  ${makros ? `<h2>Nährwerte (pro Portion)</h2>${makros}` : ""}
+  ${r.gesundheitshinweis ? `<div class="tip">🩺 ${esc(r.gesundheitshinweis)}</div>` : ""}
+  <div class="footer">Erstellt mit „Was esse ich?“ · Angaben ohne Gewähr. Bei Allergien Originalverpackung prüfen.</div>
+  <script>window.onload=function(){window.print();}</script>
+</body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { alert("Bitte Pop-ups für den PDF-Export erlauben."); return; }
+    w.document.write(html);
+    w.document.close();
+  }, [persons]);
+
+  // ─── Import a recipe from pasted text (e.g. an Instagram caption) ───
+  const importRecipe = useCallback(async () => {
+    const text = importText.trim();
+    if (text.length < 15) { setImportError("Bitte den Rezept-Text einfügen (Caption, Zutaten, Schritte)."); return; }
+    setImporting(true);
+    setImportError("");
+    const prompt = `Du bekommst den Text eines Social-Media-Rezepts (z.B. Instagram-Caption). Extrahiere ein strukturiertes Rezept auf Deutsch. Rechne Mengen auf ${persons} Portion(en) um, falls erkennbar. Wenn Angaben fehlen, ergänze sinnvoll und realistisch.
+
+TEXT:
+"""
+${text.slice(0, 4000)}
+"""
+
+Antworte NUR mit JSON (kein Markdown):
+{"name":"...","beschreibung":"1 Satz","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"...","gesundheitshinweis":"kurzer Hinweis"}`;
+    try {
+      const r = await callAPI(prompt);
+      if (!r || !r.name || !Array.isArray(r.zutaten)) throw new Error("Konnte kein Rezept erkennen.");
+      r._imported = true;
+      setImportText("");
+      openRecipe(r, { overlay: "import" });
+    } catch (e) {
+      setImportError(
+        backendAvailable || apiKey
+          ? `Import fehlgeschlagen: ${e.message}. Bitte Text prüfen oder erneut versuchen.`
+          : "Für den Import wird ein KI-Anbieter benötigt (API-Key in den Einstellungen, oder Freemium online)."
+      );
+    }
+    setImporting(false);
+  }, [importText, persons, callAPI, openRecipe, backendAvailable, apiKey]);
+
+  // ─── Open a meal from the weekly plan as a full recipe ───
+  // Offline plans already carry the full suggestion in `_full`. API plans only
+  // have name/emoji/zeit, so we ask the AI (or offline swarm) to flesh it out.
+  const openPlanMeal = useCallback(async (m, mealType) => {
+    if (!m) return;
+    if (m._full) { openRecipe(m._full, { mode: "plan" }); return; }
+    setSuggestion(null);
+    setView("result");
+    setLoading(true);
+    setViewingSaved(false);
+    setLoadMsg(`Rezept für „${m.name}" wird geladen...`);
+    try {
+      const prompt = `${buildPrompt(mealType === "frühstück" ? "quick" : "quick").split("NUR JSON")[0]}
+Erstelle das vollständige Rezept für genau dieses Gericht: "${m.name}" (${mealType}).
+Halte dich an Allergien/Unverträglichkeiten aus dem Profil oben.
+
+NUR JSON (kein Markdown):
+{"name":"${m.name}","beschreibung":"1 Satz","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"${m.zeit || "XX Min"}","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"${m.emoji || "🍽️"}","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"...","gesundheitshinweis":"..."}`;
+      const r = await callAPI(prompt);
+      setLoading(false);
+      openRecipe(r, { mode: "plan" });
+    } catch {
+      setLoading(false);
+      // Fallback: show what we have so the click is never a dead end.
+      openRecipe({
+        name: m.name, emoji: m.emoji || "🍽️", zeit: m.zeit, beschreibung: "",
+        zutaten: [], schritte: ["Für dieses Gericht aus dem Plan liegt offline kein Detail-Rezept vor. Erstelle es im Schnell-Modus neu, um alle Schritte zu sehen."],
+      }, { mode: "plan" });
+    }
+  }, [openRecipe, buildPrompt, callAPI]);
 
   // ─── API Key Modal ───
   if (showKeyInput) return (
@@ -1140,13 +1377,13 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {favorites.map((f, i) => (
-            <Card key={i} anim="fadeUp" delay={`${i * 0.05}s`}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
+            <Card key={i} anim="fadeUp" delay={`${i * 0.05}s`} style={{ cursor: "pointer" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
+                <div onClick={() => openRecipe(f, { overlay: "favs" })} style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontSize: "20px", marginRight: "8px" }}>{f.emoji}</span>
                   <strong style={{ fontFamily: "'Fraunces',serif", color: "var(--ink)" }}>{f.name}</strong>
                   <div style={{ fontSize: "12px", color: "var(--ink3)", marginTop: "2px" }}>
-                    {f.beschreibung} · {f.zeit} · {f.herkunft}
+                    {[f.beschreibung, f.zeit, f.herkunft].filter(Boolean).join(" · ")}
                   </div>
                   {f.tags && (
                     <div style={{ display: "flex", gap: "4px", marginTop: "4px", flexWrap: "wrap" }}>
@@ -1155,8 +1392,12 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
                       ))}
                     </div>
                   )}
+                  <div style={{ fontSize: "11px", color: "var(--accent)", marginTop: "6px", fontWeight: 600 }}>Antippen zum Öffnen →</div>
                 </div>
-                <button onClick={() => toggleFav(f)} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer" }}>🗑️</button>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", flexShrink: 0 }}>
+                  <button onClick={(e) => { e.stopPropagation(); openRecipe(f, { overlay: "favs" }); }} title="Rezept ansehen" style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer" }}>👁️</button>
+                  <button onClick={(e) => { e.stopPropagation(); toggleFav(f); }} title="Entfernen" style={{ background: "none", border: "none", fontSize: "18px", cursor: "pointer" }}>🗑️</button>
+                </div>
               </div>
             </Card>
           ))}
@@ -1165,40 +1406,125 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
     </Layout>
   );
 
-  if (overlay === "shop") return (
-    <Layout>
-      <CloseBar title="🛒 Einkaufsliste" onClose={() => setOverlay(null)} />
-      {shopList.length === 0 ? (
-        <Card anim="fadeUp"><p style={{ color: "var(--ink3)", textAlign: "center", padding: "24px 0" }}>Liste leer. Füge Zutaten aus Rezepten hinzu!</p></Card>
-      ) : (
-        <>
-          <Card anim="fadeUp">
-            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-              {shopList.map((item, i) => (
-                <div key={i} onClick={() => toggleShopItem(i)} style={{
-                  display: "flex", alignItems: "center", gap: "10px", cursor: "pointer",
-                  padding: "10px 0", borderBottom: i < shopList.length - 1 ? "1px solid var(--card-border)" : "none",
-                }}>
-                  <div style={{
-                    width: "22px", height: "22px", borderRadius: "6px",
-                    border: item.checked ? "2px solid var(--accent)" : "2px solid var(--ink3)",
-                    background: item.checked ? "var(--accent)" : "transparent",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    color: "#fff", fontSize: "14px", transition: "all 0.2s ease", flexShrink: 0,
-                  }}>{item.checked ? "✓" : ""}</div>
-                  <span style={{
-                    fontSize: "14px", color: item.checked ? "var(--ink3)" : "var(--ink)",
-                    textDecoration: item.checked ? "line-through" : "none", transition: "all 0.2s ease",
-                  }}>{item.name}</span>
-                </div>
+  if (overlay === "shop") {
+    const openCount = shopList.filter(s => !s.checked).length;
+    // Build the grouped view: by food category or by source recipe.
+    const groups = {};
+    shopList.forEach((item) => {
+      const key = shopGroupBy === "recipe"
+        ? (item.recipe || "Sonstige Zutaten")
+        : (FOOD_CATEGORIES.find(c => c.id === item.category)?.id || "sonstiges");
+      (groups[key] = groups[key] || []).push(item);
+    });
+    const groupOrder = shopGroupBy === "category"
+      ? FOOD_CATEGORIES.map(c => c.id).filter(id => groups[id])
+      : Object.keys(groups).sort();
+    const groupLabel = (key) => shopGroupBy === "recipe"
+      ? `🍽️ ${key}`
+      : (() => { const c = FOOD_CATEGORIES.find(x => x.id === key); return c ? `${c.emoji} ${c.label}` : "🫙 Sonstiges"; })();
+
+    return (
+      <Layout>
+        <CloseBar title="🛒 Einkaufsliste" onClose={() => setOverlay(null)} />
+
+        {/* Tabs: active list vs. history */}
+        <div style={{ display: "flex", background: "var(--card)", borderRadius: "14px", padding: "4px", border: "1px solid var(--card-border)", gap: "2px", marginBottom: "12px" }}>
+          {[{ id: "list", l: `📝 Liste${openCount ? ` (${openCount})` : ""}` }, { id: "history", l: `🗂️ Verlauf${shopHistory.length ? ` (${shopHistory.length})` : ""}` }].map(t => (
+            <button key={t.id} onClick={() => setShopTab(t.id)} style={{
+              flex: 1, padding: "9px 6px", borderRadius: "10px", border: "none",
+              background: shopTab === t.id ? "linear-gradient(135deg,var(--accent),var(--accent2))" : "transparent",
+              color: shopTab === t.id ? "#fff" : "var(--ink3)", fontSize: "13px",
+              fontWeight: shopTab === t.id ? 600 : 400, fontFamily: "'Outfit',sans-serif", cursor: "pointer",
+            }}>{t.l}</button>
+          ))}
+        </div>
+
+        {shopTab === "list" && (shopList.length === 0 ? (
+          <Card anim="fadeUp"><p style={{ color: "var(--ink3)", textAlign: "center", padding: "24px 0" }}>Liste leer. Füge Zutaten aus einem Rezept oder Wochenplan hinzu!</p></Card>
+        ) : (
+          <>
+            {/* Grouping toggle */}
+            <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
+              {[{ id: "category", l: "Nach Kategorie" }, { id: "recipe", l: "Nach Gericht" }].map(g => (
+                <Chip key={g.id} small active={shopGroupBy === g.id} onClick={() => setShopGroupBy(g.id)}>{g.l}</Chip>
               ))}
             </div>
-          </Card>
-          <div style={{ marginTop: "10px" }}><Btn secondary onClick={clearShopList}>🗑️ Liste leeren</Btn></div>
-        </>
-      )}
-    </Layout>
-  );
+
+            {groupOrder.map((gkey, gi) => (
+              <Card key={gkey} anim="fadeUp" delay={`${gi * 0.04}s`} style={{ marginBottom: "10px", padding: "16px 18px" }}>
+                <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--accent)", marginBottom: "6px", letterSpacing: "0.3px" }}>{groupLabel(gkey)}</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  {groups[gkey].map((item) => (
+                    <div key={item.name} style={{
+                      display: "flex", alignItems: "center", gap: "10px",
+                      padding: "9px 0", borderBottom: "1px solid var(--card-border)",
+                    }}>
+                      <div onClick={() => toggleShopItem(item.name)} style={{
+                        width: "22px", height: "22px", borderRadius: "6px", cursor: "pointer",
+                        border: item.checked ? "2px solid var(--accent)" : "2px solid var(--ink3)",
+                        background: item.checked ? "var(--accent)" : "transparent",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: "#fff", fontSize: "14px", transition: "all 0.2s ease", flexShrink: 0,
+                      }}>{item.checked ? "✓" : ""}</div>
+                      <span onClick={() => toggleShopItem(item.name)} style={{
+                        flex: 1, cursor: "pointer", fontSize: "14px", color: item.checked ? "var(--ink3)" : "var(--ink)",
+                        textDecoration: item.checked ? "line-through" : "none", transition: "all 0.2s ease",
+                      }}>
+                        {item.name}
+                        {shopGroupBy === "category" && item.recipe && (
+                          <span style={{ fontSize: "10px", color: "var(--ink3)", marginLeft: "6px" }}>· {item.recipe}</span>
+                        )}
+                      </span>
+                      <button onClick={() => removeShopItem(item.name)} style={{ background: "none", border: "none", fontSize: "14px", cursor: "pointer", color: "var(--ink3)", flexShrink: 0 }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ))}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "4px" }}>
+              <Btn onClick={archiveShopList}>✅ Einkauf erledigt — archivieren</Btn>
+              <Btn secondary onClick={clearShopList}>🗑️ Liste leeren</Btn>
+            </div>
+          </>
+        ))}
+
+        {shopTab === "history" && (shopHistory.length === 0 ? (
+          <Card anim="fadeUp"><p style={{ color: "var(--ink3)", textAlign: "center", padding: "24px 0" }}>Noch keine archivierten Listen. Schließe einen Einkauf ab, um ihn hier wiederzufinden.</p></Card>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {shopHistory.map((entry, i) => (
+              <Card key={entry.date} anim="fadeUp" delay={`${i * 0.04}s`}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--ink)", fontFamily: "'Fraunces',serif" }}>
+                      {new Date(entry.date).toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" })}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--ink3)", marginTop: "2px" }}>
+                      {entry.total} Zutaten · {entry.checked}/{entry.total} abgehakt
+                    </div>
+                    {entry.recipes?.length > 0 && (
+                      <div style={{ fontSize: "11px", color: "var(--ink3)", marginTop: "3px" }}>🍽️ {entry.recipes.slice(0, 3).join(", ")}{entry.recipes.length > 3 ? "…" : ""}</div>
+                    )}
+                  </div>
+                  <button onClick={() => deleteShopHistory(entry.date)} style={{ background: "none", border: "none", fontSize: "16px", cursor: "pointer" }}>🗑️</button>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "8px" }}>
+                  {entry.items.slice(0, 8).map((it, j) => (
+                    <span key={j} style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "8px", background: "var(--bg2)", color: "var(--ink3)" }}>{it.name}</span>
+                  ))}
+                  {entry.items.length > 8 && <span style={{ fontSize: "10px", color: "var(--ink3)", padding: "2px 4px" }}>+{entry.items.length - 8}</span>}
+                </div>
+                <div style={{ marginTop: "10px" }}>
+                  <Chip small active onClick={() => restoreShopList(entry)}>↩️ Erneut auf die Liste</Chip>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ))}
+      </Layout>
+    );
+  }
 
   if (overlay === "history") return (
     <Layout>
@@ -1230,8 +1556,33 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
       <CloseBar title="⚙️ Profil" onClose={() => setOverlay(null)} />
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         <Card anim="fadeUp">
-          <ST sub="Dein Name">👤 Name</ST>
-          <InputField value={profile.name} onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} />
+          <ST sub="So begrüßt dich die App">👤 Über dich</ST>
+          <InputField value={profile.name} onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} placeholder="Dein Name..." />
+          <p style={{ fontSize: "12px", color: "var(--ink3)", margin: "12px 0 6px", fontWeight: 500 }}>Dein Avatar</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+            {AVATARS.map(av => (
+              <button key={av} onClick={() => setProfile(p => ({ ...p, avatar: av }))} style={{
+                width: "42px", height: "42px", borderRadius: "12px", fontSize: "22px", cursor: "pointer",
+                border: profile.avatar === av ? "2px solid var(--accent)" : "1.5px solid var(--card-border)",
+                background: profile.avatar === av ? "rgba(200,97,26,0.1)" : "var(--card)",
+                transition: "all 0.2s ease",
+              }}>{av}</button>
+            ))}
+          </div>
+          <p style={{ fontSize: "12px", color: "var(--ink3)", margin: "14px 0 6px", fontWeight: 500 }}>👨‍🍳 Koch-Erfahrung <span style={{ fontWeight: 400 }}>(steuert, wie ausführlich die Schritte sind)</span></p>
+          <ChipGrid options={COOK_SKILLS} selected={profile.cookSkill || "normal"} onToggle={id => setProfile(p => ({ ...p, cookSkill: id }))} multi={false} showSub />
+          <p style={{ fontSize: "12px", color: "var(--ink3)", margin: "14px 0 6px", fontWeight: 500 }}>🏃 Aktivitätslevel <span style={{ fontWeight: 400 }}>(für Portions- & Nährwert-Hinweise)</span></p>
+          <ChipGrid options={ACTIVITY_LEVELS} selected={profile.activity || ""} onToggle={id => setProfile(p => ({ ...p, activity: id === profile.activity ? "" : id }))} multi={false} />
+          <div style={{ display: "flex", gap: "10px", marginTop: "14px" }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: "12px", color: "var(--ink3)", marginBottom: "6px", fontWeight: 500 }}>Alter (optional)</p>
+              <InputField value={profile.age || ""} onChange={e => setProfile(p => ({ ...p, age: e.target.value.replace(/[^\d]/g, "").slice(0, 3) }))} placeholder="z.B. 32" />
+            </div>
+            <div style={{ flex: 2 }}>
+              <p style={{ fontSize: "12px", color: "var(--ink3)", marginBottom: "6px", fontWeight: 500 }}>Lieblingsgericht (optional)</p>
+              <InputField value={profile.favoriteDish || ""} onChange={e => setProfile(p => ({ ...p, favoriteDish: e.target.value }))} placeholder="z.B. Lasagne" />
+            </div>
+          </div>
         </Card>
         <Card anim="fadeUp" delay="0.05s">
           <ST sub="Was du nicht verträgst">⚠️ Allergien</ST>
@@ -1352,6 +1703,140 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
     </Layout>
   );
 
+  // ─── Instagram / Recipe Import ───
+  if (overlay === "import") return (
+    <Layout>
+      <CloseBar title="📲 Rezept importieren" onClose={() => { setOverlay(null); setImportError(""); }} />
+      <Card anim="fadeUp">
+        <p style={{ fontSize: "13px", color: "var(--ink2)", lineHeight: 1.6, marginBottom: "12px" }}>
+          Gefällt dir ein Rezept auf <strong>Instagram</strong>, TikTok oder einem Blog? Kopiere den
+          Text (Caption mit Zutaten & Schritten) und füge ihn hier ein — die KI macht ein
+          sauberes, auf <strong>{persons} Portion{persons > 1 ? "en" : ""}</strong> umgerechnetes Rezept daraus,
+          inklusive Allergen- und Nährwert-Check.
+        </p>
+        <div style={{ background: "var(--bg2)", borderRadius: "var(--r)", padding: "10px 12px", marginBottom: "12px" }}>
+          <p style={{ fontSize: "11px", color: "var(--ink3)", lineHeight: 1.5, margin: 0 }}>
+            💡 So geht's: In Instagram beim Beitrag auf <strong>•••</strong> → „Link kopieren" reicht
+            nicht — öffne die Caption, markiere den Text und kopiere ihn. Bei Reels steht das Rezept
+            oft in der Beschreibung oder den Kommentaren des Erstellers.
+          </p>
+        </div>
+        <InputField
+          multiline
+          value={importText}
+          onChange={e => setImportText(e.target.value)}
+          placeholder={"Hier den Rezept-Text einfügen...\n\nz.B.\n🍝 Cremige Tomatenpasta\nZutaten: 200g Pasta, 1 Dose Tomaten, 100g Frischkäse...\nSchritte: 1. Pasta kochen 2. Sauce..."}
+          style={{ minHeight: "160px" }}
+        />
+        {importError && (
+          <p style={{ fontSize: "12px", color: "#C44040", marginTop: "8px", lineHeight: 1.5 }}>{importError}</p>
+        )}
+        <div style={{ marginTop: "12px" }}>
+          <Btn onClick={importRecipe} disabled={importing || importText.trim().length < 15}>
+            {importing ? "KI analysiert das Rezept... ✨" : "Rezept erstellen 🍳"}
+          </Btn>
+        </div>
+        <p style={{ fontSize: "11px", color: "var(--ink3)", marginTop: "10px", lineHeight: 1.5 }}>
+          Hinweis: Der Import nutzt deinen KI-Anbieter (Freemium oder eigener Key). Bitte respektiere
+          die Urheberrechte der Ersteller — der Import ist für deinen privaten Gebrauch gedacht.
+        </p>
+      </Card>
+    </Layout>
+  );
+
+  // ─── Health / Wellness Blog ───
+  if (overlay === "wellness") {
+    const renderArticles = (list) => (
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        {list.map((a, i) => (
+          <Card key={a.id} anim="fadeUp" delay={`${i * 0.04}s`}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+              <span style={{ fontSize: "26px" }}>{a.emoji}</span>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontFamily: "'Fraunces',serif", fontSize: "16px", fontWeight: 700, color: "var(--ink)" }}>{a.title}</h3>
+                <p style={{ fontSize: "12px", color: "var(--ink3)", marginTop: "2px", lineHeight: 1.5 }}>{a.summary}</p>
+              </div>
+            </div>
+            <ul style={{ margin: "10px 0 0", paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "6px" }}>
+              {a.body.map((b, j) => <li key={j} style={{ fontSize: "13px", color: "var(--ink2)", lineHeight: 1.55 }}>{b}</li>)}
+            </ul>
+          </Card>
+        ))}
+      </div>
+    );
+
+    return (
+      <Layout>
+        <CloseBar title="💚 Gesundheit" onClose={() => setOverlay(null)} />
+
+        <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "8px", marginBottom: "12px", WebkitOverflowScrolling: "touch" }}>
+          {WELLNESS_CATEGORIES.map(c => (
+            <button key={c.id} onClick={() => setWellnessTab(c.id)} style={{
+              padding: "8px 14px", borderRadius: "20px", whiteSpace: "nowrap",
+              border: wellnessTab === c.id ? "2px solid var(--accent)" : "1px solid var(--card-border)",
+              background: wellnessTab === c.id ? "linear-gradient(135deg,var(--accent),var(--accent2))" : "var(--card)",
+              color: wellnessTab === c.id ? "#fff" : "var(--ink2)",
+              fontSize: "13px", fontWeight: wellnessTab === c.id ? 600 : 400,
+              fontFamily: "'Outfit',sans-serif", cursor: "pointer", flexShrink: 0,
+            }}>{c.emoji} {c.label}</button>
+          ))}
+        </div>
+
+        {wellnessTab === "ernährung" && renderArticles(NUTRITION_ARTICLES)}
+        {wellnessTab === "sport" && renderArticles(SPORT_TIPS)}
+
+        {wellnessTab === "hausmittel" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {HOME_REMEDIES.map((r, i) => (
+              <Card key={r.id} anim="fadeUp" delay={`${i * 0.04}s`}>
+                <h3 style={{ fontFamily: "'Fraunces',serif", fontSize: "16px", fontWeight: 700, color: "var(--ink)", marginBottom: "8px" }}>{r.emoji} {r.title}</h3>
+                <ul style={{ margin: 0, paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {r.remedies.map((x, j) => <li key={j} style={{ fontSize: "13px", color: "var(--ink2)", lineHeight: 1.55 }}>{x}</li>)}
+                </ul>
+                <div style={{ marginTop: "10px", padding: "8px 12px", borderRadius: "8px", background: "rgba(196,64,64,0.06)", border: "1px solid rgba(196,64,64,0.15)", fontSize: "11px", color: "var(--ink2)", lineHeight: 1.5 }}>
+                  <strong style={{ color: "#C44040" }}>⚠️ Wichtig:</strong> {r.warn}
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {wellnessTab === "tipps" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {HEALTH_TIPS.map((t, i) => (
+              <Card key={i} anim="fadeUp" delay={`${i * 0.03}s`} style={{ padding: "14px 18px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span style={{ fontSize: "22px" }}>{t.emoji}</span>
+                  <p style={{ fontSize: "13px", color: "var(--ink2)", lineHeight: 1.5, margin: 0 }}>{t.text}</p>
+                </div>
+              </Card>
+            ))}
+            {/* Personalized hooks from the user's own profile */}
+            {(profile.deficiencies?.length > 0 || profile.goals?.length > 0) && (
+              <Card anim="fadeUp" style={{ background: "linear-gradient(135deg,rgba(34,139,34,0.05),rgba(60,179,113,0.05))", border: "1px solid rgba(34,139,34,0.15)" }}>
+                <h3 style={{ fontFamily: "'Fraunces',serif", fontSize: "15px", fontWeight: 700, color: "#228B22", marginBottom: "8px" }}>🎯 Für dich persönlich</h3>
+                {(profile.goals || []).map(id => {
+                  const g = HEALTH_GOALS.find(h => h.id === id);
+                  return g ? <p key={id} style={{ fontSize: "12px", color: "var(--ink2)", lineHeight: 1.5, marginBottom: "4px" }}><strong>{g.emoji} {g.label}:</strong> {g.tip}</p> : null;
+                })}
+                {(profile.deficiencies || []).map(id => {
+                  const nd = NUTRIENT_DEFICIENCIES.find(d => d.id === id);
+                  return nd ? <p key={id} style={{ fontSize: "12px", color: "var(--ink2)", lineHeight: 1.5, marginBottom: "4px" }}><strong>{nd.emoji} {nd.label}:</strong> {nd.foods.slice(0, 5).join(", ")}</p> : null;
+                })}
+              </Card>
+            )}
+          </div>
+        )}
+
+        <Card anim="fadeUp" style={{ marginTop: "12px", background: "rgba(0,0,0,0.02)" }}>
+          <p style={{ fontSize: "11px", color: "var(--ink3)", lineHeight: 1.5, margin: 0 }}>
+            <strong>ℹ️ Hinweis:</strong> {WELLNESS_DISCLAIMER}
+          </p>
+        </Card>
+      </Layout>
+    );
+  }
+
   // ─── Home ───
   if (view === "home") {
     const ready = mode === "fridge" ? (selectedIngredients.length > 0 || fridgeInput.trim().length > 2) : (meal && cookTime && mood);
@@ -1362,9 +1847,12 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
         {/* Header */}
         <div style={{ padding: "20px 0 8px", animation: "fadeUp 0.4s ease both" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <p style={{ fontSize: "14px", color: "var(--ink3)", marginBottom: "2px" }}>{greet()}{profile.name ? `, ${profile.name}` : ""} 👋</p>
-              <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: "28px", fontWeight: 900, color: "var(--ink)", letterSpacing: "-1px" }}>Was esse ich?</h1>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "34px", lineHeight: 1 }}>{profile.avatar || "🧑‍🍳"}</span>
+              <div>
+                <p style={{ fontSize: "14px", color: "var(--ink3)", marginBottom: "2px" }}>{greet()}{profile.name ? `, ${profile.name}` : ""} 👋</p>
+                <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: "28px", fontWeight: 900, color: "var(--ink)", letterSpacing: "-1px" }}>Was esse ich?</h1>
+              </div>
             </div>
             {streak.count > 0 && (
               <div style={{
@@ -1387,17 +1875,19 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
           </div>
         </div>
 
-        {/* Quick actions */}
-        <div style={{ display: "flex", gap: "8px", marginTop: "12px", animation: "fadeUp 0.4s ease both", animationDelay: "0.05s" }}>
+        {/* Quick actions — wraps to a second row as more tools are added */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px", marginTop: "12px", animation: "fadeUp 0.4s ease both", animationDelay: "0.05s" }}>
           {[
             { i: "❤️", l: "Favoriten", a: () => setOverlay("favs"), n: favorites.length },
-            { i: "🛒", l: "Einkauf", a: () => setOverlay("shop"), n: shopList.filter(s => !s.checked).length },
+            { i: "🛒", l: "Einkauf", a: () => { setShopTab("list"); setOverlay("shop"); }, n: shopList.filter(s => !s.checked).length },
+            { i: "💚", l: "Gesundheit", a: () => setOverlay("wellness") },
+            { i: "📲", l: "Import", a: () => { setImportError(""); setOverlay("import"); } },
             { i: "📖", l: "Verlauf", a: () => setOverlay("history"), n: history.length },
             { i: "👥", l: "Gäste", a: () => setOverlay("guest"), n: guestMode ? "!" : 0 },
             { i: "⚙️", l: "Profil", a: () => setOverlay("settings") },
           ].map((a, i) => (
             <button key={i} onClick={a.a} style={{
-              flex: 1, padding: "10px 4px", borderRadius: "var(--r)",
+              padding: "10px 4px", borderRadius: "var(--r)",
               border: "1px solid var(--card-border)", background: "var(--card)",
               cursor: "pointer", textAlign: "center", position: "relative",
               fontFamily: "'Outfit',sans-serif", transition: "all 0.2s ease",
@@ -1588,19 +2078,21 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
                       const m = day[t];
                       if (!m) return null;
                       return (
-                        <div key={t} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderBottom: "1px solid var(--card-border)" }}>
+                        <div key={t} onClick={() => openPlanMeal(m, t)} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 0", borderBottom: "1px solid var(--card-border)", cursor: "pointer", transition: "all 0.2s ease" }}>
                           <span style={{ fontSize: "20px" }}>{m.emoji}</span>
                           <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: "11px", color: "var(--accent)", fontWeight: 600, textTransform: "capitalize" }}>{t}</div>
                             <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--ink)" }}>{m.name}</div>
                             <div style={{ fontSize: "11px", color: "var(--ink3)" }}>{m.zeit}</div>
                           </div>
+                          <span style={{ fontSize: "16px", color: "var(--ink3)" }}>›</span>
                         </div>
                       );
                     })}
                   </Card>
                 ))}
                 {weekPlan.einkaufsliste && (
-                  <Btn onClick={() => { addToShopList(weekPlan.einkaufsliste); setOverlay("shop"); }}>
+                  <Btn onClick={() => { addToShopList(weekPlan.einkaufsliste, "Wochenplan"); setShopTab("list"); setOverlay("shop"); }}>
                     🛒 Einkaufsliste übernehmen ({weekPlan.einkaufsliste.length} Zutaten)
                   </Btn>
                 )}
@@ -1666,6 +2158,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
           {suggestion.schwierigkeit && <Badge icon="📊" text={suggestion.schwierigkeit} />}
           {suggestion.herkunft && <Badge icon="🌍" text={suggestion.herkunft} />}
           {suggestion._fallbackFromApi && <Badge icon="🧠" text="Offline-Fallback" />}
+          {suggestion._imported && <Badge icon="📲" text="Importiert" />}
         </div>
 
         {/* Full macros panel */}
@@ -1728,7 +2221,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
             fontFamily: "'Outfit',sans-serif", transition: "all 0.3s ease",
             animation: isFav ? "heartPop 0.4s ease" : "none",
           }}>{isFav ? "❤️ Gespeichert" : "🤍 Speichern"}</button>
-          <button onClick={() => { addToShopList(suggestion.zutaten); setOverlay("shop"); }} style={{
+          <button onClick={() => { addToShopList(suggestion.zutaten, suggestion.name); setShopTab("list"); setOverlay("shop"); }} style={{
             flex: 1, padding: "12px", borderRadius: "var(--r)",
             border: "2px solid var(--card-border)", background: "var(--card)",
             color: "var(--ink2)", fontSize: "14px", fontWeight: 600,
@@ -1894,61 +2387,94 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
 
           return (
             <Card anim="fadeUp" delay="0.36s" style={{ marginBottom: "12px", background: "rgba(0,0,0,0.02)", border: "1px solid var(--card-border)" }}>
-              <ST sub="LMIV-konform, für Gastronomie und Privatgebrauch">📋 Quellen & Nachweis</ST>
+              {/* Collapsible header — collapsed by default to keep the recipe clean */}
+              <button onClick={() => setSourcesOpen(o => !o)} style={{
+                width: "100%", background: "none", border: "none", cursor: "pointer",
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: 0, fontFamily: "'Outfit',sans-serif", textAlign: "left",
+              }}>
+                <div>
+                  <h3 style={{ fontFamily: "'Fraunces',serif", fontSize: "17px", fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.3px" }}>
+                    📋 Quellen & Nachweis
+                  </h3>
+                  <p style={{ fontSize: "13px", color: "var(--ink3)", marginTop: "2px" }}>
+                    LMIV-konform · {isReviewed ? "✓ geprüft" : "Export & Prüfung"}
+                  </p>
+                </div>
+                <span style={{ fontSize: "20px", color: "var(--ink3)", transform: sourcesOpen ? "rotate(180deg)" : "none", transition: "transform 0.25s ease" }}>⌄</span>
+              </button>
 
-              <div style={{ marginTop: "10px", fontSize: "11px", color: "var(--ink3)", lineHeight: 1.55 }}>
-                <p style={{ margin: 0, fontWeight: 600, color: "var(--ink2)", marginBottom: "4px" }}>Datenquellen:</p>
-                <ul style={{ margin: 0, paddingLeft: "16px" }}>
-                  {DATA_SOURCES.map((s, i) => <li key={i} style={{ marginBottom: "2px" }}>{s}</li>)}
-                </ul>
-              </div>
+              {sourcesOpen && (
+                <div style={{ animation: "fadeUp 0.25s ease both" }}>
+                  <div style={{ marginTop: "12px", fontSize: "11px", color: "var(--ink3)", lineHeight: 1.55 }}>
+                    <p style={{ margin: 0, fontWeight: 600, color: "var(--ink2)", marginBottom: "4px" }}>Datenquellen:</p>
+                    <ul style={{ margin: 0, paddingLeft: "16px" }}>
+                      {DATA_SOURCES.map((s, i) => <li key={i} style={{ marginBottom: "2px" }}>{s}</li>)}
+                    </ul>
+                  </div>
 
-              <div style={{ marginTop: "12px", padding: "10px 12px", borderRadius: "8px", background: "rgba(196,64,64,0.06)", border: "1px solid rgba(196,64,64,0.15)", fontSize: "11px", color: "var(--ink2)", lineHeight: 1.5 }}>
-                <strong style={{ color: "#C44040" }}>⚠️ Haftungsausschluss:</strong> {DATA_DISCLAIMER}
-              </div>
+                  <div style={{ marginTop: "12px", padding: "10px 12px", borderRadius: "8px", background: "rgba(196,64,64,0.06)", border: "1px solid rgba(196,64,64,0.15)", fontSize: "11px", color: "var(--ink2)", lineHeight: 1.5 }}>
+                    <strong style={{ color: "#C44040" }}>⚠️ Haftungsausschluss:</strong> {DATA_DISCLAIMER}
+                  </div>
 
-              <div style={{ marginTop: "12px", display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
-                <button onClick={toggleReview} style={{
-                  display: "inline-flex", alignItems: "center", gap: "6px",
-                  padding: "8px 14px", borderRadius: "20px",
-                  border: isReviewed ? "2px solid #228B22" : "1px solid var(--card-border)",
-                  background: isReviewed ? "rgba(34,139,34,0.1)" : "var(--card)",
-                  color: isReviewed ? "#228B22" : "var(--ink3)",
-                  fontSize: "12px", fontWeight: isReviewed ? 600 : 500,
-                  fontFamily: "'Outfit',sans-serif", cursor: "pointer",
-                }}>
-                  {isReviewed ? "✓ Manuell geprüft" : "☐ Manuell prüfen & freigeben"}
-                </button>
-                <button onClick={exportToClipboard} style={{
-                  display: "inline-flex", alignItems: "center", gap: "6px",
-                  padding: "8px 14px", borderRadius: "20px",
-                  border: "1px solid var(--card-border)",
-                  background: "var(--card)",
-                  color: "var(--ink2)",
-                  fontSize: "12px", fontWeight: 500,
-                  fontFamily: "'Outfit',sans-serif", cursor: "pointer",
-                }}>📄 Gastro-Export</button>
-              </div>
+                  <div style={{ marginTop: "12px", display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                    <button onClick={toggleReview} style={{
+                      display: "inline-flex", alignItems: "center", gap: "6px",
+                      padding: "8px 14px", borderRadius: "20px",
+                      border: isReviewed ? "2px solid #228B22" : "1px solid var(--card-border)",
+                      background: isReviewed ? "rgba(34,139,34,0.1)" : "var(--card)",
+                      color: isReviewed ? "#228B22" : "var(--ink3)",
+                      fontSize: "12px", fontWeight: isReviewed ? 600 : 500,
+                      fontFamily: "'Outfit',sans-serif", cursor: "pointer",
+                    }}>
+                      {isReviewed ? "✓ Manuell geprüft" : "☐ Manuell prüfen & freigeben"}
+                    </button>
+                    <button onClick={exportToClipboard} style={{
+                      display: "inline-flex", alignItems: "center", gap: "6px",
+                      padding: "8px 14px", borderRadius: "20px",
+                      border: "1px solid var(--card-border)", background: "var(--card)",
+                      color: "var(--ink2)", fontSize: "12px", fontWeight: 500,
+                      fontFamily: "'Outfit',sans-serif", cursor: "pointer",
+                    }}>📋 Gastro-Export (Text)</button>
+                  </div>
 
-              {isReviewed && (
-                <p style={{ marginTop: "10px", fontSize: "11px", color: "#228B22", fontWeight: 500 }}>
-                  Geprüft am {new Date(review.date).toLocaleDateString("de-DE")} von {review.by || "Nutzer"}
-                </p>
+                  {isReviewed && (
+                    <p style={{ marginTop: "10px", fontSize: "11px", color: "#228B22", fontWeight: 500 }}>
+                      Geprüft am {new Date(review.date).toLocaleDateString("de-DE")} von {review.by || "Nutzer"}
+                    </p>
+                  )}
+                </div>
               )}
             </Card>
           );
         })()}
 
+        {/* PDF export — available for any recipe (download/print) */}
+        <div style={{ marginBottom: "12px", animation: "fadeUp 0.5s ease both", animationDelay: "0.34s" }}>
+          <button onClick={() => downloadRecipePDF(suggestion)} style={{
+            width: "100%", padding: "12px", borderRadius: "var(--r)",
+            border: "2px solid var(--card-border)", background: "var(--card)",
+            color: "var(--ink2)", fontSize: "14px", fontWeight: 600,
+            cursor: "pointer", fontFamily: "'Outfit',sans-serif",
+          }}>📄 Rezept als PDF speichern</button>
+        </div>
+
         {/* Bottom actions */}
         <div style={{ display: "flex", flexDirection: "column", gap: "8px", animation: "fadeUp 0.5s ease both", animationDelay: "0.35s" }}>
-          <Btn onClick={() => {
-            // Learning signal: dislike when skipping (offline recipes)
-            if (suggestion?._offline && suggestion?._foodIds) {
-              recordDislike(suggestion, suggestion._foodIds, suggestion._templateId);
-            }
-            generate(mode === "fridge" ? "fridge" : "quick");
-          }}>Anderer Vorschlag 🔄</Btn>
-          <Btn secondary onClick={reset}>← Zurück zum Start</Btn>
+          {viewingSaved ? (
+            <Btn secondary onClick={closeRecipe}>← Zurück</Btn>
+          ) : (
+            <>
+              <Btn onClick={() => {
+                // Learning signal: dislike when skipping (offline recipes)
+                if (suggestion?._offline && suggestion?._foodIds) {
+                  recordDislike(suggestion, suggestion._foodIds, suggestion._templateId);
+                }
+                generate(mode === "fridge" ? "fridge" : "quick");
+              }}>Anderer Vorschlag 🔄</Btn>
+              <Btn secondary onClick={reset}>← Zurück zum Start</Btn>
+            </>
+          )}
         </div>
       </Layout>
     );
