@@ -86,7 +86,12 @@ if (isProd) {
 // Aktiv sobald ACCESS_GATE_PASS gesetzt ist. Schützt alles außer /api/health
 // und /__gate. Cookie ist HMAC-signiert (GATE_SECRET), kein cookie-parser nötig.
 const GATE_PASS = process.env.ACCESS_GATE_PASS || "";
-const GATE_SECRET = process.env.GATE_SECRET || GATE_PASS || "dev-gate-secret";
+// Tokens werden mit Server-Secret UND aktuellem Passwort signiert. Dadurch
+// macht ein Passwortwechsel (fly secrets set ACCESS_GATE_PASS=...) SOFORT alle
+// zuvor ausgestellten Cookies ungültig — alle, die den alten Link/das alte
+// Passwort hatten, müssen sich neu anmelden. ACCESS_GATE_PASS ist der eine
+// Hebel zur Zugriffskontrolle; GATE_SECRET liefert die starke Entropie.
+const GATE_SECRET = (process.env.GATE_SECRET || GATE_PASS || "dev-gate-secret") + "::" + GATE_PASS;
 const GATE_COOKIE = "sm_gate";
 const GATE_TTL_MS = 30 * 24 * 3600 * 1000;
 const GATE_CSP = "default-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:";
