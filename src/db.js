@@ -1,5 +1,9 @@
 const DB_NAME = "wei-foods-db";
-const DB_VERSION = 1;
+// Bump this whenever the FOODS data changes (categories, ids, removals) so the
+// cached IndexedDB copy is wiped and reseeded from the source on next load.
+// Otherwise returning users keep stale food data (the seed only runs when the
+// store is empty/smaller).
+const DB_VERSION = 2;
 const STORE_NAME = "foods";
 
 function openDB() {
@@ -11,6 +15,10 @@ function openDB() {
         const store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
         store.createIndex("category", "category", { unique: false });
         store.createIndex("histamin", "histamin", { unique: false });
+      } else {
+        // Existing store on a version upgrade: clear stale records so changed
+        // categories and removed foods are refreshed when initDB reseeds.
+        e.target.transaction.objectStore(STORE_NAME).clear();
       }
     };
     req.onsuccess = () => resolve(req.result);
