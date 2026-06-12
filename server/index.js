@@ -49,9 +49,34 @@ function getRemainingFree(ip) {
 
 // ─── Security ───
 app.use(helmet({
-  contentSecurityPolicy: isProd ? undefined : false,
-  hsts: isProd ? { maxAge: 31536000, includeSubDomains: true } : false,
+  contentSecurityPolicy: isProd
+    ? {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:", "https:"],
+          fontSrc: ["'self'", "https://fonts.gstatic.com"],
+          connectSrc: ["'self'", "https://api.anthropic.com", "https://api.openai.com", "https://generativelanguage.googleapis.com"],
+          mediaSrc: ["'none'"],
+          objectSrc: ["'none'"],
+          frameAncestors: ["'none'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+        },
+      }
+    : false,
+  hsts: isProd ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  permittedCrossDomainPolicies: false,
+  crossOriginEmbedderPolicy: false, // keep false: BYOK CORS calls to external APIs require it
 }));
+
+// Permissions-Policy (not yet in helmet 8, so set manually)
+app.use((_req, res, next) => {
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  next();
+});
 
 app.use(compression());
 app.use(express.json({ limit: "1mb" }));
