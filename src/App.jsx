@@ -4,6 +4,7 @@ import { FOODS, FOOD_CATEGORIES } from "./data/foods";
 import { CROSS_ALLERGIES, ADDITIVES, ADDITIVE_CATEGORIES, NUTRIENT_DEFICIENCIES, METABOLISM_CONDITIONS, HEALTH_GOALS } from "./data/health";
 import { WELLNESS_CATEGORIES, WELLNESS_DISCLAIMER, NUTRITION_ARTICLES, SPORT_TIPS, HOME_REMEDIES, HEALTH_TIPS } from "./data/wellness";
 import { generateOfflineSuggestion } from "./swarm/index";
+import { buildDeclarationFromText, lineDeclarationCodes } from "./swarm/declaration";
 import { recordLike, recordDislike } from "./swarm/learning-engine";
 import { generateOfflinePlan } from "./swarm/plan-generator";
 import { PROVIDERS, DEFAULT_PROVIDER, getProvider, isValidKey, callTextProvider, callVisionProvider } from "./ai/providers";
@@ -47,6 +48,21 @@ const categorizeIngredient = (raw) => {
   if (/(linse|bohne|kichererbse|erbse|hülsen)/.test(s)) return "hülsenfrüchte";
   if (/(nuss|nüsse|mandel|cashew|walnuss|samen|kerne)/.test(s)) return "nüsse";
   return "sonstiges";
+};
+
+// Ensure every recipe carries the full Kennzeichnung (Allergene + Zusatzstoffe
+// + Alkohol). Offline-Rezepte bringen sie schon mit; KI-/importierte Rezepte
+// werden hier aus dem Zutaten-/Schritttext abgeleitet. Idempotent.
+const withDeclaration = (r) => {
+  if (!r || r.error) return r;
+  if (r.alkohol && r.zusatzstoffe && r.allergene?.length >= 0 && r._offline) return r;
+  const d = buildDeclarationFromText(r.zutaten || [], r.schritte || []);
+  return {
+    ...r,
+    allergene: r.allergene?.length ? r.allergene : d.allergene,
+    zusatzstoffe: r.zusatzstoffe?.length ? r.zusatzstoffe : d.zusatzstoffe,
+    alkohol: r.alkohol || d.alkohol,
+  };
 };
 
 // LMIV / data-source footer shown beside every allergen/nutrition block
@@ -107,6 +123,8 @@ const CUISINES = [
   { id: "indisch", label: "Indisch", emoji: "🇮🇳" },
   { id: "westafrikanisch", label: "Westafrikanisch", emoji: "🌍" },
   { id: "ostafrikanisch", label: "Ostafrikanisch", emoji: "🌍" },
+  { id: "zentralafrikanisch", label: "Zentralafrikanisch", emoji: "🌍" },
+  { id: "südafrikanisch", label: "Südafrikanisch", emoji: "🌍" },
   { id: "nordafrikanisch", label: "Nordafrikanisch", emoji: "🌍" },
   { id: "mediterran", label: "Mediterran", emoji: "🫒" },
   { id: "orientalisch", label: "Orientalisch", emoji: "🧆" },
@@ -1017,7 +1035,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
       if (r.error) {
         setSuggestion(r);
       } else {
-        setSuggestion(r);
+        setSuggestion(withDeclaration(r));
         const nh = [...history, { name: r.name, date: new Date().toISOString(), emoji: r.emoji }].slice(-30);
         setHistory(nh);
         save(K.history, nh);
@@ -1061,7 +1079,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
   const openRecipe = useCallback((recipe, ret = { view: "home" }) => {
     if (!recipe) return;
     recipeReturn.current = ret;
-    setSuggestion(recipe);
+    setSuggestion(withDeclaration(recipe));
     setViewingSaved(true);
     setSourcesOpen(false);
     setOverlay(null);
@@ -1088,6 +1106,10 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
     const steps = (r.schritte || []).map((s, i) => `<li><span class="num">${i + 1}</span>${esc(s)}</li>`).join("");
     const allerg = r.allergene?.length
       ? `<p class="meta"><strong>Allergene:</strong> ${r.allergene.map(a => `${esc(a.code)} ${esc(a.label)}`).join(", ")}</p>` : "";
+    const zusatz = r.zusatzstoffe?.length
+      ? `<p class="meta"><strong>Zusatzstoffe:</strong> ${r.zusatzstoffe.map(zs => `${esc(zs.number)} ${esc(zs.label)}`).join(", ")}</p>` : "";
+    const alk = r.alkohol
+      ? `<p class="meta"><strong>Alkoholgehalt:</strong> ${esc(r.alkohol.label)}</p>` : "";
     const makros = r.makros
       ? `<table class="macros"><tr><td>Energie</td><td>${r.makros.kcal} kcal</td></tr><tr><td>Protein</td><td>${r.makros.protein} g</td></tr><tr><td>Fett</td><td>${r.makros.fat} g</td></tr><tr><td>Kohlenhydrate</td><td>${r.makros.carbs} g</td></tr><tr><td>Ballaststoffe</td><td>${r.makros.fiber} g</td></tr><tr><td>Salz</td><td>${r.makros.salt} g</td></tr></table>`
       : (r.kalorien ? `<p class="meta">${esc(r.kalorien)}${r.protein ? " · " + esc(r.protein) : ""}</p>` : "");
@@ -1114,7 +1136,9 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
   ${r.beschreibung ? `<p class="desc">${esc(r.beschreibung)}</p>` : ""}
   <p class="meta">⏱️ ${esc(r.zeit || "")}${r.schwierigkeit ? " · 📊 " + esc(r.schwierigkeit) : ""}${r.herkunft ? " · 🌍 " + esc(r.herkunft) : ""} · 👤 ${persons} Portion(en)</p>
   ${allerg}
-  <h2>Zutaten</h2><ul>${li(r.zutaten)}</ul>
+  ${zusatz}
+  ${alk}
+  <h2>Inhaltsstoffe</h2><ul>${li(r.zutaten)}</ul>
   <h2>Zubereitung</h2><ol>${steps}</ol>
   ${r.tipp ? `<div class="tip">💡 ${esc(r.tipp)}</div>` : ""}
   ${makros ? `<h2>Nährwerte (pro Portion)</h2>${makros}` : ""}
@@ -2347,38 +2371,93 @@ NUR JSON (kein Markdown):
           </div>
         )}
 
-        {/* Ingredients */}
+        {/* Ingredients (= Inhaltsstoffe) — nummeriert, mit Allergen-Buchstaben
+            und Zusatzstoff-Zahlen als Hochzahl direkt an der Zutat. */}
         <Card anim="fadeUp" delay="0.2s" style={{ marginBottom: "12px" }}>
-          <ST sub={`Für ${persons} Person${persons > 1 ? "en" : ""}`}>🧾 Zutaten</ST>
+          <ST sub={`Für ${persons} Person${persons > 1 ? "en" : ""}`}>🧾 Inhaltsstoffe</ST>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {suggestion.zutaten?.map((z, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "14px", color: "var(--ink)", lineHeight: 1.4 }}>
-                <span style={{ width: "7px", height: "7px", borderRadius: "50%", marginTop: "6px", background: "linear-gradient(135deg,var(--accent),var(--accent3))", flexShrink: 0 }} />
-                <span>{z}</span>
-              </div>
-            ))}
-          </div>
-          {suggestion.allergene?.length > 0 && (
-            <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--card-border)" }}>
-              <p style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 600, marginBottom: "8px", letterSpacing: "0.3px", textTransform: "uppercase" }}>
-                Allergenkennzeichnung (EU-LMIV)
-              </p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                {suggestion.allergene.map(a => (
-                  <span key={a.code} style={{
-                    display: "inline-flex", alignItems: "center", gap: "6px",
-                    padding: "4px 10px", borderRadius: "999px",
-                    background: "rgba(200,97,26,0.08)",
-                    border: "1px solid rgba(200,97,26,0.18)",
-                    fontSize: "11px", color: "var(--ink2)", fontWeight: 500,
-                  }}>
-                    <strong style={{ color: "var(--accent)", fontFamily: "'Fraunces',serif", fontWeight: 700 }}>{a.code}</strong>
-                    {a.label}
+            {suggestion.zutaten?.map((z, i) => {
+              const codes = lineDeclarationCodes(z);
+              const sup = [...codes.allergens, ...codes.additives.map(String)];
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "14px", color: "var(--ink)", lineHeight: 1.4 }}>
+                  <span style={{ minWidth: "20px", height: "20px", borderRadius: "6px", marginTop: "1px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, color: "var(--accent)", background: "rgba(200,97,26,0.08)", border: "1px solid rgba(200,97,26,0.15)", flexShrink: 0, fontFamily: "'Fraunces',serif" }}>{i + 1}</span>
+                  <span>
+                    {z}
+                    {sup.length > 0 && (
+                      <sup style={{ marginLeft: "3px", fontSize: "10px", fontWeight: 700, color: "var(--accent)" }}>{sup.join(",")}</sup>
+                    )}
                   </span>
-                ))}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Kennzeichnung zur Orientierung: Allergene (Buchstaben),
+              Zusatzstoffe (Zahlen), Alkoholgehalt. */}
+          <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--card-border)", display: "flex", flexDirection: "column", gap: "12px" }}>
+            <p style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 600, margin: 0, letterSpacing: "0.3px", textTransform: "uppercase" }}>
+              Kennzeichnung zur Orientierung
+            </p>
+
+            {suggestion.allergene?.length > 0 && (
+              <div>
+                <p style={{ fontSize: "10px", color: "var(--ink3)", fontWeight: 600, margin: "0 0 6px" }}>Allergene (EU-LMIV)</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                  {suggestion.allergene.map(a => (
+                    <span key={a.code} style={{
+                      display: "inline-flex", alignItems: "center", gap: "6px",
+                      padding: "4px 10px", borderRadius: "999px",
+                      background: "rgba(200,97,26,0.08)", border: "1px solid rgba(200,97,26,0.18)",
+                      fontSize: "11px", color: "var(--ink2)", fontWeight: 500,
+                    }}>
+                      <strong style={{ color: "var(--accent)", fontFamily: "'Fraunces',serif", fontWeight: 700 }}>{a.code}</strong>
+                      {a.label}
+                    </span>
+                  ))}
+                </div>
               </div>
+            )}
+
+            <div>
+              <p style={{ fontSize: "10px", color: "var(--ink3)", fontWeight: 600, margin: "0 0 6px" }}>Zusatzstoffe</p>
+              {suggestion.zusatzstoffe?.length > 0 ? (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                  {suggestion.zusatzstoffe.map(zs => (
+                    <span key={zs.number} style={{
+                      display: "inline-flex", alignItems: "center", gap: "6px",
+                      padding: "4px 10px", borderRadius: "999px",
+                      background: "rgba(80,80,80,0.06)", border: "1px solid rgba(80,80,80,0.16)",
+                      fontSize: "11px", color: "var(--ink2)", fontWeight: 500,
+                    }}>
+                      <strong style={{ color: "var(--ink)", fontFamily: "'Fraunces',serif", fontWeight: 700 }}>{zs.number}</strong>
+                      {zs.label}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ fontSize: "11px", color: "var(--ink3)", margin: 0 }}>keine deklarationspflichtigen Zusatzstoffe – frisch zubereitet</p>
+              )}
             </div>
-          )}
+
+            {suggestion.alkohol && (
+              <div>
+                <p style={{ fontSize: "10px", color: "var(--ink3)", fontWeight: 600, margin: "0 0 6px" }}>Alkoholgehalt</p>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: "6px",
+                  padding: "4px 10px", borderRadius: "999px",
+                  background: suggestion.alkohol.enthalten ? "rgba(120,40,60,0.07)" : "rgba(34,139,34,0.07)",
+                  border: `1px solid ${suggestion.alkohol.enthalten ? "rgba(120,40,60,0.18)" : "rgba(34,139,34,0.18)"}`,
+                  fontSize: "11px", color: "var(--ink2)", fontWeight: 500,
+                }}>
+                  {suggestion.alkohol.enthalten ? "🍷" : "🚫"} {suggestion.alkohol.label}
+                </span>
+                {suggestion.alkohol.hinweis && (
+                  <p style={{ fontSize: "10px", color: "var(--ink3)", margin: "6px 0 0", lineHeight: 1.4 }}>{suggestion.alkohol.hinweis}</p>
+                )}
+              </div>
+            )}
+          </div>
         </Card>
 
         {/* Steps */}
@@ -2442,6 +2521,15 @@ NUR JSON (kein Markdown):
               lines.push("");
               lines.push("ALLERGENE:");
               suggestion.allergene.forEach(a => lines.push(`  ${a.code} = ${a.label}`));
+            }
+            if (suggestion.zusatzstoffe?.length) {
+              lines.push("");
+              lines.push("ZUSATZSTOFFE:");
+              suggestion.zusatzstoffe.forEach(zs => lines.push(`  ${zs.number} = ${zs.label}`));
+            }
+            if (suggestion.alkohol) {
+              lines.push("");
+              lines.push(`ALKOHOLGEHALT: ${suggestion.alkohol.label}`);
             }
             if (suggestion.makros) {
               lines.push("");

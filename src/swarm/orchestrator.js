@@ -22,6 +22,8 @@ import { scorePairing } from "./combination-agent";
 import { findMatchingTemplates } from "./recipe-templates";
 import { estimateNutrition } from "./nutrition-data";
 import { getFoodAllergenCodes, summarizeAllergens } from "./allergen-codes";
+import { summarizeAdditives } from "./additive-codes";
+import { detectAlcohol } from "./declaration";
 import { getIngredientPreference, getTemplatePreference, recordGeneration } from "./learning-engine";
 import { NUTRIENT_DEFICIENCIES, HEALTH_GOALS } from "../data/health";
 import { enrichSteps } from "./step-detail";
@@ -526,6 +528,8 @@ export async function orchestrate(context) {
       coverage: nutrition.coverage,
     },
     allergene: allergenLegend,
+    zusatzstoffe: summarizeAdditives(selectedFoods),
+    alkohol: detectAlcohol(zutaten, filled.schritte),
     zutatenDetail,
     tipp: generateCookingTip(template, selectedFoods),
     emoji: resolveEmoji(template, slotFills),

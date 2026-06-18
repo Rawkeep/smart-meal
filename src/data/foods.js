@@ -218,4 +218,16 @@ export const FOODS = [
   // Hülsenfrüchte (weiße Bohnen bereits oben definiert)
   { id: "schwarze_bohnen", name: "Schwarze Bohnen", emoji: "🫘", category: "hülsenfrüchte", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
   { id: "gruene_linsen", name: "Grüne Linsen", emoji: "🫘", category: "hülsenfrüchte", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch"], season: [] },
+
+  // ═══ AFRIKANISCHE GRUNDZUTATEN — Staples für Zentral-, West-, Süd- & Ostafrika ═══
+  { id: "maniok", name: "Maniok (Cassava)", emoji: "🥔", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "glutenfrei"], season: [] },
+  { id: "fufu_mehl", name: "Fufu-Mehl (Maniok/Mais)", emoji: "🥣", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "glutenfrei"], season: [] },
+  { id: "kochbanane", name: "Kochbanane (Plantain)", emoji: "🍌", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "glutenfrei"], season: [] },
+  { id: "yamswurzel", name: "Yamswurzel", emoji: "🍠", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "glutenfrei"], season: [] },
+  { id: "maniokblatt", name: "Maniokblätter (Pondu/Saka-Saka)", emoji: "🥬", category: "gemüse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "lowcarb", "glutenfrei"], season: [] },
+  { id: "palmöl", name: "Rotes Palmöl", emoji: "🫗", category: "gewürze", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "keto", "glutenfrei"], season: [] },
+  { id: "egusi", name: "Egusi (Melonenkerne)", emoji: "🌰", category: "nüsse", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "glutenfrei"], season: [] },
+  { id: "maismehl", name: "Maismehl (Pap/Ugali/Sadza)", emoji: "🌽", category: "getreide", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "glutenfrei"], season: [] },
+  { id: "berbere", name: "Berbere-Gewürz", emoji: "🌶️", category: "gewürze", histamin: "none", allergies: [], tags: ["vegan", "vegetarisch", "glutenfrei"], season: [] },
+  { id: "injera", name: "Injera (Teff-Fladen)", emoji: "🫓", category: "getreide", histamin: "low", allergies: [], tags: ["vegan", "vegetarisch", "glutenfrei"], season: [] },
 ];
