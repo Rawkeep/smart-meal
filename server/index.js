@@ -469,6 +469,12 @@ app.post("/api/recognize", apiLimiter, freemiumGuard, async (req, res) => {
 // ─── Serve static frontend in production ───
 if (isProd) {
   const distPath = join(__dirname, "..", "dist");
+  // Digital Asset Links an der Origin-Root (ungated — der Gate whitelistet den
+  // Pfad bereits). Ermöglicht eine verifizierte, vollbildige TWA, sobald die
+  // App auf dieser (eigenen) Domain ungated ausgeliefert wird.
+  app.get("/.well-known/assetlinks.json", (_req, res) => {
+    res.type("application/json").sendFile(join(distPath, ".well-known", "assetlinks.json"));
+  });
   app.use("/smart-meal", express.static(distPath));
   app.get("/smart-meal/*splat", (_req, res) => {
     res.sendFile(join(distPath, "index.html"));

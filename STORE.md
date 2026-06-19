@@ -157,3 +157,28 @@ Push-Kampagnen (Server-getrieben) bräuchten zusätzlich FCM/APNs bzw. Web-Push 
 - [ ] Datenschutz-URL + Data-Safety/App-Privacy ausgefüllt
 - [ ] (optional) Sentry-DSN gesetzt
 - [ ] Internal Testing bestanden → Produktion einreichen
+
+---
+
+## Android-Build (TWA) — Stand & Reproduktion
+
+**Erzeugt am 2026-06-19:** signierte `SmartMeal-1.0.0.apk` (Sideload) + `SmartMeal-1.0.0.aab` (Play Store), Paket `com.rawkeep.smartmeal`, min SDK 21 / target 35.
+
+**Reproduzieren (macOS):**
+```bash
+bash scripts/build-android.sh   # → build/android/app-release-signed.apk + .aab
+```
+Voraussetzungen: JDK 17 (`brew install openjdk@17`), Android SDK (`cmdline-tools/latest`, `build-tools;34.0.0`, eine Platform), Node. Das generierte Gradle-Projekt + Keystore liegen unter `build/`/lokal und sind **bewusst nicht im Repo** (`.gitignore`). Quelle der Wahrheit: `scripts/twa-manifest.pages.json` (zeigt auf die **ungated** Pages-URL).
+
+**Keystore:** `build/android-keystore.keystore`, Alias `smartmeal`, Passwort aktuell `smartmeal` (für Produktion ändern!). SHA-256 der Upload-Signatur:
+`AF:BA:7A:0D:5E:FC:D6:FF:91:D7:C6:3E:F3:84:11:EA:0F:71:F1:B7:4E:2E:31:14:DE:71:01:C7:A8:1D:F7:E7`
+**Ohne diesen Keystore sind keine App-Updates möglich — sicher sichern, nie committen.**
+
+### Vollbild-TWA / Play Store — offene Punkte
+1. **Digital Asset Links:** `public/.well-known/assetlinks.json` ist angelegt (mit obigem SHA-256) und wird vom Express-Server an der **Origin-Root** ausgeliefert (`/.well-known/assetlinks.json`, ungated). Damit eine TWA **ohne Adressleiste** (Vollbild) läuft, muss die App von **einer eigenen Domain ungated** ausgeliefert werden, deren Root diese Datei liefert (GitHub-Project-Pages unter `/smart-meal/` können das nicht an der Root).
+   - Empfohlen: Fly-App bzw. `smartmeal.rawkeep.com` **ungated** schalten (Gate-Entscheidung, Abschnitt 3), TWA-`host` darauf zeigen, neu bauen.
+2. **Play App Signing:** Google re-signiert das AAB mit eigenem Schlüssel → den **dort angezeigten SHA-256** zusätzlich in `assetlinks.json` aufnehmen.
+3. **Play Console:** Entwicklerkonto (einmalig 25 $), `SmartMeal-1.0.0.aab` hochladen, Store-Listing, Data-Safety, Internal Testing → Produktion.
+
+### Sideload aufs Tablet (sofort, ohne Play Store)
+APK aufs Gerät kopieren → öffnen → „Unbekannte Apps installieren" erlauben → installieren. (Ohne verifizierte assetlinks öffnet die TWA mit dünner Chrome-Leiste; die **PWA-Installation** via Chrome „App installieren" ist personal die vollbildigere Variante.)
