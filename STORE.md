@@ -182,3 +182,25 @@ Voraussetzungen: JDK 17 (`brew install openjdk@17`), Android SDK (`cmdline-tools
 
 ### Sideload aufs Tablet (sofort, ohne Play Store)
 APK aufs Gerät kopieren → öffnen → „Unbekannte Apps installieren" erlauben → installieren. (Ohne verifizierte assetlinks öffnet die TWA mit dünner Chrome-Leiste; die **PWA-Installation** via Chrome „App installieren" ist personal die vollbildigere Variante.)
+
+---
+
+## Monetarisierung — per-Käufer-Zugangscodes (Paywall via Gate)
+
+Das Fly-Gate akzeptiert **mehrere Codes** (`ACCESS_CODES`), einer je Käufer, jeder einzeln widerrufbar — ohne DB. Cookie speichert nur den **Fingerprint** des Codes; fällt der Code aus der Liste, endet nur dessen Sitzung.
+
+**Einmalig — starkes Signier-Secret setzen (stabil halten!):**
+```bash
+fly secrets set GATE_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))") -a smart-meal
+```
+
+**Verkaufsfluss:**
+1. Codes erzeugen: `node scripts/gen-codes.mjs 20`
+2. Gesamtliste in einem Passwortmanager führen (Fly zeigt Secret-Werte nicht an).
+3. Setzen: `fly secrets set ACCESS_CODES="code1,code2,…" -a smart-meal`
+4. Käufer zahlt (z. B. Stripe Payment Link / Ko-fi / PayPal.me) → du gibst ihm **einen** Code.
+5. Käufer öffnet App/PWA/APK → gibt den Code im Gate ein → 30 Tage Zugang (Cookie).
+
+**Widerruf eines Käufers:** Code aus der Liste streichen, erneut `fly secrets set ACCESS_CODES="…"`. Nur dessen Zugang endet; alle anderen bleiben.
+
+**Grenzen (für „mini"-Skala ok):** ein Code kann weitergegeben werden (kein Geräte-Binding); `ACCESS_GATE_PASS` (falls noch gesetzt) gilt weiterhin als Einzel-Passwort. Für viele Käufer/automatischen Verkauf später: DB + Stripe-Webhook, der Codes automatisch ausgibt.
