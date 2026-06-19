@@ -55,8 +55,10 @@ const KEYWORD_TO_NUMBERS = [
   { match: ["sojasauce", "sojasoße", "soy sauce", "miso", "maggi", "brühwürfel", "brühe (instant)", "fondor"], numbers: [4] },
   { match: ["essig", "weinessig", "balsamico"], numbers: [5] },
   { match: ["trockenfr", "rosinen", "aprikosen (getr", "sultaninen", "dörr"], numbers: [5] },
-  { match: ["cola", "energy", "energydrink", "mate", "club-mate"], numbers: [11] },
-  { match: ["tonic", "bitter lemon"], numbers: [12] },
+  // Spezifische Getränkenamen statt kurzer Stämme — "cola"/"mate" steckten sonst
+  // in "Rucola"/"Tomate" und hätten Salat/Tomatengerichte als koffeinhaltig markiert.
+  { match: ["coca-cola", "cola-getränk", "energydrink", "energy-drink", "club-mate", "mate-tee", "matetee", "guaraná", "guarana"], numbers: [11] },
+  { match: ["tonic water", "tonicwater", "bitter lemon"], numbers: [12] },
   { match: ["light", "zero", "süßstoff", "diät"], numbers: [9] },
 ];
 

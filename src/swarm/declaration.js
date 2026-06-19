@@ -24,12 +24,14 @@ import {
   getTextAdditiveNumbers,
   summarizeAdditives,
   summarizeAdditivesFromText,
+  ADDITIVE_NUMBER_LABELS,
 } from "./additive-codes.js";
 
-// Alkoholhaltige Zutaten (Wortstämme, lowercase). Wein als reine
-// Getränkeempfehlung zählt NICHT — nur Alkohol IM Gericht.
+// Alkoholhaltige Zutaten (lowercase). Als GANZE Wörter geprüft (Unicode-Wort-
+// grenzen), sonst steckte "ale" in "Schale", "rum" in "Rumpsteak", "bier" in
+// "Himbier…" usw. Wein als reine Getränkeempfehlung zählt nicht — nur im Gericht.
 const ALCOHOL_KEYWORDS = [
-  "weißwein", "rotwein", "rosé", "wein ", "kochwein", "sekt", "champagner",
+  "wein", "weißwein", "rotwein", "rosé", "kochwein", "sekt", "champagner",
   "bier", "stout", "ale", "rum", "cognac", "weinbrand", "brandy", "sherry",
   "portwein", "marsala", "madeira", "wodka", "vodka", "whisky", "whiskey",
   "likör", "amaretto", "baileys", "grappa", "calvados", "schnaps", "obstler",
@@ -41,6 +43,13 @@ const ALCOHOL_FREE = Object.freeze({
   label: "0,0 % vol · alkoholfrei",
 });
 
+// Ganzwort-Treffer ohne Lookbehind (breite Browser-Kompatibilität): der Begriff
+// darf nicht von einem Buchstaben umschlossen sein.
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function mentionsWholeWord(haystack, term) {
+  return new RegExp(`(?:^|[^\\p{L}])${escapeRe(term)}(?![\\p{L}])`, "iu").test(haystack);
+}
+
 /**
  * Alkoholgehalt aus Zutaten- und Schritttexten ableiten.
  * @param {string[]} zutaten
@@ -49,7 +58,7 @@ const ALCOHOL_FREE = Object.freeze({
  */
 export function detectAlcohol(zutaten = [], schritte = []) {
   const haystack = [...zutaten, ...schritte].join(" \n ").toLowerCase();
-  const hit = ALCOHOL_KEYWORDS.find((k) => haystack.includes(k));
+  const hit = ALCOHOL_KEYWORDS.some((k) => mentionsWholeWord(haystack, k));
   if (!hit) return ALCOHOL_FREE;
 
   // Kochalkohol verdampft beim Erhitzen nur teilweise — ehrlich kennzeichnen,
@@ -125,21 +134,10 @@ export function buildDeclarationFromText(zutaten = [], schritte = []) {
     allergene,
     zusatzstoffe: [...additiveNumbers].sort((a, b) => a - b).map((number) => ({
       number,
-      label: textAdditives.find((t) => t.number === number)?.label || numberLabel(number),
+      label: ADDITIVE_NUMBER_LABELS[number] || String(number),
     })),
     alkohol: detectAlcohol(zutaten, schritte),
   };
-}
-
-function numberLabel(number) {
-  // Lazy import-free Lookup: dieselbe Tabelle wie additive-codes.
-  const labels = {
-    1: "mit Farbstoff", 2: "mit Konservierungsstoff", 3: "mit Antioxidationsmittel",
-    4: "mit Geschmacksverstärker", 5: "geschwefelt", 6: "geschwärzt", 7: "gewachst",
-    8: "mit Phosphat", 9: "mit Süßungsmitteln", 10: "enthält eine Phenylalaninquelle",
-    11: "koffeinhaltig", 12: "chininhaltig", 13: "mit Taurin",
-  };
-  return labels[number] || String(number);
 }
 
 /**
@@ -154,4 +152,48 @@ export function lineDeclarationCodes(line) {
   const additives = new Set(food ? getFoodAdditiveNumbers(food) : []);
   getTextAdditiveNumbers(line).forEach((n) => additives.add(n));
   return { allergens, additives: [...additives].sort((a, b) => a - b) };
+}
+
+// Trailing Allergencode-Suffix wie " (G)" oder " (A,C)" — nur reine EU-Codes
+// (A–R, optional eine Ziffer für H1–H8), damit "Kokosmilch (Dose)" unberührt bleibt.
+const ALLERGEN_SUFFIX_RE = /\s*\((?:[A-R]\d?)(?:\s*,\s*[A-R]\d?)*\)\s*$/;
+
+/**
+ * Anzeige-Deklaration für die UI: pro Zutatenzeile die Codes UND eine Legende,
+ * die garantiert JEDEN inline gezeigten Code erklärt. Die Legende ist die
+ * Vereinigung aus den gespeicherten Rezept-Codes und allen Zeilen-Codes —
+ * so kann nie eine Hochzahl/ein Buchstabe ohne Erläuterung auftauchen.
+ * @param {{ zutaten?: string[], schritte?: string[], allergene?: Array<{code:string,label:string}>, zusatzstoffe?: Array<{number:number,label:string}>, alkohol?: object }} suggestion
+ * @returns {{ lines: Array<{text:string, allergens:string[], additives:number[]}>, allergene: Array<{code:string,label:string}>, zusatzstoffe: Array<{number:number,label:string}>, alkohol: AlcoholInfo }}
+ */
+export function displayDeclaration(suggestion = {}) {
+  const zutaten = suggestion.zutaten || [];
+  // Offline-Rezepte hängen Allergencodes als " (G)" / " (A,C)" an die Zutat an.
+  // Da die UI die Codes jetzt als farbige Marker zeigt, den Klammer-Suffix für
+  // die Anzeige entfernen (nur reine Allergencodes, z. B. nicht "Kokosmilch (Dose)").
+  const lines = zutaten.map((text) => ({
+    text: text.replace(ALLERGEN_SUFFIX_RE, ""),
+    ...lineDeclarationCodes(text),
+  }));
+
+  const allergenCodes = new Set((suggestion.allergene || []).map((a) => a.code));
+  lines.forEach((l) => l.allergens.forEach((c) => allergenCodes.add(c)));
+  const allergene = [...allergenCodes].sort().map((code) => ({
+    code,
+    label: EU_ALLERGEN_LABELS[code] || code,
+  }));
+
+  const additiveNumbers = new Set((suggestion.zusatzstoffe || []).map((z) => z.number));
+  lines.forEach((l) => l.additives.forEach((n) => additiveNumbers.add(n)));
+  const zusatzstoffe = [...additiveNumbers].sort((a, b) => a - b).map((number) => ({
+    number,
+    label: ADDITIVE_NUMBER_LABELS[number] || String(number),
+  }));
+
+  return {
+    lines,
+    allergene,
+    zusatzstoffe,
+    alkohol: suggestion.alkohol || detectAlcohol(zutaten, suggestion.schritte),
+  };
 }
