@@ -134,7 +134,10 @@ const _b64u = (buf) => Buffer.from(buf).toString("base64").replace(/\+/g, "-").r
 // gezielten Widerruf: fällt der Code aus ACCESS_CODES, ist sein fp nicht mehr gültig.
 const _codeFp = (code) => _b64u(crypto.createHmac("sha256", GATE_SECRET).update("fp:" + code).digest()).slice(0, 22);
 // Aktuell gültige Fingerprints (Codes + Alt-Passwort + optional App-Bypass-Token).
-const VALID_FPS = new Set([...VALID_CODES, ...(APP_TOKEN ? [APP_TOKEN] : [])].map(_codeFp));
+// "__signed__" = Sammel-Fingerprint für selbst-signierte Codes (automatische
+// Ausgabe nach Zahlung) — deren Cookies sind so gültig, ohne dass jeder einzelne
+// Code in der Liste stehen muss.
+const VALID_FPS = new Set([...VALID_CODES, ...(APP_TOKEN ? [APP_TOKEN] : []), "__signed__"].map(_codeFp));
 function _gateToken(code) {
   const payload = `${Date.now() + GATE_TTL_MS}:${_codeFp(code)}`;
   const sig = _b64u(crypto.createHmac("sha256", GATE_SECRET).update(payload).digest());
@@ -153,6 +156,25 @@ function _validGateToken(tok) {
   const exp = parseInt(expStr, 10);
   if (!(Number.isFinite(exp) && exp > Date.now())) return false;
   return !!fp && VALID_FPS.has(fp); // entzogener/unbekannter Code → Cookie ungültig
+}
+// ─── Selbst-signierte Codes (für automatische Ausgabe nach Zahlung) ───
+// Format: SMP.<exp>.<sig> — gültig, wenn die Signatur (GATE_SECRET) stimmt und
+// exp in der Zukunft liegt. Kein Speicher/Redeploy nötig: der Server kann sie
+// jederzeit prägen (mintSignedCode) und akzeptiert sie sofort.
+function mintSignedCode(days = 365) {
+  const exp = Date.now() + days * 24 * 3600 * 1000;
+  const sig = _b64u(crypto.createHmac("sha256", GATE_SECRET).update("signed:" + exp).digest()).slice(0, 24);
+  return `SMP.${exp}.${sig}`;
+}
+function _isSignedCode(code) {
+  if (typeof code !== "string" || !code.startsWith("SMP.")) return false;
+  const [, expStr, sig] = code.split(".");
+  if (!expStr || !sig) return false;
+  const expected = _b64u(crypto.createHmac("sha256", GATE_SECRET).update("signed:" + expStr).digest()).slice(0, 24);
+  if (sig.length !== expected.length) return false;
+  if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return false;
+  const exp = parseInt(expStr, 10);
+  return Number.isFinite(exp) && exp > Date.now();
 }
 function _readCookie(req, name) {
   const raw = req.headers.cookie || "";
@@ -195,12 +217,53 @@ const _validAppToken = (req) => {
   return !!t && _safeEq(t, APP_TOKEN);
 };
 
+// ─── Automatischer Kauf → Zugangscode (Stripe Checkout success_url) ───
+// Bei Stripe als success_url eintragen:
+//   https://smartmeal.rawkeep.com/buy/success?session_id={CHECKOUT_SESSION_ID}
+// Inert ohne STRIPE_SECRET_KEY. Verifiziert die Session serverseitig (REST, keine
+// Extra-Dependency) und prägt bei bezahltem Status sofort einen gültigen Code.
+const STRIPE_KEY = process.env.STRIPE_SECRET_KEY || "";
+function _buyPage(msg, code) {
+  const body = code
+    ? `<p style="font-size:13px;color:#94a3b8;margin:0 0 10px">Zahlung bestätigt — danke! Dein persönlicher Zugangscode (1 Jahr gültig, bitte sichern):</p>
+<div style="font-family:ui-monospace,monospace;font-size:15px;letter-spacing:.5px;background:#0f172a;border:1px solid #334155;border-radius:9px;padding:12px;word-break:break-all;color:#a7f3d0;margin-bottom:14px">${_htmlAttr(code)}</div>
+<form method="POST" action="/__gate"><input type="hidden" name="code" value="${_htmlAttr(code)}"><input type="hidden" name="returnTo" value="/smart-meal/"><button type="submit" style="width:100%;padding:11px;border:0;border-radius:9px;background:#10b981;color:#fff;font-size:14px;font-weight:600;cursor:pointer">Jetzt eintreten →</button></form>`
+    : `<div style="background:#7f1d1d;color:#fecaca;font-size:13px;padding:10px 12px;border-radius:8px">${_htmlAttr(msg || "Fehler")}</div>`;
+  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Meal — Kauf</title></head>
+<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f172a;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0">
+<div style="background:#1e293b;padding:32px 28px;border-radius:16px;width:340px;box-shadow:0 10px 40px rgba(0,0,0,.4)">
+<div style="font-size:32px;text-align:center;margin-bottom:6px">🍽️</div>
+<h1 style="font-size:18px;margin:0 0 14px;text-align:center">Smart Meal</h1>${body}</div></body></html>`;
+}
+app.get("/buy/success", async (req, res) => {
+  res.setHeader("Content-Security-Policy", GATE_CSP);
+  const sid = String((req.query && req.query.session_id) || "");
+  if (!STRIPE_KEY || !/^cs_[A-Za-z0-9_]+$/.test(sid)) {
+    return res.status(400).send(_buyPage("Kein gültiger Zahlungsnachweis.", null));
+  }
+  try {
+    const r = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sid)}`, {
+      headers: { Authorization: `Bearer ${STRIPE_KEY}` },
+    });
+    const s = await r.json();
+    if (!r.ok || s.payment_status !== "paid") {
+      return res.status(402).send(_buyPage("Zahlung noch nicht bestätigt. Bei Fragen melde dich bitte.", null));
+    }
+    return res.send(_buyPage(null, mintSignedCode(365)));
+  } catch {
+    return res.status(502).send(_buyPage("Zahlung konnte gerade nicht geprüft werden — Seite später erneut öffnen.", null));
+  }
+});
+
 if (GATE_ON) {
   app.use(express.urlencoded({ extended: false, limit: "4kb" }));
   app.use((req, res, next) => {
     if (req.path === "/api/health") return next();
     // Öffentlich (auch für Store-Reviewer / TWA-Verifikation): Datenschutz + Asset-Links.
     if (req.path === "/privacy" || req.path === "/.well-known/assetlinks.json") return next();
+    // Kauf-Erfolgsseite (Stripe success_url) — muss ohne Code erreichbar sein,
+    // sie GIBT den Code ja erst aus.
+    if (req.path === "/buy/success") return next();
     // Öffentliche, nicht-sensible PWA-Metadaten: Manifest, Icons, Screenshots.
     // Nötig für Installierbarkeit, Lighthouse/PWA-Audits und Bubblewrap (das die
     // Manifest-URL öffentlich abruft). Die App-Shell selbst bleibt gegated.
@@ -209,10 +272,10 @@ if (GATE_ON) {
         req.path.startsWith("/smart-meal/screenshots/")) return next();
     if (req.path === "/__gate") {
       if (req.method === "POST") {
-        const submitted = (req.body && (req.body.code || req.body.password)) || "";
+        const submitted = ((req.body && (req.body.code || req.body.password)) || "").trim();
         const matched = VALID_CODES.find((c) => _safeEq(submitted, c));
-        if (matched) {
-          res.cookie(GATE_COOKIE, _gateToken(matched), { httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: GATE_TTL_MS });
+        if (matched || _isSignedCode(submitted)) {
+          res.cookie(GATE_COOKIE, _gateToken(matched || "__signed__"), { httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: GATE_TTL_MS });
           return res.redirect(302, _safeReturn(req.body && req.body.returnTo));
         }
         res.setHeader("Content-Security-Policy", GATE_CSP);
