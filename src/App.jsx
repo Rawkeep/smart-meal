@@ -30,6 +30,7 @@ const K = {
   provider: "wei-provider",
   reviewed: "wei-reviewed-v1",
   reminder: "wei-reminder-v1",
+  theme: "wei-theme-v1",
 };
 
 // Map a free-text ingredient line (e.g. "200 g Hähnchenbrust") to a food
@@ -330,6 +331,8 @@ const ICON_PATHS = {
   nutrition: <path d="M4 13l3.5-.0 2-4.5 3 9 2.2-5 1.8 0.5H21" />,
   alert: <><path d="M12 3 2.5 20h19L12 3Z" /><path d="M12 10v4.5M12 17.4v.1" /></>,
   label: <><path d="M3 12l8.3-8.3a2 2 0 0 1 1.4-.6H19a2 2 0 0 1 2 2v6.3a2 2 0 0 1-.6 1.4L12 21a2 2 0 0 1-2.8 0L3 14.8a2 2 0 0 1 0-2.8Z" /><circle cx="16.5" cy="7.5" r="1.3" /></>,
+  sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8" /></>,
+  moon: <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8Z" />,
 };
 
 const Icon = ({ name, size = 19, color = "var(--accent)", style: s }) => (
@@ -339,6 +342,42 @@ const Icon = ({ name, size = 19, color = "var(--accent)", style: s }) => (
     {ICON_PATHS[name]}
   </svg>
 );
+
+// Respektiert die System-Einstellung „weniger Bewegung" (lazy init → kein
+// setState im Effect-Body).
+const usePrefersReducedMotion = () => {
+  const [reduce, setReduce] = useState(
+    () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || false
+  );
+  useEffect(() => {
+    const m = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handler = () => setReduce(m.matches);
+    m.addEventListener("change", handler);
+    return () => m.removeEventListener("change", handler);
+  }, []);
+  return reduce;
+};
+
+// Zahl zählt beim Erscheinen sanft hoch (easeOutCubic) — premiumiges Detail.
+const CountUp = ({ end, decimals = 0, duration = 900 }) => {
+  const reduce = usePrefersReducedMotion();
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (reduce) return; // kein State-Set im Effect-Body — Wert wird unten direkt gezeigt
+    let raf, start;
+    const step = (t) => {
+      if (start == null) start = t;
+      const p = Math.min((t - start) / duration, 1);
+      setVal(end * (1 - Math.pow(1 - p, 3))); // setState nur im rAF-Callback
+      if (p < 1) raf = requestAnimationFrame(step);
+      else setVal(end);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [end, duration, reduce]);
+  const shown = reduce ? end : val;
+  return <>{Number(shown).toFixed(decimals)}</>;
+};
 
 const ST = ({ children, sub, icon }) => (
   <div style={{ marginBottom: "10px" }}>
@@ -613,6 +652,7 @@ const AVATARS = ["🧑‍🍳", "👩‍🍳", "👨‍🍳", "🦊", "🐻", "�
 // ─── Main App ───
 export default function App() {
   const [profile, setProfile] = useState(defaultProfile);
+  const [theme, setTheme] = useState(() => load(K.theme) || "light");
   const [view, setView] = useState("loading");
   const [onbStep, setOnbStep] = useState(0);
   const [meal, setMeal] = useState("");
@@ -656,6 +696,12 @@ export default function App() {
   const [offlineMode, setOfflineMode] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
   const mounted = useRef(false);
+
+  // ─── Theme (Light / Luxus-Dark) ───
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    save(K.theme, theme);
+  }, [theme]);
 
   // ─── Network status listener ───
   // Auto-flip to offline AI when the device drops connectivity, and flip back
@@ -2015,15 +2061,29 @@ NUR JSON (kein Markdown):
                 <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: "28px", fontWeight: 900, color: "var(--ink)", letterSpacing: "-1px" }}>Was esse ich?</h1>
               </div>
             </div>
-            {streak.count > 0 && (
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 10px",
-                borderRadius: "12px",
-                background: streak.count >= 7 ? "linear-gradient(135deg,#E8943A,#D4731A)" : "var(--card)",
-                border: "1px solid var(--card-border)", fontSize: "12px", fontWeight: 600,
-                color: streak.count >= 7 ? "#fff" : "var(--ink2)",
-              }}>🔥 {streak.count} Tage</div>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {streak.count > 0 && (
+                <div style={{
+                  display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 10px",
+                  borderRadius: "12px",
+                  background: streak.count >= 7 ? "linear-gradient(135deg,var(--accent),var(--accent-deep))" : "var(--card)",
+                  border: "1px solid var(--card-border)", fontSize: "12px", fontWeight: 600,
+                  color: streak.count >= 7 ? "#fff" : "var(--ink2)",
+                }}>🔥 {streak.count} Tage</div>
+              )}
+              <button
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                aria-label={theme === "dark" ? "Helles Design" : "Dunkles Design"}
+                title={theme === "dark" ? "Zu hellem Design wechseln" : "Zu dunklem Design wechseln"}
+                style={{
+                  width: "38px", height: "38px", borderRadius: "12px", flexShrink: 0,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  background: "var(--card)", border: "1px solid var(--card-border)",
+                  boxShadow: "var(--inset-hi), var(--shadow-sm)", cursor: "pointer", color: "var(--accent)",
+                }}>
+                <Icon name={theme === "dark" ? "sun" : "moon"} size={18} color="var(--accent)" />
+              </button>
+            </div>
           </div>
           <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
             {profile.histamin && <Badge icon="⚠️" text="Histamin" />}
@@ -2348,12 +2408,12 @@ NUR JSON (kein Markdown):
             <ST icon="nutrition" sub="pro Person">Nährwerte</ST>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: "8px", marginTop: "8px" }}>
               {[
-                { label: "Energie", value: `${suggestion.makros.kcal} kcal`, c: "var(--saffron)" },
-                { label: "Protein", value: `${suggestion.makros.protein} g`, c: "var(--berry)" },
-                { label: "Fett", value: `${suggestion.makros.fat} g`, sub: `davon ges. ${suggestion.makros.satFat} g`, c: "var(--accent)" },
-                { label: "Kohlenhydrate", value: `${suggestion.makros.carbs} g`, sub: `davon Zucker ${suggestion.makros.sugar} g`, c: "var(--petrol)" },
-                { label: "Ballaststoffe", value: `${suggestion.makros.fiber} g`, c: "var(--herb)" },
-                { label: "Salz", value: `${suggestion.makros.salt} g`, c: "var(--plum)" },
+                { label: "Energie", n: suggestion.makros.kcal, unit: "kcal", c: "var(--saffron)" },
+                { label: "Protein", n: suggestion.makros.protein, unit: "g", c: "var(--berry)" },
+                { label: "Fett", n: suggestion.makros.fat, unit: "g", sub: `davon ges. ${suggestion.makros.satFat} g`, c: "var(--accent)" },
+                { label: "Kohlenhydrate", n: suggestion.makros.carbs, unit: "g", sub: `davon Zucker ${suggestion.makros.sugar} g`, c: "var(--petrol)" },
+                { label: "Ballaststoffe", n: suggestion.makros.fiber, unit: "g", c: "var(--herb)" },
+                { label: "Salz", n: suggestion.makros.salt, unit: "g", dec: 1, c: "var(--plum)" },
               ].map(m => (
                 <div key={m.label} style={{
                   padding: "10px", borderRadius: "10px",
@@ -2362,7 +2422,10 @@ NUR JSON (kein Markdown):
                   borderLeft: `3px solid ${m.c}`,
                 }}>
                   <div style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 500 }}>{m.label}</div>
-                  <div style={{ fontSize: "15px", color: m.c, fontWeight: 700, fontFamily: "'Fraunces',serif", fontVariantNumeric: "tabular-nums" }}>{m.value}</div>
+                  <div style={{ fontSize: "16px", color: m.c, fontWeight: 700, fontFamily: "'Fraunces',serif", fontVariantNumeric: "tabular-nums" }}>
+                    <CountUp end={Number(m.n) || 0} decimals={m.dec || 0} />
+                    <span style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 600, marginLeft: "3px" }}>{m.unit}</span>
+                  </div>
                   {m.sub && <div style={{ fontSize: "10px", color: "var(--ink3)", marginTop: "2px" }}>{m.sub}</div>}
                 </div>
               ))}
@@ -2428,8 +2491,8 @@ NUR JSON (kein Markdown):
           // Semantische Palette: Allergene (Beere), Zusatzstoffe (Petrol),
           // Alkohol (Wein/Kräutergrün) — bewusst getrennte Farbwelten.
           const C = {
-            allergen: { fg: "#B23A48", bg: "rgba(178,58,72,0.10)", bd: "rgba(178,58,72,0.28)" },
-            additive: { fg: "#2C7A86", bg: "rgba(44,122,134,0.10)", bd: "rgba(44,122,134,0.28)" },
+            allergen: { fg: "var(--berry)", bg: "color-mix(in srgb, var(--berry) 10%, transparent)", bd: "color-mix(in srgb, var(--berry) 28%, transparent)" },
+            additive: { fg: "var(--petrol)", bg: "color-mix(in srgb, var(--petrol) 10%, transparent)", bd: "color-mix(in srgb, var(--petrol) 28%, transparent)" },
           };
           const aLabel = Object.fromEntries(decl.allergene.map(a => [a.code, a.label]));
           const zLabel = Object.fromEntries(decl.zusatzstoffe.map(z => [z.number, z.label]));
@@ -2513,10 +2576,10 @@ NUR JSON (kein Markdown):
                 </div>
 
                 <div>
-                  <p style={{ fontSize: "10px", color: alk.enthalten ? "#8A2E48" : "#3F7D4E", fontWeight: 700, margin: "0 0 6px", letterSpacing: "0.3px", textTransform: "uppercase" }}>Alkoholgehalt</p>
+                  <p style={{ fontSize: "10px", color: alk.enthalten ? "var(--wine)" : "var(--herb)", fontWeight: 700, margin: "0 0 6px", letterSpacing: "0.3px", textTransform: "uppercase" }}>Alkoholgehalt</p>
                   <span style={chip(
-                    alk.enthalten ? "rgba(138,46,72,0.10)" : "rgba(63,125,78,0.10)",
-                    alk.enthalten ? "rgba(138,46,72,0.28)" : "rgba(63,125,78,0.28)",
+                    alk.enthalten ? "color-mix(in srgb, var(--wine) 12%, transparent)" : "color-mix(in srgb, var(--herb) 12%, transparent)",
+                    alk.enthalten ? "color-mix(in srgb, var(--wine) 30%, transparent)" : "color-mix(in srgb, var(--herb) 30%, transparent)",
                   )}>
                     <span style={{ fontSize: "13px" }}>{alk.enthalten ? "🍷" : "🌿"}</span>
                     {alk.label}
