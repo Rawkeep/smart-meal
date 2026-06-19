@@ -65,6 +65,19 @@ const withDeclaration = (r) => {
   };
 };
 
+// Deterministische „Dish-Art": pro Rezept zwei warme Paletten-Töne aus einem
+// Hash von Herkunft/Tag/Name — gibt jedem Gericht ein eigenes, offline-fähiges
+// Hero-Motiv (kein Bild/Asset nötig).
+const DISH_HUES = ["178,58,72", "126,90,134", "224,165,46", "94,140,79", "44,122,134", "138,46,72", "199,90,103"];
+const hashStr = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; };
+const dishArt = (r) => {
+  const seed = hashStr(String(r?.herkunft || r?.tags?.[0] || r?.name || "meal"));
+  const a = DISH_HUES[seed % DISH_HUES.length];
+  let b = DISH_HUES[(Math.floor(seed / 7)) % DISH_HUES.length];
+  if (b === a) b = DISH_HUES[(seed + 3) % DISH_HUES.length];
+  return { a, b };
+};
+
 // LMIV / data-source footer shown beside every allergen/nutrition block
 const DATA_SOURCES = [
   "Allergene nach LMIV / FIC Reg. (EU) Nr. 1169/2011, Anhang II",
@@ -302,22 +315,44 @@ const Card = ({ children, style, anim, delay }) => (
     borderRadius: "var(--R)",
     padding: "26px",
     border: "1px solid var(--card-border)",
-    boxShadow: "var(--shadow)",
+    boxShadow: "var(--inset-hi), var(--shadow)",
     animation: anim ? `${anim} 0.5s cubic-bezier(0.16,1,0.3,1) both` : undefined,
     animationDelay: delay || "0s",
     ...style,
   }}>{children}</div>
 );
 
-const ST = ({ children, sub }) => (
+// Schlanke Stroke-Icons (24px, currentColor) — professioneller als Emojis in
+// den Section-Headern. Bewusst minimal gehalten; erweiterbar.
+const ICON_PATHS = {
+  ingredients: <><path d="M4 7h11M4 12h11M4 17h7" /><circle cx="19" cy="7" r="1.3" /><circle cx="19" cy="12" r="1.3" /></>,
+  steps: <><path d="M5 6h14M5 6l1.4 12.5a1.5 1.5 0 0 0 1.5 1.3h8.2a1.5 1.5 0 0 0 1.5-1.3L19 6" /><path d="M9 3.5h6" /><path d="M9.5 10v6M14.5 10v6" /></>,
+  nutrition: <path d="M4 13l3.5-.0 2-4.5 3 9 2.2-5 1.8 0.5H21" />,
+  alert: <><path d="M12 3 2.5 20h19L12 3Z" /><path d="M12 10v4.5M12 17.4v.1" /></>,
+  label: <><path d="M3 12l8.3-8.3a2 2 0 0 1 1.4-.6H19a2 2 0 0 1 2 2v6.3a2 2 0 0 1-.6 1.4L12 21a2 2 0 0 1-2.8 0L3 14.8a2 2 0 0 1 0-2.8Z" /><circle cx="16.5" cy="7.5" r="1.3" /></>,
+};
+
+const Icon = ({ name, size = 19, color = "var(--accent)", style: s }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
+    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+    style={{ flexShrink: 0, ...s }}>
+    {ICON_PATHS[name]}
+  </svg>
+);
+
+const ST = ({ children, sub, icon }) => (
   <div style={{ marginBottom: "10px" }}>
     <h3 style={{
+      display: "flex", alignItems: "center", gap: "9px",
       fontFamily: "'Fraunces',serif", fontSize: "17px", fontWeight: 700,
       color: "var(--ink)", letterSpacing: "-0.3px",
-    }}>{children}</h3>
+    }}>
+      {icon && <Icon name={icon} />}
+      {children}
+    </h3>
     {sub && <p style={{
       fontFamily: "'Outfit',sans-serif", fontSize: "13px",
-      color: "var(--ink3)", marginTop: "2px",
+      color: "var(--ink3)", marginTop: "2px", marginLeft: icon ? "28px" : 0,
     }}>{sub}</p>}
   </div>
 );
@@ -341,7 +376,7 @@ const Badge = ({ icon, text }) => (
   <div style={{
     padding: "5px 12px", borderRadius: "20px", background: "var(--card)",
     border: "1px solid var(--card-border)", fontSize: "12px", color: "var(--ink2)",
-    fontWeight: 500, fontFamily: "'Outfit',sans-serif",
+    fontWeight: 500, fontFamily: "'Outfit',sans-serif", fontVariantNumeric: "tabular-nums",
     display: "inline-flex", alignItems: "center", gap: "4px",
   }}>{icon} {text}</div>
 );
@@ -2266,19 +2301,32 @@ NUR JSON (kein Markdown):
     );
 
     const isFav = favorites.some(f => f.name === suggestion.name);
+    const art = dishArt(suggestion);
 
     return (
       <Layout>
         {/* Hero */}
         <div style={{ textAlign: "center", padding: "28px 0 12px", animation: "scaleIn 0.5s cubic-bezier(0.16,1,0.3,1) both", position: "relative" }}>
-          {/* Soft multi-hue glow behind the dish emoji (Beere · Pflaume · Safran) */}
+          {/* Generative „Dish-Art": Teller-Komposition mit rezepteigenem
+              Verlauf — edler & appetitlicher als ein nacktes Emoji, voll offline. */}
           <div style={{
-            position: "absolute", top: "10px", left: "50%", transform: "translateX(-50%)",
-            width: "190px", height: "190px", borderRadius: "50%", pointerEvents: "none",
-            background: "radial-gradient(circle at 42% 40%, rgba(178,58,72,0.30) 0%, transparent 60%), radial-gradient(circle at 60% 58%, rgba(126,90,134,0.24) 0%, transparent 62%), radial-gradient(circle at 50% 50%, rgba(224,165,46,0.18) 0%, transparent 72%)",
-            filter: "blur(9px)", animation: "glowPulse 5s ease-in-out infinite", zIndex: 0,
+            position: "absolute", top: "-6px", left: "50%", transform: "translateX(-50%)",
+            width: "210px", height: "210px", borderRadius: "50%", pointerEvents: "none", zIndex: 0,
+            background: `radial-gradient(circle at 40% 36%, rgba(${art.a},0.22) 0%, transparent 62%), radial-gradient(circle at 64% 66%, rgba(${art.b},0.18) 0%, transparent 64%)`,
+            filter: "blur(14px)", animation: "glowPulse 6s ease-in-out infinite",
           }} />
-          <div style={{ position: "relative", fontSize: "76px", animation: "float 3s ease infinite", filter: "drop-shadow(0 8px 18px rgba(120,70,20,0.18))" }}>{suggestion.emoji || "🍽️"}</div>
+          <div style={{
+            position: "relative", width: "172px", height: "172px", margin: "0 auto", borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+            background: `radial-gradient(circle at 36% 30%, rgba(${art.a},0.5) 0%, rgba(${art.a},0.14) 46%, transparent 70%), radial-gradient(circle at 70% 72%, rgba(${art.b},0.42) 0%, transparent 58%), radial-gradient(circle at 50% 50%, var(--bg2) 0%, var(--bg3) 100%)`,
+            boxShadow: "var(--inset-hi), 0 20px 44px rgba(58,38,18,0.18), inset 0 0 0 1px rgba(255,255,255,0.22)",
+          }}>
+            {/* Tellerrand */}
+            <div style={{ position: "absolute", inset: "13px", borderRadius: "50%", border: "1px solid rgba(255,255,255,0.28)", boxShadow: "inset 0 2px 12px rgba(58,38,18,0.12)" }} />
+            {/* Lichtreflex */}
+            <div style={{ position: "absolute", top: "12%", left: "20%", width: "44%", height: "30%", borderRadius: "50%", background: "radial-gradient(circle, rgba(255,255,255,0.28) 0%, transparent 70%)", filter: "blur(3px)" }} />
+            <div style={{ position: "relative", fontSize: "82px", animation: "float 3s ease infinite", filter: "drop-shadow(0 10px 16px rgba(60,30,10,0.30))" }}>{suggestion.emoji || "🍽️"}</div>
+          </div>
           <h1 style={{ position: "relative", fontFamily: "'Fraunces',serif", fontSize: "27px", fontWeight: 900, color: "var(--ink)", marginTop: "10px", letterSpacing: "-0.5px", lineHeight: 1.15, padding: "0 16px" }}>{suggestion.name}</h1>
           <p style={{ position: "relative", fontSize: "14px", color: "var(--ink2)", marginTop: "8px", lineHeight: 1.55, padding: "0 22px", fontStyle: "italic", fontFamily: "'Fraunces',serif", fontWeight: 400 }}>{suggestion.beschreibung}</p>
         </div>
@@ -2297,7 +2345,7 @@ NUR JSON (kein Markdown):
         {/* Full macros panel */}
         {suggestion.makros && (
           <Card anim="fadeUp" delay="0.12s" style={{ marginBottom: "12px" }}>
-            <ST sub="pro Person">🥗 Nährwerte</ST>
+            <ST icon="nutrition" sub="pro Person">Nährwerte</ST>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: "8px", marginTop: "8px" }}>
               {[
                 { label: "Energie", value: `${suggestion.makros.kcal} kcal`, c: "var(--saffron)" },
@@ -2314,7 +2362,7 @@ NUR JSON (kein Markdown):
                   borderLeft: `3px solid ${m.c}`,
                 }}>
                   <div style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 500 }}>{m.label}</div>
-                  <div style={{ fontSize: "15px", color: m.c, fontWeight: 700, fontFamily: "'Fraunces',serif" }}>{m.value}</div>
+                  <div style={{ fontSize: "15px", color: m.c, fontWeight: 700, fontFamily: "'Fraunces',serif", fontVariantNumeric: "tabular-nums" }}>{m.value}</div>
                   {m.sub && <div style={{ fontSize: "10px", color: "var(--ink3)", marginTop: "2px" }}>{m.sub}</div>}
                 </div>
               ))}
@@ -2330,7 +2378,7 @@ NUR JSON (kein Markdown):
         {/* Health warnings */}
         {suggestion.warnungen?.length > 0 && (
           <Card anim="fadeUp" delay="0.13s" style={{ marginBottom: "12px" }}>
-            <ST sub="Von unserem Ernährungsberater">⚠️ Hinweise</ST>
+            <ST icon="alert" sub="Von unserem Ernährungsberater">Hinweise</ST>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "8px" }}>
               {suggestion.warnungen.map((w, i) => (
                 <div key={i} style={{
@@ -2403,7 +2451,7 @@ NUR JSON (kein Markdown):
           const alk = decl.alkohol || {};
           return (
             <Card anim="fadeUp" delay="0.2s" style={{ marginBottom: "12px" }}>
-              <ST sub={`Für ${persons} Person${persons > 1 ? "en" : ""}`}>🧾 Inhaltsstoffe</ST>
+              <ST icon="ingredients" sub={`Für ${persons} Person${persons > 1 ? "en" : ""}`}>Inhaltsstoffe</ST>
               <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
                 {decl.lines.map((l, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "11px", fontSize: "14px", color: "var(--ink)", lineHeight: 1.5 }}>
@@ -2424,8 +2472,8 @@ NUR JSON (kein Markdown):
               {/* Kennzeichnung — farbcodierte Legende, erklärt jeden Marker oben. */}
               <div style={{ marginTop: "16px", paddingTop: "13px", borderTop: "1px solid var(--card-border)", display: "flex", flexDirection: "column", gap: "13px" }}>
                 <div>
-                  <p style={{ fontSize: "12px", color: "var(--ink2)", fontWeight: 700, margin: "0 0 2px", fontFamily: "'Fraunces',serif" }}>
-                    🪶 Kennzeichnung — alles offen erklärt
+                  <p style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "12px", color: "var(--ink2)", fontWeight: 700, margin: "0 0 2px", fontFamily: "'Fraunces',serif" }}>
+                    <Icon name="label" size={15} /> Kennzeichnung — alles offen erklärt
                   </p>
                   <p style={{ fontSize: "11px", color: "var(--ink3)", margin: 0, lineHeight: 1.5 }}>
                     Wir nehmen deine Unverträglichkeiten ernst. Die kleinen Marker hinter manchen Zutaten bedeuten: <strong style={{ color: "var(--berry)" }}>Buchstabe = Allergen</strong>, <strong style={{ color: "var(--petrol)" }}>Zahl = Zusatzstoff</strong>. Tippe einen Marker an (oder fahre mit der Maus darüber), um den Klartext zu sehen — die vollständige Übersicht steht direkt darunter.
@@ -2484,7 +2532,7 @@ NUR JSON (kein Markdown):
 
         {/* Steps */}
         <Card anim="fadeUp" delay="0.25s" style={{ marginBottom: "12px" }}>
-          <ST>👨‍🍳 Zubereitung</ST>
+          <ST icon="steps">Zubereitung</ST>
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {suggestion.schritte?.map((s, i) => (
               <div key={i} style={{ display: "flex", gap: "12px" }}>
