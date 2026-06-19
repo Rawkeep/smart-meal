@@ -300,7 +300,7 @@ const Card = ({ children, style, anim, delay }) => (
     backdropFilter: "blur(24px) saturate(1.3)",
     WebkitBackdropFilter: "blur(24px) saturate(1.3)",
     borderRadius: "var(--R)",
-    padding: "24px",
+    padding: "26px",
     border: "1px solid var(--card-border)",
     boxShadow: "var(--shadow)",
     animation: anim ? `${anim} 0.5s cubic-bezier(0.16,1,0.3,1) both` : undefined,
@@ -326,11 +326,11 @@ const Btn = ({ children, onClick, disabled, secondary, style: s }) => (
   <button onClick={onClick} disabled={disabled} style={{
     width: "100%", padding: "16px", borderRadius: "16px",
     border: secondary ? "2px solid var(--card-border)" : "none",
-    background: secondary ? "var(--card)" : disabled ? "var(--ink3)" : "linear-gradient(135deg,var(--accent) 0%,#A8500F 100%)",
+    background: secondary ? "var(--card)" : disabled ? "var(--ink3)" : "linear-gradient(135deg,var(--berry) 0%,var(--plum) 100%)",
     color: secondary ? "var(--ink2)" : "#fff",
     fontSize: "15px", fontWeight: 700, fontFamily: "'Outfit',sans-serif",
     cursor: disabled ? "not-allowed" : "pointer",
-    boxShadow: secondary || disabled ? "none" : "0 6px 20px rgba(200,97,26,0.35)",
+    boxShadow: secondary || disabled ? "none" : "0 6px 20px rgba(178,58,72,0.32)",
     transition: "all 0.25s ease", letterSpacing: "0.3px",
     opacity: disabled ? 0.5 : 1,
     ...s,
@@ -364,7 +364,7 @@ const Layout = ({ children }) => (
     animation: "bgShift 20s ease infinite",
     fontFamily: "'Outfit',sans-serif",
   }}>
-    <div style={{ maxWidth: "520px", margin: "0 auto", padding: "16px 16px 48px", position: "relative", zIndex: 1 }}>
+    <div style={{ maxWidth: "560px", margin: "0 auto", padding: "22px 20px 64px", position: "relative", zIndex: 1 }}>
       {children}
     </div>
   </div>
@@ -1121,14 +1121,14 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
   .emoji { font-size: 40px; }
   .desc { color: #5A4A38; font-style: italic; margin-bottom: 12px; }
   .meta { font-size: 13px; color: #5A4A38; margin: 4px 0; }
-  h2 { font-size: 16px; border-bottom: 2px solid #C8611A; padding-bottom: 4px; margin: 22px 0 10px; color: #A8500F; }
+  h2 { font-size: 16px; border-bottom: 2px solid #B23A48; padding-bottom: 4px; margin: 22px 0 10px; color: #8E2A3A; }
   ul, ol { padding-left: 20px; } li { margin-bottom: 6px; }
   ol { list-style: none; padding-left: 0; }
   ol li { display: flex; gap: 10px; align-items: flex-start; }
-  .num { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 50%; background: #C8611A; color: #fff; font-size: 12px; font-family: sans-serif; flex-shrink: 0; }
+  .num { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 50%; background: #B23A48; color: #fff; font-size: 12px; font-family: sans-serif; flex-shrink: 0; }
   table.macros { border-collapse: collapse; font-size: 13px; }
   table.macros td { border: 1px solid #ddd; padding: 4px 12px; }
-  .tip { background: #FBF3E9; border-left: 3px solid #C8611A; padding: 10px 14px; margin: 14px 0; font-size: 14px; }
+  .tip { background: #FBF3E9; border-left: 3px solid #B23A48; padding: 10px 14px; margin: 14px 0; font-size: 14px; }
   .footer { margin-top: 28px; font-size: 10px; color: #9A8A76; border-top: 1px solid #ccc; padding-top: 8px; }
 </style></head><body>
   <div class="emoji">${esc(r.emoji || "🍽️")}</div>
@@ -1232,8 +1232,8 @@ NUR JSON (kein Markdown):
           </div>
 
           <div style={{
-            background: "linear-gradient(135deg,rgba(200,97,26,0.08),rgba(245,166,35,0.08))",
-            border: "1px solid rgba(200,97,26,0.15)", borderRadius: "var(--r)",
+            background: "linear-gradient(135deg,rgba(178,58,72,0.08),rgba(126,90,134,0.08))",
+            border: "1px solid rgba(178,58,72,0.15)", borderRadius: "var(--r)",
             padding: "12px 14px", marginBottom: "16px",
           }}>
             <p style={{ fontSize: "12px", color: "var(--ink2)", lineHeight: 1.5, margin: 0 }}>
@@ -1664,7 +1664,7 @@ NUR JSON (kein Markdown):
               <button key={av} onClick={() => setProfile(p => ({ ...p, avatar: av }))} style={{
                 width: "42px", height: "42px", borderRadius: "12px", fontSize: "22px", cursor: "pointer",
                 border: profile.avatar === av ? "2px solid var(--accent)" : "1.5px solid var(--card-border)",
-                background: profile.avatar === av ? "rgba(200,97,26,0.1)" : "var(--card)",
+                background: profile.avatar === av ? "rgba(178,58,72,0.1)" : "var(--card)",
                 transition: "all 0.2s ease",
               }}>{av}</button>
             ))}
@@ -1725,7 +1725,7 @@ NUR JSON (kein Markdown):
           <ST sub="Pollen-/Latexallergien die Lebensmittel beeinflussen">🌳 Kreuzallergien</ST>
           <ChipGrid options={CROSS_ALLERGIES.map(c => ({ id: c.id, label: c.label, emoji: c.emoji }))} selected={profile.crossAllergies || []} onToggle={id => setProfile(p => ({ ...p, crossAllergies: toggle(p.crossAllergies || [], id) }))} />
           {(profile.crossAllergies || []).length > 0 && (
-            <div style={{ marginTop: "10px", padding: "10px", borderRadius: "var(--r)", background: "rgba(200,97,26,0.06)", border: "1px solid rgba(200,97,26,0.12)" }}>
+            <div style={{ marginTop: "10px", padding: "10px", borderRadius: "var(--r)", background: "rgba(178,58,72,0.06)", border: "1px solid rgba(178,58,72,0.12)" }}>
               <p style={{ fontSize: "11px", color: "var(--ink2)", fontWeight: 600, marginBottom: "4px" }}>⚠️ Betroffene Lebensmittel:</p>
               {(profile.crossAllergies || []).map(id => {
                 const ca = CROSS_ALLERGIES.find(c => c.id === id);
@@ -2035,8 +2035,8 @@ NUR JSON (kein Markdown):
         {/* Season */}
         <div style={{
           marginTop: "12px", padding: "10px 16px", borderRadius: "var(--r)",
-          background: "linear-gradient(135deg,rgba(200,97,26,0.06),rgba(245,166,35,0.06))",
-          border: "1px solid rgba(200,97,26,0.12)",
+          background: "linear-gradient(135deg,rgba(178,58,72,0.06),rgba(126,90,134,0.06))",
+          border: "1px solid rgba(178,58,72,0.12)",
           animation: "fadeUp 0.4s ease both", animationDelay: "0.1s",
         }}>
           <p style={{ fontSize: "12px", color: "var(--ink2)" }}>
@@ -2078,7 +2078,7 @@ NUR JSON (kein Markdown):
                 display: "flex", alignItems: "center", gap: "6px",
                 padding: "6px 14px", borderRadius: "20px",
                 border: offlineMode ? "2px solid var(--accent)" : "1px solid var(--card-border)",
-                background: offlineMode ? "linear-gradient(135deg,rgba(200,97,26,0.08),rgba(245,166,35,0.08))" : "var(--card)",
+                background: offlineMode ? "linear-gradient(135deg,rgba(178,58,72,0.08),rgba(126,90,134,0.08))" : "var(--card)",
                 color: offlineMode ? "var(--accent)" : "var(--ink3)",
                 fontSize: "12px", fontWeight: offlineMode ? 600 : 400,
                 fontFamily: "'Outfit',sans-serif",
@@ -2271,12 +2271,12 @@ NUR JSON (kein Markdown):
       <Layout>
         {/* Hero */}
         <div style={{ textAlign: "center", padding: "28px 0 12px", animation: "scaleIn 0.5s cubic-bezier(0.16,1,0.3,1) both", position: "relative" }}>
-          {/* Soft warm glow behind the dish emoji */}
+          {/* Soft multi-hue glow behind the dish emoji (Beere · Pflaume · Safran) */}
           <div style={{
             position: "absolute", top: "10px", left: "50%", transform: "translateX(-50%)",
-            width: "180px", height: "180px", borderRadius: "50%", pointerEvents: "none",
-            background: "radial-gradient(circle, rgba(245,166,35,0.35) 0%, rgba(200,97,26,0.12) 45%, transparent 70%)",
-            filter: "blur(8px)", animation: "glowPulse 5s ease-in-out infinite", zIndex: 0,
+            width: "190px", height: "190px", borderRadius: "50%", pointerEvents: "none",
+            background: "radial-gradient(circle at 42% 40%, rgba(178,58,72,0.30) 0%, transparent 60%), radial-gradient(circle at 60% 58%, rgba(126,90,134,0.24) 0%, transparent 62%), radial-gradient(circle at 50% 50%, rgba(224,165,46,0.18) 0%, transparent 72%)",
+            filter: "blur(9px)", animation: "glowPulse 5s ease-in-out infinite", zIndex: 0,
           }} />
           <div style={{ position: "relative", fontSize: "76px", animation: "float 3s ease infinite", filter: "drop-shadow(0 8px 18px rgba(120,70,20,0.18))" }}>{suggestion.emoji || "🍽️"}</div>
           <h1 style={{ position: "relative", fontFamily: "'Fraunces',serif", fontSize: "27px", fontWeight: 900, color: "var(--ink)", marginTop: "10px", letterSpacing: "-0.5px", lineHeight: 1.15, padding: "0 16px" }}>{suggestion.name}</h1>
@@ -2300,20 +2300,21 @@ NUR JSON (kein Markdown):
             <ST sub="pro Person">🥗 Nährwerte</ST>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: "8px", marginTop: "8px" }}>
               {[
-                { label: "Energie", value: `${suggestion.makros.kcal} kcal` },
-                { label: "Protein", value: `${suggestion.makros.protein} g` },
-                { label: "Fett", value: `${suggestion.makros.fat} g`, sub: `davon ges. ${suggestion.makros.satFat} g` },
-                { label: "Kohlenhydrate", value: `${suggestion.makros.carbs} g`, sub: `davon Zucker ${suggestion.makros.sugar} g` },
-                { label: "Ballaststoffe", value: `${suggestion.makros.fiber} g` },
-                { label: "Salz", value: `${suggestion.makros.salt} g` },
+                { label: "Energie", value: `${suggestion.makros.kcal} kcal`, c: "var(--saffron)" },
+                { label: "Protein", value: `${suggestion.makros.protein} g`, c: "var(--berry)" },
+                { label: "Fett", value: `${suggestion.makros.fat} g`, sub: `davon ges. ${suggestion.makros.satFat} g`, c: "var(--accent)" },
+                { label: "Kohlenhydrate", value: `${suggestion.makros.carbs} g`, sub: `davon Zucker ${suggestion.makros.sugar} g`, c: "var(--petrol)" },
+                { label: "Ballaststoffe", value: `${suggestion.makros.fiber} g`, c: "var(--herb)" },
+                { label: "Salz", value: `${suggestion.makros.salt} g`, c: "var(--plum)" },
               ].map(m => (
                 <div key={m.label} style={{
                   padding: "10px", borderRadius: "10px",
-                  background: "rgba(200,97,26,0.05)",
-                  border: "1px solid rgba(200,97,26,0.1)",
+                  background: `color-mix(in srgb, ${m.c} 9%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${m.c} 22%, transparent)`,
+                  borderLeft: `3px solid ${m.c}`,
                 }}>
                   <div style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 500 }}>{m.label}</div>
-                  <div style={{ fontSize: "15px", color: "var(--ink)", fontWeight: 700, fontFamily: "'Fraunces',serif" }}>{m.value}</div>
+                  <div style={{ fontSize: "15px", color: m.c, fontWeight: 700, fontFamily: "'Fraunces',serif" }}>{m.value}</div>
                   {m.sub && <div style={{ fontSize: "10px", color: "var(--ink3)", marginTop: "2px" }}>{m.sub}</div>}
                 </div>
               ))}
@@ -2366,7 +2367,7 @@ NUR JSON (kein Markdown):
         {suggestion.tags?.length > 0 && (
           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "12px", animation: "fadeUp 0.5s ease both", animationDelay: "0.18s" }}>
             {suggestion.tags.map((t, i) => (
-              <span key={i} style={{ fontSize: "11px", padding: "3px 10px", borderRadius: "10px", background: "rgba(200,97,26,0.08)", color: "var(--accent)", fontWeight: 500, border: "1px solid rgba(200,97,26,0.15)" }}>#{t}</span>
+              <span key={i} style={{ fontSize: "11px", padding: "3px 10px", borderRadius: "10px", background: "color-mix(in srgb, var(--herb) 11%, transparent)", color: "var(--herb)", fontWeight: 600, border: "1px solid color-mix(in srgb, var(--herb) 26%, transparent)" }}>#{t}</span>
             ))}
           </div>
         )}
@@ -2406,7 +2407,7 @@ NUR JSON (kein Markdown):
               <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
                 {decl.lines.map((l, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "11px", fontSize: "14px", color: "var(--ink)", lineHeight: 1.5 }}>
-                    <span style={{ minWidth: "22px", height: "22px", borderRadius: "8px", marginTop: "1px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, color: "var(--accent-deep)", background: "var(--accent-soft)", border: "1px solid rgba(200,97,26,0.18)", flexShrink: 0, fontFamily: "'Fraunces',serif" }}>{i + 1}</span>
+                    <span style={{ minWidth: "22px", height: "22px", borderRadius: "8px", marginTop: "1px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, color: "var(--herb)", background: "color-mix(in srgb, var(--herb) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--herb) 24%, transparent)", flexShrink: 0, fontFamily: "'Fraunces',serif" }}>{i + 1}</span>
                     <span>
                       {l.text}
                       {l.allergens.map(code => (
@@ -2427,7 +2428,7 @@ NUR JSON (kein Markdown):
                     🪶 Kennzeichnung — alles offen erklärt
                   </p>
                   <p style={{ fontSize: "11px", color: "var(--ink3)", margin: 0, lineHeight: 1.5 }}>
-                    Wir nehmen deine Unverträglichkeiten ernst. Die Marker an jeder Zutat führst du hier nach (Buchstabe = Allergen, Zahl = Zusatzstoff) — tippe oder fahre über einen Marker für den Klartext.
+                    Wir nehmen deine Unverträglichkeiten ernst. Die kleinen Marker hinter manchen Zutaten bedeuten: <strong style={{ color: "var(--berry)" }}>Buchstabe = Allergen</strong>, <strong style={{ color: "var(--petrol)" }}>Zahl = Zusatzstoff</strong>. Tippe einen Marker an (oder fahre mit der Maus darüber), um den Klartext zu sehen — die vollständige Übersicht steht direkt darunter.
                   </p>
                 </div>
 
@@ -2487,7 +2488,7 @@ NUR JSON (kein Markdown):
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {suggestion.schritte?.map((s, i) => (
               <div key={i} style={{ display: "flex", gap: "12px" }}>
-                <div style={{ width: "28px", height: "28px", borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,var(--accent),var(--accent2))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: 700, boxShadow: "0 2px 8px rgba(200,97,26,0.25)" }}>{i + 1}</div>
+                <div style={{ width: "28px", height: "28px", borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,var(--petrol),#3C9AA8)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: 700, boxShadow: "0 2px 8px rgba(44,122,134,0.3)" }}>{i + 1}</div>
                 <p style={{ fontSize: "14px", color: "var(--ink)", lineHeight: 1.6, margin: 0, paddingTop: "3px" }}>{s}</p>
               </div>
             ))}
@@ -2496,7 +2497,7 @@ NUR JSON (kein Markdown):
 
         {/* Tip */}
         {suggestion.tipp && (
-          <Card anim="fadeUp" delay="0.3s" style={{ marginBottom: "12px", background: "linear-gradient(135deg,rgba(200,97,26,0.05),rgba(245,166,35,0.05))", border: "1px solid rgba(200,97,26,0.15)" }}>
+          <Card anim="fadeUp" delay="0.3s" style={{ marginBottom: "12px", background: "linear-gradient(135deg,rgba(178,58,72,0.05),rgba(126,90,134,0.05))", border: "1px solid rgba(178,58,72,0.15)" }}>
             <p style={{ margin: 0, fontSize: "14px", color: "var(--ink2)", lineHeight: 1.6 }}>
               <strong style={{ color: "var(--accent)" }}>💡 Tipp:</strong> {suggestion.tipp}
             </p>

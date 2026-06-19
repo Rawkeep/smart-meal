@@ -7,12 +7,20 @@
   --ink: #271B11;
   --ink2: #574836;
   --ink3: #978573;
-  /* ─── Accent (burnt orange family) ─── */
-  --accent: #C2611A;
-  --accent2: #E07A2E;
-  --accent3: #F5A623;
-  --accent-deep: #A8500F;
-  --accent-soft: rgba(200, 97, 26, 0.08);
+  /* ─── Accent (edel-warm: Beere → Pflaume) ─── */
+  --accent: #B23A48;
+  --accent2: #C75A67;
+  --accent3: #7E5A86;
+  --accent-deep: #8E2A3A;
+  --accent-soft: rgba(178, 58, 72, 0.08);
+  /* ─── Food palette (appetitanregend, mehrfarbig) — für Sektionen,
+         Kennzeichnung & Nährwert-Visualisierung statt Einheits-Orange ─── */
+  --herb: #5E8C4F;          /* frisches Kräutergrün — Zutaten, Ballaststoffe */
+  --petrol: #2C7A86;        /* Petrol/Teal — Zubereitung, Zusatzstoffe, KH */
+  --berry: #B23A48;         /* Beere — Allergene, Protein */
+  --plum: #7E5A86;          /* Pflaume — Salz/Mineral */
+  --saffron: #E0A52E;       /* Safran — Energie/Fett, warm */
+  --wine: #8A2E48;          /* Wein — Alkohol */
   /* ─── Cards & lines ─── */
   --card: rgba(255, 253, 249, 0.82);
   --card-border: rgba(190, 170, 145, 0.30);
@@ -24,7 +32,7 @@
   --shadow-sm: 0 1px 2px rgba(58, 38, 18, 0.05), 0 2px 6px rgba(58, 38, 18, 0.04);
   --shadow: 0 4px 14px rgba(58, 38, 18, 0.06), 0 14px 34px rgba(58, 38, 18, 0.07);
   --shadow-lg: 0 10px 28px rgba(58, 38, 18, 0.10), 0 28px 60px rgba(58, 38, 18, 0.12);
-  --ring: 0 0 0 3px rgba(200, 97, 26, 0.32);
+  --ring: 0 0 0 3px rgba(178, 58, 72, 0.32);
   /* ─── Motion ─── */
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -32,7 +40,7 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scrollbar-color: rgba(200, 97, 26, 0.35) transparent; }
+html { scrollbar-color: rgba(178, 58, 72, 0.35) transparent; }
 
 body {
   -webkit-font-smoothing: antialiased;
@@ -79,19 +87,19 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 
 /* ─── Text selection ─── */
-::selection { background: rgba(200, 97, 26, 0.22); color: var(--ink); }
+::selection { background: rgba(178, 58, 72, 0.22); color: var(--ink); }
 
 /* ─── Custom scrollbar (warm) ─── */
 ::-webkit-scrollbar { width: 11px; height: 11px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(200, 97, 26, 0.32);
+  background: rgba(178, 58, 72, 0.32);
   border-radius: 10px;
   border: 3px solid transparent;
   background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(200, 97, 26, 0.5);
+  background: rgba(178, 58, 72, 0.5);
   background-clip: content-box;
 }
 
