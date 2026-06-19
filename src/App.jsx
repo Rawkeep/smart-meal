@@ -4,7 +4,7 @@ import { FOODS, FOOD_CATEGORIES } from "./data/foods";
 import { CROSS_ALLERGIES, ADDITIVES, ADDITIVE_CATEGORIES, NUTRIENT_DEFICIENCIES, METABOLISM_CONDITIONS, HEALTH_GOALS } from "./data/health";
 import { WELLNESS_CATEGORIES, WELLNESS_DISCLAIMER, NUTRITION_ARTICLES, SPORT_TIPS, HOME_REMEDIES, HEALTH_TIPS } from "./data/wellness";
 import { generateOfflineSuggestion } from "./swarm/index";
-import { buildDeclarationFromText, lineDeclarationCodes } from "./swarm/declaration";
+import { buildDeclarationFromText, displayDeclaration } from "./swarm/declaration";
 import { recordLike, recordDislike } from "./swarm/learning-engine";
 import { generateOfflinePlan } from "./swarm/plan-generator";
 import { PROVIDERS, DEFAULT_PROVIDER, getProvider, isValidKey, callTextProvider, callVisionProvider } from "./ai/providers";
@@ -2371,94 +2371,115 @@ NUR JSON (kein Markdown):
           </div>
         )}
 
-        {/* Ingredients (= Inhaltsstoffe) — nummeriert, mit Allergen-Buchstaben
-            und Zusatzstoff-Zahlen als Hochzahl direkt an der Zutat. */}
-        <Card anim="fadeUp" delay="0.2s" style={{ marginBottom: "12px" }}>
-          <ST sub={`Für ${persons} Person${persons > 1 ? "en" : ""}`}>🧾 Inhaltsstoffe</ST>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {suggestion.zutaten?.map((z, i) => {
-              const codes = lineDeclarationCodes(z);
-              const sup = [...codes.allergens, ...codes.additives.map(String)];
-              return (
-                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "14px", color: "var(--ink)", lineHeight: 1.4 }}>
-                  <span style={{ minWidth: "20px", height: "20px", borderRadius: "6px", marginTop: "1px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, color: "var(--accent)", background: "rgba(200,97,26,0.08)", border: "1px solid rgba(200,97,26,0.15)", flexShrink: 0, fontFamily: "'Fraunces',serif" }}>{i + 1}</span>
-                  <span>
-                    {z}
-                    {sup.length > 0 && (
-                      <sup style={{ marginLeft: "3px", fontSize: "10px", fontWeight: 700, color: "var(--accent)" }}>{sup.join(",")}</sup>
-                    )}
+        {/* Inhaltsstoffe — nummeriert, mit farbcodierten Allergen-/Zusatzstoff-
+            Markern direkt an der Zutat. Marker + Legende stammen aus EINER
+            Quelle (displayDeclaration), damit nie ein Code unerklärt bleibt. */}
+        {(() => {
+          const decl = displayDeclaration(suggestion);
+          // Semantische Palette: Allergene (Beere), Zusatzstoffe (Petrol),
+          // Alkohol (Wein/Kräutergrün) — bewusst getrennte Farbwelten.
+          const C = {
+            allergen: { fg: "#B23A48", bg: "rgba(178,58,72,0.10)", bd: "rgba(178,58,72,0.28)" },
+            additive: { fg: "#2C7A86", bg: "rgba(44,122,134,0.10)", bd: "rgba(44,122,134,0.28)" },
+          };
+          const aLabel = Object.fromEntries(decl.allergene.map(a => [a.code, a.label]));
+          const zLabel = Object.fromEntries(decl.zusatzstoffe.map(z => [z.number, z.label]));
+          const markStyle = (k) => ({
+            display: "inline-block", marginLeft: "4px", padding: "1px 6px", borderRadius: "6px",
+            fontSize: "10px", fontWeight: 800, lineHeight: 1.5, verticalAlign: "1px", cursor: "help",
+            fontFamily: "'Fraunces',serif", color: C[k].fg, background: C[k].bg, border: `1px solid ${C[k].bd}`,
+          });
+          const chip = (bg, bd) => ({
+            display: "inline-flex", alignItems: "center", gap: "7px", padding: "5px 11px",
+            borderRadius: "999px", background: bg, border: `1px solid ${bd}`,
+            fontSize: "11.5px", color: "var(--ink2)", fontWeight: 500,
+          });
+          const badge = (fg) => ({
+            minWidth: "22px", height: "22px", borderRadius: "999px", display: "inline-flex",
+            alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800,
+            color: "#fff", background: fg, fontFamily: "'Fraunces',serif",
+          });
+          const alk = decl.alkohol || {};
+          return (
+            <Card anim="fadeUp" delay="0.2s" style={{ marginBottom: "12px" }}>
+              <ST sub={`Für ${persons} Person${persons > 1 ? "en" : ""}`}>🧾 Inhaltsstoffe</ST>
+              <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
+                {decl.lines.map((l, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "11px", fontSize: "14px", color: "var(--ink)", lineHeight: 1.5 }}>
+                    <span style={{ minWidth: "22px", height: "22px", borderRadius: "8px", marginTop: "1px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, color: "var(--accent-deep)", background: "var(--accent-soft)", border: "1px solid rgba(200,97,26,0.18)", flexShrink: 0, fontFamily: "'Fraunces',serif" }}>{i + 1}</span>
+                    <span>
+                      {l.text}
+                      {l.allergens.map(code => (
+                        <span key={`a${code}`} style={markStyle("allergen")} title={`Allergen ${code}: ${aLabel[code] || code}`}>{code}</span>
+                      ))}
+                      {l.additives.map(n => (
+                        <span key={`z${n}`} style={markStyle("additive")} title={`Zusatzstoff ${n}: ${zLabel[n] || n}`}>{n}</span>
+                      ))}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Kennzeichnung — farbcodierte Legende, erklärt jeden Marker oben. */}
+              <div style={{ marginTop: "16px", paddingTop: "13px", borderTop: "1px solid var(--card-border)", display: "flex", flexDirection: "column", gap: "13px" }}>
+                <div>
+                  <p style={{ fontSize: "12px", color: "var(--ink2)", fontWeight: 700, margin: "0 0 2px", fontFamily: "'Fraunces',serif" }}>
+                    🪶 Kennzeichnung — alles offen erklärt
+                  </p>
+                  <p style={{ fontSize: "11px", color: "var(--ink3)", margin: 0, lineHeight: 1.5 }}>
+                    Wir nehmen deine Unverträglichkeiten ernst. Die Marker an jeder Zutat führst du hier nach (Buchstabe = Allergen, Zahl = Zusatzstoff) — tippe oder fahre über einen Marker für den Klartext.
+                  </p>
+                </div>
+
+                <div>
+                  <p style={{ fontSize: "10px", color: C.allergen.fg, fontWeight: 700, margin: "0 0 6px", letterSpacing: "0.3px", textTransform: "uppercase" }}>Allergene · EU-LMIV</p>
+                  {decl.allergene.length > 0 ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
+                      {decl.allergene.map(a => (
+                        <span key={a.code} style={chip(C.allergen.bg, C.allergen.bd)}>
+                          <strong style={{ color: C.allergen.fg, fontFamily: "'Fraunces',serif", fontWeight: 800 }}>{a.code}</strong>
+                          {a.label}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: "11px", color: "var(--ink3)", margin: 0 }}>keine der 14 EU-Allergene enthalten 🌿</p>
+                  )}
+                </div>
+
+                <div>
+                  <p style={{ fontSize: "10px", color: C.additive.fg, fontWeight: 700, margin: "0 0 6px", letterSpacing: "0.3px", textTransform: "uppercase" }}>Zusatzstoffe</p>
+                  {decl.zusatzstoffe.length > 0 ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
+                      {decl.zusatzstoffe.map(zs => (
+                        <span key={zs.number} style={chip(C.additive.bg, C.additive.bd)}>
+                          <span style={badge(C.additive.fg)}>{zs.number}</span>
+                          {zs.label}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: "11px", color: "var(--ink3)", margin: 0 }}>keine deklarationspflichtigen Zusatzstoffe – frisch &amp; ehrlich zubereitet 🌱</p>
+                  )}
+                </div>
+
+                <div>
+                  <p style={{ fontSize: "10px", color: alk.enthalten ? "#8A2E48" : "#3F7D4E", fontWeight: 700, margin: "0 0 6px", letterSpacing: "0.3px", textTransform: "uppercase" }}>Alkoholgehalt</p>
+                  <span style={chip(
+                    alk.enthalten ? "rgba(138,46,72,0.10)" : "rgba(63,125,78,0.10)",
+                    alk.enthalten ? "rgba(138,46,72,0.28)" : "rgba(63,125,78,0.28)",
+                  )}>
+                    <span style={{ fontSize: "13px" }}>{alk.enthalten ? "🍷" : "🌿"}</span>
+                    {alk.label}
                   </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Kennzeichnung zur Orientierung: Allergene (Buchstaben),
-              Zusatzstoffe (Zahlen), Alkoholgehalt. */}
-          <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--card-border)", display: "flex", flexDirection: "column", gap: "12px" }}>
-            <p style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 600, margin: 0, letterSpacing: "0.3px", textTransform: "uppercase" }}>
-              Kennzeichnung zur Orientierung
-            </p>
-
-            {suggestion.allergene?.length > 0 && (
-              <div>
-                <p style={{ fontSize: "10px", color: "var(--ink3)", fontWeight: 600, margin: "0 0 6px" }}>Allergene (EU-LMIV)</p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                  {suggestion.allergene.map(a => (
-                    <span key={a.code} style={{
-                      display: "inline-flex", alignItems: "center", gap: "6px",
-                      padding: "4px 10px", borderRadius: "999px",
-                      background: "rgba(200,97,26,0.08)", border: "1px solid rgba(200,97,26,0.18)",
-                      fontSize: "11px", color: "var(--ink2)", fontWeight: 500,
-                    }}>
-                      <strong style={{ color: "var(--accent)", fontFamily: "'Fraunces',serif", fontWeight: 700 }}>{a.code}</strong>
-                      {a.label}
-                    </span>
-                  ))}
+                  {alk.hinweis && (
+                    <p style={{ fontSize: "10px", color: "var(--ink3)", margin: "6px 0 0", lineHeight: 1.4 }}>{alk.hinweis}</p>
+                  )}
                 </div>
               </div>
-            )}
-
-            <div>
-              <p style={{ fontSize: "10px", color: "var(--ink3)", fontWeight: 600, margin: "0 0 6px" }}>Zusatzstoffe</p>
-              {suggestion.zusatzstoffe?.length > 0 ? (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                  {suggestion.zusatzstoffe.map(zs => (
-                    <span key={zs.number} style={{
-                      display: "inline-flex", alignItems: "center", gap: "6px",
-                      padding: "4px 10px", borderRadius: "999px",
-                      background: "rgba(80,80,80,0.06)", border: "1px solid rgba(80,80,80,0.16)",
-                      fontSize: "11px", color: "var(--ink2)", fontWeight: 500,
-                    }}>
-                      <strong style={{ color: "var(--ink)", fontFamily: "'Fraunces',serif", fontWeight: 700 }}>{zs.number}</strong>
-                      {zs.label}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ fontSize: "11px", color: "var(--ink3)", margin: 0 }}>keine deklarationspflichtigen Zusatzstoffe – frisch zubereitet</p>
-              )}
-            </div>
-
-            {suggestion.alkohol && (
-              <div>
-                <p style={{ fontSize: "10px", color: "var(--ink3)", fontWeight: 600, margin: "0 0 6px" }}>Alkoholgehalt</p>
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: "6px",
-                  padding: "4px 10px", borderRadius: "999px",
-                  background: suggestion.alkohol.enthalten ? "rgba(120,40,60,0.07)" : "rgba(34,139,34,0.07)",
-                  border: `1px solid ${suggestion.alkohol.enthalten ? "rgba(120,40,60,0.18)" : "rgba(34,139,34,0.18)"}`,
-                  fontSize: "11px", color: "var(--ink2)", fontWeight: 500,
-                }}>
-                  {suggestion.alkohol.enthalten ? "🍷" : "🚫"} {suggestion.alkohol.label}
-                </span>
-                {suggestion.alkohol.hinweis && (
-                  <p style={{ fontSize: "10px", color: "var(--ink3)", margin: "6px 0 0", lineHeight: 1.4 }}>{suggestion.alkohol.hinweis}</p>
-                )}
-              </div>
-            )}
-          </div>
-        </Card>
+            </Card>
+          );
+        })()}
 
         {/* Steps */}
         <Card anim="fadeUp" delay="0.25s" style={{ marginBottom: "12px" }}>
