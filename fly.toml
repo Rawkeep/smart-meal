@@ -1,7 +1,11 @@
 # ===============================================================
 # Smart Meal — Fly.io App (Express-Server + Vite-PWA, eine Origin)
-# Kein Volume nötig (Freemium-Zähler ist In-Memory). Secrets via
-# `fly secrets set` (ACCESS_GATE_PASS, GATE_SECRET, ANTHROPIC_API_KEY).
+# SQLite-Volume `sm_data` → /data hält Käufe, ausgegebene Codes und den
+# Freemium-Zähler über Restarts/auto-stop hinweg. Einmalig anlegen:
+#   fly volumes create sm_data --region fra --size 1 -a smart-meal
+# Secrets via `fly secrets set` (ANTHROPIC_API_KEY, GATE_SECRET, ACCESS_CODES,
+# STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY, MAIL_FROM).
+# Stripe-Webhook-Endpoint: https://smartmeal.rawkeep.com/api/stripe/webhook
 # ===============================================================
 app = "smart-meal"
 primary_region = "fra"
@@ -14,6 +18,11 @@ primary_region = "fra"
   PORT = "3001"
   FREE_DAILY_LIMIT = "10"
   APP_URL = "https://smartmeal.rawkeep.com"
+  DB_PATH = "/data/smartmeal.db"
+
+[[mounts]]
+  source = "sm_data"
+  destination = "/data"
 
 [http_service]
   internal_port = 3001

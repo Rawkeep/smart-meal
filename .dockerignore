@@ -5,6 +5,10 @@ node_modules
 dist
 .env
 *.log
+data
+*.db
+*.db-wal
+*.db-shm
 .github
 .claude
 docker-compose.yml
