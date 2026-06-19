@@ -111,14 +111,17 @@ if (isProd) {
 // Aktiv sobald ACCESS_GATE_PASS gesetzt ist. Schützt alles außer /api/health
 // und /__gate. Cookie ist HMAC-signiert (GATE_SECRET), kein cookie-parser nötig.
 const GATE_PASS = process.env.ACCESS_GATE_PASS || "";
-// Tokens werden mit Server-Secret UND aktuellem Passwort signiert. Dadurch
-// macht ein Passwortwechsel (fly secrets set ACCESS_GATE_PASS=...) SOFORT alle
-// zuvor ausgestellten Cookies ungültig — alle, die den alten Link/das alte
-// Passwort hatten, müssen sich neu anmelden. ACCESS_GATE_PASS ist der eine
-// Hebel zur Zugriffskontrolle; GATE_SECRET liefert die starke Entropie.
-const GATE_SECRET = (process.env.GATE_SECRET || GATE_PASS || "dev-gate-secret") + "::" + GATE_PASS;
+// Per-Käufer-Zugangscodes (kommagetrennt) — jeder Käufer bekommt einen eigenen.
+// Plus optional ein geteiltes Alt-Passwort (ACCESS_GATE_PASS, Abwärtskompat).
+const ACCESS_CODES = (process.env.ACCESS_CODES || "").split(",").map((s) => s.trim()).filter(Boolean);
+const VALID_CODES = [...new Set([...ACCESS_CODES, ...(GATE_PASS ? [GATE_PASS] : [])])];
+const GATE_ON = VALID_CODES.length > 0;
 const GATE_COOKIE = "sm_gate";
 const GATE_TTL_MS = 30 * 24 * 3600 * 1000;
+// Signier-Secret STABIL & unabhängig von der Code-Liste: das Entfernen eines
+// einzelnen Codes (Widerruf) entwertet nur dessen Cookies, nicht die der anderen
+// Käufer. In Produktion ZWINGEND zufällig setzen: fly secrets set GATE_SECRET=<random>.
+const GATE_SECRET = process.env.GATE_SECRET || GATE_PASS || "dev-gate-secret";
 // Optional bypass for the published store apps (TWA/iOS): a shared token lets
 // the apps through the gate while the password still protects the shared web
 // link. Inert unless APP_BYPASS_TOKEN is set. Apps pass it via the
@@ -127,8 +130,13 @@ const APP_TOKEN = process.env.APP_BYPASS_TOKEN || "";
 const GATE_CSP = "default-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:";
 
 const _b64u = (buf) => Buffer.from(buf).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-function _gateToken() {
-  const payload = String(Date.now() + GATE_TTL_MS);
+// Fingerprint eines Codes — landet im Cookie, NICHT der Code selbst. Erlaubt
+// gezielten Widerruf: fällt der Code aus ACCESS_CODES, ist sein fp nicht mehr gültig.
+const _codeFp = (code) => _b64u(crypto.createHmac("sha256", GATE_SECRET).update("fp:" + code).digest()).slice(0, 22);
+// Aktuell gültige Fingerprints (Codes + Alt-Passwort + optional App-Bypass-Token).
+const VALID_FPS = new Set([...VALID_CODES, ...(APP_TOKEN ? [APP_TOKEN] : [])].map(_codeFp));
+function _gateToken(code) {
+  const payload = `${Date.now() + GATE_TTL_MS}:${_codeFp(code)}`;
   const sig = _b64u(crypto.createHmac("sha256", GATE_SECRET).update(payload).digest());
   return `${payload}.${sig}`;
 }
@@ -141,8 +149,10 @@ function _validGateToken(tok) {
   const expected = _b64u(crypto.createHmac("sha256", GATE_SECRET).update(payload).digest());
   if (sig.length !== expected.length) return false;
   if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return false;
-  const exp = parseInt(payload, 10);
-  return Number.isFinite(exp) && exp > Date.now();
+  const [expStr, fp] = payload.split(":");
+  const exp = parseInt(expStr, 10);
+  if (!(Number.isFinite(exp) && exp > Date.now())) return false;
+  return !!fp && VALID_FPS.has(fp); // entzogener/unbekannter Code → Cookie ungültig
 }
 function _readCookie(req, name) {
   const raw = req.headers.cookie || "";
@@ -171,10 +181,10 @@ function _gatePage(msg, returnTo) {
 <form method="POST" action="/__gate" style="background:#1e293b;padding:32px 28px;border-radius:16px;width:320px;box-shadow:0 10px 40px rgba(0,0,0,.4)">
 <div style="font-size:32px;text-align:center;margin-bottom:6px">🍽️</div>
 <h1 style="font-size:18px;margin:0 0 4px;text-align:center">Smart Meal</h1>
-<p style="font-size:13px;color:#94a3b8;margin:0 0 18px;text-align:center">Bitte Zugangspasswort eingeben.</p>
+<p style="font-size:13px;color:#94a3b8;margin:0 0 18px;text-align:center">Bitte deinen persönlichen Zugangscode eingeben.</p>
 ${msg ? `<div style="background:#7f1d1d;color:#fecaca;font-size:12px;padding:8px 10px;border-radius:8px;margin-bottom:12px">${_htmlAttr(msg)}</div>` : ""}
 <input type="hidden" name="returnTo" value="${_htmlAttr(_safeReturn(returnTo))}">
-<input name="password" type="password" autocomplete="current-password" autofocus required placeholder="Passwort" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:9px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:14px;margin-bottom:12px">
+<input name="code" type="text" inputmode="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" autofocus required placeholder="Zugangscode (z. B. SMEAL-XXXX-XXXX)" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:9px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:14px;margin-bottom:12px;letter-spacing:0.5px">
 <button type="submit" style="width:100%;padding:11px;border:0;border-radius:9px;background:#10b981;color:#fff;font-size:14px;font-weight:600;cursor:pointer">Eintreten</button>
 </form></body></html>`;
 }
@@ -185,7 +195,7 @@ const _validAppToken = (req) => {
   return !!t && _safeEq(t, APP_TOKEN);
 };
 
-if (GATE_PASS) {
+if (GATE_ON) {
   app.use(express.urlencoded({ extended: false, limit: "4kb" }));
   app.use((req, res, next) => {
     if (req.path === "/api/health") return next();
@@ -199,12 +209,14 @@ if (GATE_PASS) {
         req.path.startsWith("/smart-meal/screenshots/")) return next();
     if (req.path === "/__gate") {
       if (req.method === "POST") {
-        if (_safeEq((req.body && req.body.password) || "", GATE_PASS)) {
-          res.cookie(GATE_COOKIE, _gateToken(), { httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: GATE_TTL_MS });
+        const submitted = (req.body && (req.body.code || req.body.password)) || "";
+        const matched = VALID_CODES.find((c) => _safeEq(submitted, c));
+        if (matched) {
+          res.cookie(GATE_COOKIE, _gateToken(matched), { httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: GATE_TTL_MS });
           return res.redirect(302, _safeReturn(req.body && req.body.returnTo));
         }
         res.setHeader("Content-Security-Policy", GATE_CSP);
-        return res.status(401).send(_gatePage("Falsches Passwort.", req.body && req.body.returnTo));
+        return res.status(401).send(_gatePage("Ungültiger Zugangscode.", req.body && req.body.returnTo));
       }
       if (_hasGate(req)) return res.redirect(302, "/smart-meal/");
       res.setHeader("Content-Security-Policy", GATE_CSP);
@@ -214,7 +226,7 @@ if (GATE_PASS) {
     // Gate-Cookie setzen, damit Folge-Requests ohne Token passieren.
     if (_validAppToken(req)) {
       if (!_hasGate(req)) {
-        res.cookie(GATE_COOKIE, _gateToken(), { httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: GATE_TTL_MS });
+        res.cookie(GATE_COOKIE, _gateToken(APP_TOKEN), { httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: GATE_TTL_MS });
       }
       return next();
     }
