@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.rawkeep.smartmeal",
+      "sha256_cert_fingerprints": [
+        "AF:BA:7A:0D:5E:FC:D6:FF:91:D7:C6:3E:F3:84:11:EA:0F:71:F1:B7:4E:2E:31:14:DE:71:01:C7:A8:1D:F7:E7"
+      ]
+    }
+  }
+]
