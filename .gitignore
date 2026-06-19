@@ -13,6 +13,12 @@ dist-ssr
 *.local
 .env
 
+# Lokale SQLite-DB (Käufe, Codes, Nutzung) — niemals committen
+data/
+*.db
+*.db-wal
+*.db-shm
+
 # Native store wrappers (generated locally; keystores must never be committed)
 ios/
 android/

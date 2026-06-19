@@ -1,5 +1,7 @@
 # Stage 1: Build frontend
-FROM node:20-alpine AS build
+# node:20-slim (Debian/glibc statt Alpine/musl): better-sqlite3 zieht so vorgebaute
+# Binaries und muss nicht aus dem Quellcode kompiliert werden (keine Build-Tools nötig).
+FROM node:20-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci --legacy-peer-deps
@@ -7,7 +9,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Production server
-FROM node:20-alpine
+FROM node:20-slim
 WORKDIR /app
 ENV NODE_ENV=production
 

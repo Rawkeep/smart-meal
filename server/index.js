@@ -7,6 +7,8 @@ import rateLimit from "express-rate-limit";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import crypto from "crypto";
+import * as store from "./db.js";
+import { sendCodeEmail, mailEnabled } from "./mail.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -19,28 +21,19 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const FREE_DAILY_LIMIT = parseInt(process.env.FREE_DAILY_LIMIT || "10", 10);
 
 // ─── Freemium Usage Tracking (per IP, resets daily) ───
-const usageMap = new Map();
-
+// Persistiert in SQLite (server/db.js) → überlebt Restart & auto_stop_machines.
 function getUsageKey(ip) {
   const date = new Date().toISOString().slice(0, 10);
   return `${ip}:${date}`;
 }
 
 function getUsage(ip) {
-  const key = getUsageKey(ip);
-  return usageMap.get(key) || 0;
+  return store.getUsageCount(getUsageKey(ip));
 }
 
 function incrementUsage(ip) {
-  const key = getUsageKey(ip);
-  const current = usageMap.get(key) || 0;
-  usageMap.set(key, current + 1);
-  // Cleanup old entries (keep only today)
   const today = new Date().toISOString().slice(0, 10);
-  for (const k of usageMap.keys()) {
-    if (!k.endsWith(today)) usageMap.delete(k);
-  }
-  return current + 1;
+  return store.incrementUsage(getUsageKey(ip), today);
 }
 
 function getRemainingFree(ip) {
@@ -79,6 +72,13 @@ app.use((_req, res, next) => {
 });
 
 app.use(compression());
+
+// ─── Stripe-Webhook (VOR express.json — braucht den rohen Body für die
+// Signaturprüfung). Früh registriert, damit der Route-Handler den Access-Gate
+// kurzschließt (Stripe kann keinen Zugangscode mitschicken). Inert ohne
+// STRIPE_WEBHOOK_SECRET. Implementiert in handleStripeWebhook (weiter unten). ───
+app.post("/api/stripe/webhook", express.raw({ type: "application/json", limit: "1mb" }), (req, res) => handleStripeWebhook(req, res));
+
 app.use(express.json({ limit: "1mb" }));
 
 // ─── CORS ───
@@ -223,6 +223,93 @@ const _validAppToken = (req) => {
 // Inert ohne STRIPE_SECRET_KEY. Verifiziert die Session serverseitig (REST, keine
 // Extra-Dependency) und prägt bei bezahltem Status sofort einen gültigen Code.
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY || "";
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
+const YEAR_MS = 365 * 24 * 3600 * 1000;
+
+// Prüft die Stripe-Signatur manuell (HMAC-SHA256 über `t.<rawBody>`), ohne das
+// Stripe-SDK — gleiche stateless-REST-Philosophie wie der Rest der Datei.
+function _verifyStripeSig(rawBody, sigHeader, secret, toleranceSec = 300) {
+  if (!secret || !sigHeader || !Buffer.isBuffer(rawBody)) return false;
+  const parts = {};
+  for (const kv of String(sigHeader).split(",")) {
+    const i = kv.indexOf("=");
+    if (i > 0) parts[kv.slice(0, i).trim()] = kv.slice(i + 1).trim();
+  }
+  const t = parts.t;
+  const v1 = parts.v1;
+  if (!t || !v1) return false;
+  const expected = crypto.createHmac("sha256", secret).update(`${t}.`).update(rawBody).digest("hex");
+  let ok = false;
+  try {
+    ok = v1.length === expected.length && crypto.timingSafeEqual(Buffer.from(v1), Buffer.from(expected));
+  } catch {
+    return false;
+  }
+  if (!ok) return false;
+  const age = Math.floor(Date.now() / 1000) - parseInt(t, 10);
+  return Number.isFinite(age) && Math.abs(age) <= toleranceSec;
+}
+
+// Idempotente Kauf-Erfüllung: prägt einen signierten Code, persistiert Kauf +
+// Code (Schlüssel = Stripe-Session) und mailt den Code beim ERSTEN Anlegen.
+// Von Webhook UND /buy/success genutzt → egal welcher Pfad zuerst kommt, der
+// Käufer sieht/bekommt denselben Code.
+async function fulfillSession({ id, paymentIntent, email, amountTotal, currency }) {
+  const existing = store.getPurchaseBySession(id);
+  if (existing) return { code: existing.code, created: false };
+  const code = mintSignedCode(365);
+  const expiresAt = new Date(Date.now() + YEAR_MS).toISOString();
+  const { created } = store.recordPurchase({ sessionId: id, paymentIntent, email, code, amountTotal, currency, expiresAt });
+  if (!created) {
+    // Race: ein anderer Pfad hat zwischen Lookup und Insert angelegt → dessen Code gewinnt.
+    const winner = store.getPurchaseBySession(id);
+    return { code: winner?.code || code, created: false };
+  }
+  if (email && mailEnabled()) {
+    const r = await sendCodeEmail({ to: email, code, expiresAt });
+    if (!r.sent) console.warn("[mail] Code-Mail nicht gesendet:", r.reason);
+  }
+  return { code, created: true };
+}
+
+// Stripe-Webhook (Wahrheitsquelle für Käufe). Registriert weiter oben mit
+// express.raw. Behandelt Zahlung → Code anlegen/mailen und Erstattung/Dispute →
+// Code widerrufen. Antwortet 5xx bei internen Fehlern, damit Stripe es (idempotent) erneut zustellt.
+async function handleStripeWebhook(req, res) {
+  if (!STRIPE_WEBHOOK_SECRET) return res.status(503).json({ error: "Webhook nicht konfiguriert" });
+  if (!_verifyStripeSig(req.body, req.get("stripe-signature"), STRIPE_WEBHOOK_SECRET)) {
+    return res.status(400).json({ error: "Ungültige Signatur" });
+  }
+  let event;
+  try {
+    event = JSON.parse(req.body.toString("utf8"));
+  } catch {
+    return res.status(400).json({ error: "Ungültiger JSON-Body" });
+  }
+  try {
+    if (event.type === "checkout.session.completed") {
+      const s = event.data.object;
+      if (s.payment_status === "paid") {
+        await fulfillSession({
+          id: s.id,
+          paymentIntent: s.payment_intent || null,
+          email: s.customer_details?.email || s.customer_email || null,
+          amountTotal: s.amount_total ?? null,
+          currency: s.currency || null,
+        });
+      }
+    } else if (event.type === "charge.refunded" || event.type === "charge.dispute.created") {
+      const pi = event.data.object?.payment_intent;
+      const n = store.revokeByPaymentIntent(pi, event.type);
+      if (n) console.log(`[stripe] ${n} Code(s) widerrufen für ${pi} (${event.type})`);
+    }
+  } catch (err) {
+    console.error("[stripe] Webhook-Handler-Fehler:", err);
+    return res.status(500).json({ error: "Handler-Fehler" });
+  }
+  return res.json({ received: true });
+}
+
 function _buyPage(msg, code) {
   const body = code
     ? `<p style="font-size:13px;color:#94a3b8;margin:0 0 10px">Zahlung bestätigt — danke! Dein persönlicher Zugangscode (1 Jahr gültig, bitte sichern):</p>
@@ -249,7 +336,16 @@ app.get("/buy/success", async (req, res) => {
     if (!r.ok || s.payment_status !== "paid") {
       return res.status(402).send(_buyPage("Zahlung noch nicht bestätigt. Bei Fragen melde dich bitte.", null));
     }
-    return res.send(_buyPage(null, mintSignedCode(365)));
+    // Idempotent erfüllen: gibt den (ggf. vom Webhook bereits angelegten) Code
+    // zur Session zurück und mailt ihn beim ersten Anlegen.
+    const { code } = await fulfillSession({
+      id: s.id,
+      paymentIntent: s.payment_intent || null,
+      email: s.customer_details?.email || s.customer_email || null,
+      amountTotal: s.amount_total ?? null,
+      currency: s.currency || null,
+    });
+    return res.send(_buyPage(null, code));
   } catch {
     return res.status(502).send(_buyPage("Zahlung konnte gerade nicht geprüft werden — Seite später erneut öffnen.", null));
   }
@@ -274,7 +370,15 @@ if (GATE_ON) {
       if (req.method === "POST") {
         const submitted = ((req.body && (req.body.code || req.body.password)) || "").trim();
         const matched = VALID_CODES.find((c) => _safeEq(submitted, c));
-        if (matched || _isSignedCode(submitted)) {
+        const isSigned = !matched && _isSignedCode(submitted);
+        // Erstatteter/strittiger Kauf → Code in der DB als widerrufen markiert.
+        // (Greift bei der Einlösung; bereits gesetzte Cookies laufen erst nach
+        // GATE_TTL ab — für eine kleine Paywall vertretbar.)
+        if (isSigned && store.isCodeRevoked(submitted)) {
+          res.setHeader("Content-Security-Policy", GATE_CSP);
+          return res.status(401).send(_gatePage("Dieser Zugangscode wurde widerrufen (z. B. nach Erstattung).", req.body && req.body.returnTo));
+        }
+        if (matched || isSigned) {
           res.cookie(GATE_COOKIE, _gateToken(matched || "__signed__"), { httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: GATE_TTL_MS });
           return res.redirect(302, _safeReturn(req.body && req.body.returnTo));
         }
