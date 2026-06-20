@@ -19,6 +19,10 @@ const PORT = process.env.PORT || 3001;
 const isProd = process.env.NODE_ENV === "production";
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const FREE_DAILY_LIMIT = parseInt(process.env.FREE_DAILY_LIMIT || "10", 10);
+// Modell-Routing: schnelles Modell für Einzel-Vorschläge (Haiku ≈ 2–3× schneller),
+// stärkeres Modell für den Wochenplan (Qualität). Per Env überschreibbar.
+const MODEL_FAST = process.env.MODEL_FAST || "claude-haiku-4-5-20251001";
+const MODEL_SMART = process.env.MODEL_SMART || "claude-sonnet-4-20250514";
 
 // ─── Freemium Usage Tracking (per IP, resets daily) ───
 // Persistiert in SQLite (server/db.js) → überlebt Restart & auto_stop_machines.
@@ -447,7 +451,7 @@ function validateImageBody(body) {
 }
 
 // ─── Proxy to Claude API ───
-async function callClaude(messages, maxTokens = 1500) {
+async function callClaude(messages, maxTokens = 1500, model = MODEL_SMART) {
   if (!ANTHROPIC_API_KEY) {
     throw new Error("ANTHROPIC_API_KEY not configured on server");
   }
@@ -460,7 +464,7 @@ async function callClaude(messages, maxTokens = 1500) {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model,
       max_tokens: maxTokens,
       messages,
     }),
@@ -476,7 +480,7 @@ async function callClaude(messages, maxTokens = 1500) {
 }
 
 // ─── BYOK Proxy to Claude API ───
-async function callClaudeWithKey(apiKey, messages, maxTokens = 1500) {
+async function callClaudeWithKey(apiKey, messages, maxTokens = 1500, model = MODEL_SMART) {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -485,7 +489,7 @@ async function callClaudeWithKey(apiKey, messages, maxTokens = 1500) {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model,
       max_tokens: maxTokens,
       messages,
     }),
@@ -578,12 +582,12 @@ app.get("/privacy", (_req, res) => {
 });
 
 // ─── Helper: call Claude with freemium or BYOK ───
-async function callClaudeAuto(req, messages, maxTokens = 1500) {
+async function callClaudeAuto(req, messages, maxTokens = 1500, model = MODEL_SMART) {
   let data;
   if (req.useByok) {
-    data = await callClaudeWithKey(req.userApiKey, messages, maxTokens);
+    data = await callClaudeWithKey(req.userApiKey, messages, maxTokens, model);
   } else {
-    data = await callClaude(messages, maxTokens);
+    data = await callClaude(messages, maxTokens, model);
     incrementUsage(req.ip);
   }
   return data;
@@ -596,7 +600,8 @@ app.post("/api/suggest", apiLimiter, freemiumGuard, async (req, res) => {
 
   try {
     const prompt = sanitizeText(req.body.prompt);
-    const data = await callClaudeAuto(req, [{ role: "user", content: prompt }]);
+    // Einzel-Vorschlag → schnelles Modell (Haiku); Wochenplan unten bleibt Sonnet.
+    const data = await callClaudeAuto(req, [{ role: "user", content: prompt }], 1500, MODEL_FAST);
     const text = data.content.map(c => c.type === "text" ? c.text : "").join("");
     const remaining = req.useByok ? null : getRemainingFree(req.ip);
     res.json({ text, remaining });
