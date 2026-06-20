@@ -1642,11 +1642,11 @@ NUR JSON (kein Markdown):
     const cs = steps[onbStep];
 
     return (
-      <Layout>
+      <Layout photo>
         <div style={{ textAlign: "center", padding: "28px 0 20px", animation: "fadeUp 0.5s ease both" }}>
-          <div style={{ fontSize: "56px", animation: "float 3s ease infinite" }}>🍽️</div>
-          <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: "32px", color: "var(--ink)", fontWeight: 900, marginTop: "8px", letterSpacing: "-1px" }}>Was esse ich?</h1>
-          <p style={{ fontSize: "14px", color: "var(--ink3)", marginTop: "4px" }}>Dein persönlicher Essens-Berater</p>
+          <div style={{ fontSize: "56px", animation: "float 3s ease infinite", filter: "drop-shadow(0 6px 14px rgba(0,0,0,.35))" }}>🍽️</div>
+          <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: "32px", color: "var(--ink)", fontWeight: 900, marginTop: "8px", letterSpacing: "-1px", textShadow: "0 1px 10px var(--photo-scrim)" }}>Was esse ich?</h1>
+          <p style={{ fontSize: "14px", color: "var(--ink2)", marginTop: "4px", textShadow: "0 1px 8px var(--photo-scrim)" }}>Dein persönlicher Essens-Berater</p>
         </div>
         <div style={{ display: "flex", gap: "6px", justifyContent: "center", marginBottom: "16px" }}>
           {steps.map((_, i) => (
