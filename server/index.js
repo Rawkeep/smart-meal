@@ -211,7 +211,10 @@ function _gatePage(msg, returnTo) {
 <div style="width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:25px;background:linear-gradient(135deg,#e8896b,#c2415a);box-shadow:0 6px 18px rgba(194,65,90,.4)">🍽️</div>
 <div><div style="font-size:19px;font-weight:700;letter-spacing:-.3px">Smart Meal</div><div style="font-size:12px;color:#8aa0c0">Dein KI-Essensberater</div></div>
 </div>
-<p style="font-size:13.5px;color:#aebbd0;line-height:1.5;margin:0 0 18px">Sag, worauf du Lust hast oder was im Kühlschrank liegt — Smart Meal erstellt in Sekunden ein passendes Rezept, abgestimmt auf deine Vorlieben und Unverträglichkeiten.</p>
+<div style="margin:0 0 17px">
+<p style="font-size:22px;font-weight:700;font-style:italic;color:#f2e4cb;line-height:1.2;margin:0 0 8px;letter-spacing:-.3px">„Was esse ich heute?"</p>
+<p style="font-size:13px;color:#aebbd0;line-height:1.55;margin:0">Milliarden Menschen fragen sich das jeden Tag — genau dafür gibt es Smart Meal. Deine Antwort in Sekunden, abgestimmt auf dich.</p>
+</div>
 ${feat("🥗", "Rezepte nach Vorlieben, Allergien &amp; Zielen — mit Nährwerten &amp; Allergen-Kennzeichnung")}
 ${feat("🌶️", "Mit Herkunft-Story, Schärfegrad &amp; cleveren Zutaten-Ersätzen")}
 ${feat("📸", "Zutaten per Foto erkennen, Reste verkochen &amp; Wochenplan")}
