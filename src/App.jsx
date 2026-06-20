@@ -209,6 +209,18 @@ const PROTEINS = [
   { id: "gemüse", label: "Nur Gemüse", emoji: "🥦" },
 ];
 
+// Appetitanregendes Hero-Foto (public/img, base-pfad-sicher). Lizenz: Unsplash (frei).
+const HERO_IMG = (import.meta.env.BASE_URL || "/") + "img/hero-food.webp";
+
+// Statisches Beispiel-Rezept — zeigt auf der Startseite, wie ein Vorschlag aussieht.
+const EXAMPLE_RECIPE = {
+  emoji: "🍲",
+  name: "Bibimbap mit Rind & Sesam",
+  beschreibung: "Buntes koreanisches Reisgericht: knackiges Gemüse, mariniertes Rind und ein Spiegelei auf warmem Reis — abgerundet mit nussig-würziger Gochujang-Sauce.",
+  kultur: "„Bibimbap“ heißt wörtlich „gemischter Reis“ — vor dem Essen wird traditionell alles kräftig untergerührt.",
+  zeit: "30 Min", kalorien: "ca. 540 kcal", schaerfe: 2, gerichtTyp: "Reisgericht", proteinTyp: "Rind",
+};
+
 const SEASONS = {
   0: "Grünkohl,Rosenkohl,Feldsalat,Pastinaken,Sellerie,Rote Bete,Wirsing",
   1: "Grünkohl,Rosenkohl,Feldsalat,Pastinaken,Sellerie,Rote Bete,Chicorée",
@@ -715,6 +727,7 @@ export default function App() {
   const [dishType, setDishType] = useState("egal");   // optional: Art des Gerichts
   const [proteinPref, setProteinPref] = useState("egal"); // optional: Haupt-Protein
   const [shopMsg, setShopMsg] = useState("");          // kurze Bestätigung in der Einkaufsliste
+  const [showMoreOpts, setShowMoreOpts] = useState(false); // Startseite: optionale Filter einklappen
   const [fridgeInput, setFridgeInput] = useState("");
   const [selectedIngredients, setSelectedIngredients] = useState([]);
   const [fridgeInputMode, setFridgeInputMode] = useState("chips"); // chips | text | photo
@@ -2186,49 +2199,46 @@ NUR JSON (kein Markdown):
 
     return (
       <Layout>
-        {/* Header */}
-        <div style={{ padding: "20px 0 8px", animation: "fadeUp 0.4s ease both" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "34px", lineHeight: 1 }}>{profile.avatar || "🧑‍🍳"}</span>
-              <div>
-                <p style={{ fontSize: "14px", color: "var(--ink3)", marginBottom: "2px" }}>{greet()}{profile.name ? `, ${profile.name}` : ""} 👋</p>
-                <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: "28px", fontWeight: 900, color: "var(--ink)", letterSpacing: "-1px" }}>Was esse ich?</h1>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              {streak.count > 0 && (
-                <div style={{
-                  display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 10px",
-                  borderRadius: "12px",
-                  background: streak.count >= 7 ? "linear-gradient(135deg,var(--accent),var(--accent-deep))" : "var(--card)",
-                  border: "1px solid var(--card-border)", fontSize: "12px", fontWeight: 600,
-                  color: streak.count >= 7 ? "#fff" : "var(--ink2)",
-                }}>🔥 {streak.count} Tage</div>
-              )}
-              <button
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                aria-label={theme === "dark" ? "Helles Design" : "Dunkles Design"}
-                title={theme === "dark" ? "Zu hellem Design wechseln" : "Zu dunklem Design wechseln"}
-                style={{
-                  width: "38px", height: "38px", borderRadius: "12px", flexShrink: 0,
-                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  background: "var(--card)", border: "1px solid var(--card-border)",
-                  boxShadow: "var(--inset-hi), var(--shadow-sm)", cursor: "pointer", color: "var(--accent)",
-                }}>
-                <Icon name={theme === "dark" ? "sun" : "moon"} size={18} color="var(--accent)" />
-              </button>
-            </div>
+        {/* Hero-Header — großes appetitanregendes Food-Foto mit Begrüßung darüber */}
+        <div style={{
+          position: "relative", marginTop: "10px", borderRadius: "20px", overflow: "hidden",
+          minHeight: "172px", display: "flex", flexDirection: "column", justifyContent: "space-between",
+          backgroundImage: `linear-gradient(168deg, rgba(18,11,16,.22) 0%, rgba(18,11,16,.5) 52%, rgba(18,11,16,.88) 100%), url(${HERO_IMG})`,
+          backgroundSize: "cover", backgroundPosition: "center",
+          boxShadow: "0 14px 36px rgba(40,20,12,0.22)", animation: "fadeUp 0.4s ease both",
+        }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px", padding: "12px 12px 0" }}>
+            {streak.count > 0 && (
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 10px", borderRadius: "12px",
+                background: "rgba(0,0,0,.34)", border: "1px solid rgba(255,255,255,.22)", fontSize: "12px", fontWeight: 600, color: "#fff",
+              }}>🔥 {streak.count} Tage</div>
+            )}
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              aria-label={theme === "dark" ? "Helles Design" : "Dunkles Design"}
+              title={theme === "dark" ? "Zu hellem Design wechseln" : "Zu dunklem Design wechseln"}
+              style={{
+                width: "38px", height: "38px", borderRadius: "12px", flexShrink: 0,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                background: "rgba(0,0,0,.34)", border: "1px solid rgba(255,255,255,.22)", cursor: "pointer", color: "#fff",
+              }}>
+              <Icon name={theme === "dark" ? "sun" : "moon"} size={18} color="#fff" />
+            </button>
           </div>
-          <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
-            {profile.histamin && <Badge icon="⚠️" text="Histamin" />}
-            {profile.allergies.length > 0 && <Badge icon="🛡️" text={`${profile.allergies.length} Allergien`} />}
-            {profile.diet.slice(0, 2).map(d => <Badge key={d} icon={DIETS.find(o => o.id === d)?.emoji} text={DIETS.find(o => o.id === d)?.label} />)}
-            {guestMode && <Badge icon="👥" text="Gäste aktiv" />}
-            {apiKey ? <Badge icon="🔓" text="Eigener Key" /> :
-              freemiumInfo.freemium ? <Badge icon="✨" text={`${freemiumInfo.remaining}/${freemiumInfo.dailyLimit} frei`} /> :
-              <Badge icon="🧠" text="Offline-KI" />}
+          <div style={{ padding: "0 18px 16px", color: "#fff" }}>
+            <p style={{ fontSize: "13.5px", margin: "0 0 2px", opacity: .94, textShadow: "0 1px 6px rgba(0,0,0,.55)" }}>{profile.avatar || "🧑‍🍳"} {greet()}{profile.name ? `, ${profile.name}` : ""} 👋</p>
+            <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: "30px", fontWeight: 900, letterSpacing: "-1px", margin: 0, color: "#fff", textShadow: "0 2px 16px rgba(0,0,0,.6)" }}>Was esse ich heute?</h1>
           </div>
+        </div>
+        <div style={{ display: "flex", gap: "6px", marginTop: "10px", flexWrap: "wrap", animation: "fadeUp 0.4s ease both", animationDelay: "0.05s" }}>
+          {profile.histamin && <Badge icon="⚠️" text="Histamin" />}
+          {profile.allergies.length > 0 && <Badge icon="🛡️" text={`${profile.allergies.length} Allergien`} />}
+          {profile.diet.slice(0, 2).map(d => <Badge key={d} icon={DIETS.find(o => o.id === d)?.emoji} text={DIETS.find(o => o.id === d)?.label} />)}
+          {guestMode && <Badge icon="👥" text="Gäste aktiv" />}
+          {apiKey ? <Badge icon="🔓" text="Eigener Key" /> :
+            freemiumInfo.freemium ? <Badge icon="✨" text={`${freemiumInfo.remaining}/${freemiumInfo.dailyLimit} frei`} /> :
+            <Badge icon="🧠" text="Offline-KI" />}
         </div>
 
         {/* Quick actions — wraps to a second row as more tools are added */}
@@ -2337,13 +2347,55 @@ NUR JSON (kein Markdown):
         {/* Quick Mode */}
         {mode === "quick" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "14px" }}>
+            {/* Beispiel-Vorschau — zeigt neuen Nutzern, wie ein Vorschlag aussieht */}
+            <Card anim="fadeUp" delay="0.12s" style={{ padding: 0, overflow: "hidden" }}>
+              <div style={{ display: "flex", gap: "12px", alignItems: "center", padding: "12px 14px 6px" }}>
+                <div style={{ fontSize: "38px", lineHeight: 1, flexShrink: 0 }}>{EXAMPLE_RECIPE.emoji}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--accent)", letterSpacing: ".4px", textTransform: "uppercase" }}>Beispiel · so sieht dein Vorschlag aus</div>
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: "17px", fontWeight: 800, color: "var(--ink)", lineHeight: 1.2 }}>{EXAMPLE_RECIPE.name}</div>
+                </div>
+              </div>
+              <div style={{ padding: "0 14px 13px" }}>
+                <p style={{ fontSize: "12.5px", color: "var(--ink2)", lineHeight: 1.5, margin: "0 0 8px", fontStyle: "italic", fontFamily: "'Fraunces',serif" }}>{EXAMPLE_RECIPE.beschreibung}</p>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "8px" }}>
+                  <Badge icon="⏱️" text={EXAMPLE_RECIPE.zeit} />
+                  <Badge icon="🔥" text={EXAMPLE_RECIPE.kalorien} />
+                  <Badge icon="🍴" text={EXAMPLE_RECIPE.gerichtTyp} />
+                  <Badge icon="🍗" text={EXAMPLE_RECIPE.proteinTyp} />
+                  <Badge icon="🌶️" text="mittelscharf" />
+                </div>
+                <p style={{ fontSize: "11.5px", color: "var(--ink3)", lineHeight: 1.5, margin: 0 }}><strong style={{ color: "var(--saffron)" }}>📖 Herkunft:</strong> {EXAMPLE_RECIPE.kultur}</p>
+              </div>
+            </Card>
+
             <Card anim="fadeUp" delay="0.15s"><ST sub="Was wird's?">🍽️ Mahlzeit</ST><ChipGrid options={MEALS} selected={meal} onToggle={id => setMeal(id === meal ? "" : id)} multi={false} /></Card>
             <Card anim="fadeUp" delay="0.2s"><ST sub="Wie viel Zeit hast du?">⏱️ Kochzeit</ST><ChipGrid options={TIMES} selected={cookTime} onToggle={id => setCookTime(id === cookTime ? "" : id)} multi={false} showSub /></Card>
             <Card anim="fadeUp" delay="0.25s"><ST>🎨 Stimmung</ST><ChipGrid options={MOODS} selected={mood} onToggle={id => setMood(id === mood ? "" : id)} multi={false} colorMap /></Card>
-            <Card anim="fadeUp" delay="0.3s"><ST>💰 Budget</ST><ChipGrid options={BUDGETS} selected={budget} onToggle={id => setBudget(id === budget ? "egal" : id)} multi={false} showSub /></Card>
-            <Card anim="fadeUp" delay="0.32s"><ST sub="Optional — Lust auf etwas Bestimmtes?">🍴 Art des Gerichts</ST><ChipGrid options={DISH_TYPES} selected={dishType} onToggle={setDishType} multi={false} /></Card>
-            <Card anim="fadeUp" delay="0.34s"><ST sub="Optional">🍗 Protein</ST><ChipGrid options={PROTEINS} selected={proteinPref} onToggle={setProteinPref} multi={false} /></Card>
-            <Card anim="fadeUp" delay="0.36s">
+
+            {/* Optionale Verfeinerung — eingeklappt, hält die Startseite aufgeräumt */}
+            <div>
+              <button onClick={() => setShowMoreOpts(v => !v)} style={{
+                width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "13px 16px", borderRadius: "var(--r)", cursor: "pointer",
+                background: "var(--card)", border: "1px solid var(--card-border)",
+                color: "var(--ink2)", fontFamily: "'Outfit',sans-serif", fontSize: "14px", fontWeight: 600,
+              }}>
+                <span>⚙️ Mehr Optionen <span style={{ color: "var(--ink3)", fontWeight: 400, fontSize: "12px" }}>· Budget, Art, Protein</span>
+                  {(budget !== "egal" || dishType !== "egal" || proteinPref !== "egal") && <span style={{ marginLeft: "8px", fontSize: "10px", color: "#fff", background: "var(--accent)", borderRadius: "8px", padding: "1px 7px", fontWeight: 700 }}>aktiv</span>}
+                </span>
+                <span style={{ color: "var(--ink3)", display: "inline-block", transition: "transform .2s", transform: showMoreOpts ? "rotate(180deg)" : "none" }}>▾</span>
+              </button>
+              {showMoreOpts && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px", animation: "fadeUp 0.3s ease both" }}>
+                  <Card><ST>💰 Budget</ST><ChipGrid options={BUDGETS} selected={budget} onToggle={id => setBudget(id === budget ? "egal" : id)} multi={false} showSub /></Card>
+                  <Card><ST sub="Lust auf etwas Bestimmtes?">🍴 Art des Gerichts</ST><ChipGrid options={DISH_TYPES} selected={dishType} onToggle={setDishType} multi={false} /></Card>
+                  <Card><ST>🍗 Protein</ST><ChipGrid options={PROTEINS} selected={proteinPref} onToggle={setProteinPref} multi={false} /></Card>
+                </div>
+              )}
+            </div>
+
+            <Card anim="fadeUp" delay="0.3s">
               <ST>👤 Portionen</ST>
               <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                 <button onClick={() => setPersons(Math.max(1, persons - 1))} style={{ width: "40px", height: "40px", borderRadius: "50%", border: "2px solid var(--card-border)", background: "var(--card)", fontSize: "20px", cursor: "pointer", color: "var(--ink)" }}>−</button>
