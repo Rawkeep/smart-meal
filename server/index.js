@@ -212,9 +212,10 @@ function _gatePage(msg, returnTo) {
 <div><div style="font-size:19px;font-weight:700;letter-spacing:-.3px">Smart Meal</div><div style="font-size:12px;color:#8aa0c0">Dein KI-Essensberater</div></div>
 </div>
 <p style="font-size:13.5px;color:#aebbd0;line-height:1.5;margin:0 0 18px">Sag, worauf du Lust hast oder was im Kühlschrank liegt — Smart Meal erstellt in Sekunden ein passendes Rezept, abgestimmt auf deine Vorlieben und Unverträglichkeiten.</p>
-${feat("🥗", "Rezepte nach deinen Vorlieben, Allergien &amp; Zielen")}
-${feat("📸", "Zutaten per Foto erkennen &amp; Reste clever verkochen")}
-${feat("📅", "Wochenplan, Nährwerte &amp; Einkaufsliste inklusive")}
+${feat("🥗", "Rezepte nach Vorlieben, Allergien &amp; Zielen — mit Nährwerten &amp; Allergen-Kennzeichnung")}
+${feat("🌶️", "Mit Herkunft-Story, Schärfegrad &amp; cleveren Zutaten-Ersätzen")}
+${feat("📸", "Zutaten per Foto erkennen, Reste verkochen &amp; Wochenplan")}
+${feat("🛒", "Einkaufsliste direkt an Bring!, Picnic &amp; Co. übergeben")}
 <form method="POST" action="/__gate" style="margin:20px 0 0;padding-top:18px;border-top:1px solid #243049">
 <label for="code" style="display:block;font-size:12px;color:#8aa0c0;font-weight:600;margin-bottom:7px">Dein Zugangscode</label>
 ${msg ? `<div style="background:#7f1d1d;color:#fecaca;font-size:12px;padding:8px 10px;border-radius:8px;margin-bottom:10px">${_htmlAttr(msg)}</div>` : ""}
