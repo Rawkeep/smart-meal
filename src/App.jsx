@@ -253,6 +253,31 @@ const ProviderSelect = ({ value, onChange }) => (
   </div>
 );
 
+// Transparenter Gratis-Hinweis (Google Gemini, ohne Kreditkarte) — unter der
+// Key-Eingabe. Grün = kostenlos. Theme-sicher über rgba auf Karten-Hintergrund.
+const GeminiTip = () => (
+  <div style={{
+    background: "linear-gradient(135deg,rgba(74,143,94,0.12),rgba(74,143,94,0.04))",
+    border: "1px solid rgba(74,143,94,0.24)", borderRadius: "var(--r)",
+    padding: "11px 13px", marginBottom: "14px",
+  }}>
+    <p style={{ fontSize: "12px", color: "var(--ink)", fontWeight: 600, margin: "0 0 6px" }}>
+      💚 Kostenlos nutzen — mit Google Gemini, ohne Kreditkarte
+    </p>
+    <ol style={{ paddingLeft: "16px", fontSize: "11.5px", color: "var(--ink2)", lineHeight: 1.7, margin: 0 }}>
+      <li>Gratis-Key holen:{" "}
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer"
+           style={{ color: "var(--accent)", fontWeight: 600 }}>aistudio.google.com</a>{" "}
+        → „Create API key" (beginnt mit <code style={{ fontSize: "11px" }}>AIza…</code>)</li>
+      <li>Oben <strong>Google Gemini</strong> wählen, Key einfügen</li>
+      <li>Fertig — KI-Vorschläge laufen, <strong>0&nbsp;€</strong></li>
+    </ol>
+    <p style={{ fontSize: "11px", color: "var(--ink3)", margin: "6px 0 0", lineHeight: 1.5 }}>
+      Ohne Key läuft die Offline-KI weiter (sofort, gratis, etwas einfacher).
+    </p>
+  </div>
+);
+
 const Chip = ({ active, onClick, children, color, small }) => (
   <button onClick={onClick} style={{
     padding: small ? "6px 12px" : "9px 16px",
@@ -1326,6 +1351,8 @@ NUR JSON (kein Markdown):
 
           <ProviderSelect value={provider} onChange={saveProvider} />
 
+          <GeminiTip />
+
           <div style={{ background: "var(--bg2)", borderRadius: "var(--r)", padding: "14px", marginBottom: "16px" }}>
             <p style={{ fontSize: "13px", color: "var(--ink)", fontWeight: 600, marginBottom: "8px" }}>So geht's (2 Minuten):</p>
             <ol style={{ paddingLeft: "18px", fontSize: "12px", color: "var(--ink2)", lineHeight: 1.8, margin: 0 }}>
@@ -1873,6 +1900,7 @@ NUR JSON (kein Markdown):
             marginTop: "6px", background: "none", border: "none", color: "var(--ink3)",
             fontSize: "12px", cursor: "pointer", padding: "4px 0",
           }}>Key entfernen (zurück zu Offline-KI / Freemium)</button>}
+          <div style={{ marginTop: "12px" }}><GeminiTip /></div>
         </Card>
         <Btn onClick={() => { saveProfile(profile); saveApiKey(apiKey); setOverlay(null); }}>💾 Profil speichern</Btn>
       </div>
