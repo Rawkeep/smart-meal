@@ -495,23 +495,58 @@ const CloseBar = ({ title, onClose }) => (
   </div>
 );
 
-const Layout = ({ children, photo }) => (
-  <div style={{
-    minHeight: "100vh",
-    // photo: appetitliches Food-Foto fest hinter der ganzen Seite, mit Scrim
-    // darüber (Foto bleibt als Atmosphäre sichtbar, Karten/Text lesbar).
-    background: photo
-      ? `linear-gradient(var(--photo-scrim), var(--photo-scrim)), url(${HERO_IMG}) center top / cover no-repeat fixed, var(--bg1)`
-      : "linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 40%,var(--bg3) 100%)",
-    backgroundSize: photo ? undefined : "200% 200%",
-    animation: photo ? undefined : "bgShift 20s ease infinite",
-    fontFamily: "'Outfit',sans-serif",
-  }}>
-    <div style={{ maxWidth: "560px", margin: "0 auto", padding: "22px 20px 64px", position: "relative", zIndex: 1 }}>
-      {children}
+const Layout = ({ children, photo }) => {
+  // Parallax: die feste Foto-Ebene wird beim Scrollen langsamer mitbewegt
+  // (direkt per Ref, kein React-Re-Render). Mobil-sicher (kein background-
+  // attachment:fixed, das auf iOS bricht). Respektiert „Reduzierte Bewegung".
+  const bgRef = useRef(null);
+  useEffect(() => {
+    if (!photo || !bgRef.current) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const el = bgRef.current;
+    let raf = 0;
+    const apply = () => {
+      raf = 0;
+      const y = window.scrollY || window.pageYOffset || 0;
+      const ty = Math.min(y * 0.3, window.innerHeight * 0.25); // gedeckelt → keine Kanten
+      el.style.transform = `translate3d(0, ${ty}px, 0) scale(1.08)`;
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(apply); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    apply();
+    return () => { window.removeEventListener("scroll", onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, [photo]);
+
+  if (photo) {
+    return (
+      <div style={{ minHeight: "100vh", position: "relative", background: "var(--bg1)", fontFamily: "'Outfit',sans-serif" }}>
+        <div ref={bgRef} aria-hidden="true" style={{
+          position: "fixed", left: 0, right: 0, top: "-30vh", height: "160vh", zIndex: 0, pointerEvents: "none",
+          backgroundImage: `url(${HERO_IMG})`, backgroundSize: "cover", backgroundPosition: "center top",
+          willChange: "transform",
+        }} />
+        <div aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "var(--photo-scrim)" }} />
+        <div style={{ maxWidth: "560px", margin: "0 auto", padding: "22px 20px 64px", position: "relative", zIndex: 1 }}>
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 40%,var(--bg3) 100%)",
+      backgroundSize: "200% 200%",
+      animation: "bgShift 20s ease infinite",
+      fontFamily: "'Outfit',sans-serif",
+    }}>
+      <div style={{ maxWidth: "560px", margin: "0 auto", padding: "22px 20px 64px", position: "relative", zIndex: 1 }}>
+        {children}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const InputField = ({ value, onChange, placeholder, multiline, style: s }) => {
   const base = {
