@@ -9,6 +9,7 @@ import { dirname, join } from "path";
 import crypto from "crypto";
 import * as store from "./db.js";
 import { sendCodeEmail, mailEnabled } from "./mail.js";
+import { providerFromKey, callGeminiText, callGeminiVision, callOpenAIText, callOpenAIVision } from "./providers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -509,6 +510,7 @@ function freemiumGuard(req, res, next) {
   if (userKey) {
     req.useByok = true;
     req.userApiKey = userKey;
+    req.userProvider = providerFromKey(userKey); // gemini/openai/anthropic am Präfix
     return next();
   }
   if (!ANTHROPIC_API_KEY) {
@@ -569,7 +571,7 @@ app.get("/privacy", (_req, res) => {
 <ul>
 <li><strong>Keine Konten, kein Tracking, keine Werbung.</strong> Es werden keine Cookies zu Analysezwecken gesetzt.</li>
 <li><strong>KI-Anfragen:</strong> Deine Eingaben (z. B. Zutaten, Vorlieben, optional Foto) werden zur Rezept-Generierung an <a href="https://www.anthropic.com/legal/privacy" rel="noopener">Anthropic (Claude API, USA)</a> übermittelt. Anthropic verarbeitet sie als Auftragsverarbeiter und nutzt API-Daten nicht zum Modelltraining.</li>
-<li><strong>Eigener API-Schlüssel (BYOK):</strong> Falls du einen eigenen Anthropic-Key eingibst, wird er nur für deine Anfragen an Anthropic verwendet und nicht serverseitig gespeichert.</li>
+<li><strong>Eigener API-Schlüssel (BYOK):</strong> Falls du einen eigenen Key eingibst, gehen deine Anfragen an den dazugehörigen Anbieter — Anthropic (Claude), Google (Gemini) oder OpenAI, je nach Key. Der Key wird nur für deine Anfragen verwendet und nicht serverseitig gespeichert.</li>
 <li><strong>Nutzungslimit:</strong> Für das kostenlose Kontingent wird die Anzahl Anfragen pro Tag flüchtig pro IP im Arbeitsspeicher gezählt (kein dauerhaftes Protokoll, Reset täglich).</li>
 <li><strong>Lokale Speicherung:</strong> Einstellungen, Vorlieben und Verlauf bleiben über den Browser-Speicher (localStorage) auf deinem Gerät und werden nicht an uns übertragen.</li>
 </ul>
@@ -581,16 +583,46 @@ app.get("/privacy", (_req, res) => {
 </main></body></html>`);
 });
 
-// ─── Helper: call Claude with freemium or BYOK ───
-async function callClaudeAuto(req, messages, maxTokens = 1500, model = MODEL_SMART) {
-  let data;
+// ─── Antworttext aus Anthropic-Response normalisieren ───
+const anthropicText = (data) => data.content?.map(c => c.type === "text" ? c.text : "").join("") || "";
+
+// ─── Text-Generierung mit Freemium oder BYOK (provider-aware) ───
+// Freemium (Server-Key) ist immer Anthropic. BYOK wird am Key-Präfix geroutet:
+// Gemini (Gratis-Tier) / OpenAI / Anthropic. Liefert normalisiert den Text.
+async function generateText(req, prompt, maxTokens, fast) {
+  const model = fast ? MODEL_FAST : MODEL_SMART;
   if (req.useByok) {
-    data = await callClaudeWithKey(req.userApiKey, messages, maxTokens, model);
-  } else {
-    data = await callClaude(messages, maxTokens, model);
-    incrementUsage(req.ip);
+    if (req.userProvider === "gemini") return callGeminiText(req.userApiKey, prompt, maxTokens);
+    if (req.userProvider === "openai") return callOpenAIText(req.userApiKey, prompt, maxTokens);
+    return anthropicText(await callClaudeWithKey(req.userApiKey, [{ role: "user", content: prompt }], maxTokens, model));
   }
-  return data;
+  const data = await callClaude([{ role: "user", content: prompt }], maxTokens, model);
+  incrementUsage(req.ip);
+  return anthropicText(data);
+}
+
+// ─── Bild-Erkennung mit Freemium oder BYOK (provider-aware) ───
+async function generateVision(req, { base64, mediaType, prompt, maxTokens }) {
+  if (req.useByok) {
+    if (req.userProvider === "gemini") return callGeminiVision(req.userApiKey, base64, mediaType, prompt, maxTokens);
+    if (req.userProvider === "openai") return callOpenAIVision(req.userApiKey, base64, mediaType, prompt, maxTokens);
+    return anthropicText(await callClaudeWithKey(req.userApiKey, [{
+      role: "user",
+      content: [
+        { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+        { type: "text", text: prompt },
+      ],
+    }], maxTokens, MODEL_SMART));
+  }
+  const data = await callClaude([{
+    role: "user",
+    content: [
+      { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+      { type: "text", text: prompt },
+    ],
+  }], maxTokens, MODEL_SMART);
+  incrementUsage(req.ip);
+  return anthropicText(data);
 }
 
 // ─── Suggest Route ───
@@ -601,8 +633,7 @@ app.post("/api/suggest", apiLimiter, freemiumGuard, async (req, res) => {
   try {
     const prompt = sanitizeText(req.body.prompt);
     // Einzel-Vorschlag → schnelles Modell (Haiku); Wochenplan unten bleibt Sonnet.
-    const data = await callClaudeAuto(req, [{ role: "user", content: prompt }], 1500, MODEL_FAST);
-    const text = data.content.map(c => c.type === "text" ? c.text : "").join("");
+    const text = await generateText(req, prompt, 1500, true);
     const remaining = req.useByok ? null : getRemainingFree(req.ip);
     res.json({ text, remaining });
   } catch (err) {
@@ -618,8 +649,7 @@ app.post("/api/meal-plan", apiLimiter, freemiumGuard, async (req, res) => {
 
   try {
     const prompt = sanitizeText(req.body.prompt);
-    const data = await callClaudeAuto(req, [{ role: "user", content: prompt }], 3000);
-    const text = data.content.map(c => c.type === "text" ? c.text : "").join("");
+    const text = await generateText(req, prompt, 3000, false);
     const remaining = req.useByok ? null : getRemainingFree(req.ip);
     res.json({ text, remaining });
   } catch (err) {
@@ -634,14 +664,12 @@ app.post("/api/recognize", apiLimiter, freemiumGuard, async (req, res) => {
   if (errors.length) return res.status(400).json({ error: errors.join("; ") });
 
   try {
-    const data = await callClaudeAuto(req, [{
-      role: "user",
-      content: [
-        { type: "image", source: { type: "base64", media_type: req.body.mediaType, data: req.body.image } },
-        { type: "text", text: "Erkenne alle Lebensmittel/Zutaten auf diesem Foto. Antworte NUR mit einem JSON-Array der Zutatennamen auf Deutsch, z.B. [\"Tomaten\",\"Käse\",\"Hähnchenbrust\"]. Keine Erklärung, nur das Array." },
-      ],
-    }], 500);
-    const text = data.content?.map(c => c.type === "text" ? c.text : "").join("") || "[]";
+    const text = await generateVision(req, {
+      base64: req.body.image,
+      mediaType: req.body.mediaType,
+      prompt: "Erkenne alle Lebensmittel/Zutaten auf diesem Foto. Antworte NUR mit einem JSON-Array der Zutatennamen auf Deutsch, z.B. [\"Tomaten\",\"Käse\",\"Hähnchenbrust\"]. Keine Erklärung, nur das Array.",
+      maxTokens: 500,
+    }) || "[]";
     const remaining = req.useByok ? null : getRemainingFree(req.ip);
     res.json({ text, remaining });
   } catch (err) {
