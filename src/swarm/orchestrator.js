@@ -508,9 +508,40 @@ export async function orchestrate(context) {
   const healthHint = generateHealthHint(selectedFoods, context);
   const wineHint = generateWineHint(template, selectedFoods);
 
+  // Mehrwert-Felder auch offline ableiten (Gericht-Typ, Haupt-Protein, Schärfe).
+  // Kultur-Story & Spezialzutaten-Ersatz bleiben dem KI-Pfad vorbehalten.
+  const _name = (filled.name || "").toLowerCase();
+  const _txt = `${_name} ${zutaten.join(" ")} ${(filled.schritte || []).join(" ")}`.toLowerCase();
+  const inferDishType = () => {
+    if (/(suppe|eintopf|topf|ramen|pho|curry)/.test(_txt)) return "Suppe/Eintopf";
+    if (/(pasta|nudel|noodle|spaghetti|udon|japchae)/.test(_name)) return "Nudelgericht";
+    if (/(reis|risotto|bibimbap|paella|biryani|bowl)/.test(_name)) return "Reisgericht";
+    if (/(salat|salad)/.test(_name)) return "Salat";
+    if (/(burger|sandwich|wrap|taco|dürüm|döner|street)/.test(_name)) return "Street Food";
+    if (/(auflauf|gratin|ofen|gebacken|pizza)/.test(_txt)) return "Aus dem Ofen";
+    if (/(wok|gebraten|stir.?fry)/.test(_txt)) return "Gebraten/Wok";
+    if (/(grill|gegrillt|bbq)/.test(_txt)) return "Gegrilltes";
+    if (template.mealType === "frühstück") return "Frühstück";
+    return "";
+  };
+  const inferProtein = () => {
+    if (/(garnele|shrimp|muschel|tintenfisch|meeresfr)/.test(_txt)) return "Meeresfrüchte";
+    if (/(lachs|thunfisch|kabeljau|forelle|\bfisch)/.test(_txt)) return "Fisch";
+    if (/(tofu|tempeh|sojaschnetzel)/.test(_txt)) return "Tofu";
+    if (/(hähnchen|\bhuhn|pute|chicken)/.test(_txt)) return "Huhn";
+    if (/(rind|beef|steak|hackfleisch)/.test(_txt)) return "Rind";
+    if (/(schwein|speck|bacon|schinken|kassler)/.test(_txt)) return "Schwein";
+    if (/(spiegelei|rührei|\beier\b)/.test(_txt)) return "Ei";
+    return "Gemüse";
+  };
+  const _spice = ["chili", "chilli", "sambal", "gochujang", "harissa", "sriracha", "peperoni", "jalapeño", "jalapeno", "cayenne", "currypaste"].filter(s => _txt.includes(s)).length;
+
   const result = {
     name: filled.name,
     beschreibung: filled.beschreibung,
+    gerichtTyp: inferDishType(),
+    proteinTyp: inferProtein(),
+    schaerfe: Math.min(3, _spice),
     zutaten,
     schritte: enrichSteps(filled.schritte, context.profile),
     zeit: template.zeit,
