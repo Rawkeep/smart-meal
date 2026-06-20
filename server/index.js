@@ -203,17 +203,27 @@ const _safeReturn = (r) => {
   return v.startsWith("/") && !v.startsWith("//") ? v : "/smart-meal/";
 };
 function _gatePage(msg, returnTo) {
-  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Meal — Zugang</title></head>
-<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f172a;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0">
-<form method="POST" action="/__gate" style="background:#1e293b;padding:32px 28px;border-radius:16px;width:320px;box-shadow:0 10px 40px rgba(0,0,0,.4)">
-<div style="font-size:32px;text-align:center;margin-bottom:6px">🍽️</div>
-<h1 style="font-size:18px;margin:0 0 4px;text-align:center">Smart Meal</h1>
-<p style="font-size:13px;color:#94a3b8;margin:0 0 18px;text-align:center">Bitte deinen persönlichen Zugangscode eingeben.</p>
-${msg ? `<div style="background:#7f1d1d;color:#fecaca;font-size:12px;padding:8px 10px;border-radius:8px;margin-bottom:12px">${_htmlAttr(msg)}</div>` : ""}
+  const feat = (icon, text) => `<div style="display:flex;align-items:flex-start;gap:11px;margin:0 0 11px"><div style="font-size:17px;line-height:1.4;flex-shrink:0">${icon}</div><div style="font-size:13px;color:#cbd5e1;line-height:1.45">${text}</div></div>`;
+  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Meal — Dein KI-Essensberater</title></head>
+<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;background:radial-gradient(1100px 600px at 50% -10%, #20304d 0%, #0f172a 55%, #0b1120 100%);font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0">
+<main style="width:100%;max-width:380px;background:#161f33;border:1px solid #243049;padding:30px 28px;border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,.5)">
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+<div style="width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:25px;background:linear-gradient(135deg,#e8896b,#c2415a);box-shadow:0 6px 18px rgba(194,65,90,.4)">🍽️</div>
+<div><div style="font-size:19px;font-weight:700;letter-spacing:-.3px">Smart Meal</div><div style="font-size:12px;color:#8aa0c0">Dein KI-Essensberater</div></div>
+</div>
+<p style="font-size:13.5px;color:#aebbd0;line-height:1.5;margin:0 0 18px">Sag, worauf du Lust hast oder was im Kühlschrank liegt — Smart Meal erstellt in Sekunden ein passendes Rezept, abgestimmt auf deine Vorlieben und Unverträglichkeiten.</p>
+${feat("🥗", "Rezepte nach deinen Vorlieben, Allergien &amp; Zielen")}
+${feat("📸", "Zutaten per Foto erkennen &amp; Reste clever verkochen")}
+${feat("📅", "Wochenplan, Nährwerte &amp; Einkaufsliste inklusive")}
+<form method="POST" action="/__gate" style="margin:20px 0 0;padding-top:18px;border-top:1px solid #243049">
+<label for="code" style="display:block;font-size:12px;color:#8aa0c0;font-weight:600;margin-bottom:7px">Dein Zugangscode</label>
+${msg ? `<div style="background:#7f1d1d;color:#fecaca;font-size:12px;padding:8px 10px;border-radius:8px;margin-bottom:10px">${_htmlAttr(msg)}</div>` : ""}
 <input type="hidden" name="returnTo" value="${_htmlAttr(_safeReturn(returnTo))}">
-<input name="code" type="text" inputmode="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" autofocus required placeholder="Zugangscode (z. B. SMEAL-XXXX-XXXX)" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:9px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:14px;margin-bottom:12px;letter-spacing:0.5px">
-<button type="submit" style="width:100%;padding:11px;border:0;border-radius:9px;background:#10b981;color:#fff;font-size:14px;font-weight:600;cursor:pointer">Eintreten</button>
-</form></body></html>`;
+<input id="code" name="code" type="text" inputmode="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" autofocus required placeholder="z. B. SMEAL-XXXX-XXXX" style="width:100%;box-sizing:border-box;padding:12px 13px;border-radius:10px;border:1px solid #334155;background:#0d1525;color:#e2e8f0;font-size:14px;margin-bottom:11px;letter-spacing:.5px">
+<button type="submit" style="width:100%;padding:12px;border:0;border-radius:10px;background:linear-gradient(135deg,#e8896b,#c2415a);color:#fff;font-size:14px;font-weight:700;cursor:pointer">Eintreten →</button>
+</form>
+<p style="font-size:11px;color:#64748b;text-align:center;margin:14px 0 0;line-height:1.5">🔒 Funktioniert auch offline · keine Konten, kein Tracking</p>
+</main></body></html>`;
 }
 
 const _validAppToken = (req) => {
