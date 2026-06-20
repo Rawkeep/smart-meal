@@ -1,0 +1,15 @@
+{
+  "name": "switcher",
+  "version": "1.0.0",
+  "description": "Switcher — clear, pictorial, strictly-ordered import/export process wizard per country (196). Offline, 0-CDN, DE/EN/FR.",
+  "author": "RKB / Rawkeep",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "keywords": ["import", "export", "customs", "logistics", "wizard", "offline", "pwa", "trade"],
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "serve": "python3 -m http.server 8080",
+    "bootstrap": "node scripts/bootstrap-countries.mjs"
+  }
+}

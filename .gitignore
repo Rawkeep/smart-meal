@@ -15,9 +15,9 @@ dist-ssr
 
 # Lokale SQLite-DB (Käufe, Codes, Nutzung) — niemals committen
 data/
-# Ausnahme: Country Process Wizard – Quelldatei muss committet werden
-!country-process-wizard/data/
-!country-process-wizard/data/countries.js
+# Ausnahme: Switcher – Quelldatei muss committet werden
+!switcher/data/
+!switcher/data/countries.js
 *.db
 *.db-wal
 *.db-shm

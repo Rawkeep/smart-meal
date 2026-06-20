@@ -1,0 +1,11 @@
+# Switcher — standalone .gitignore
+# (data/countries.js IS tracked: it is the source of truth)
+
+node_modules/
+*.log
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.sw?

@@ -1,4 +1,4 @@
-# 🌍 Country Process Wizard — Import / Export (196 Länder)
+# 🌍 Switcher — Import / Export (196 Länder)
 
 Eine **kompakte, bildliche, Schritt-für-Schritt-Anleitung** für Import- und
 Export-Abläufe **pro Land** – klar, strikt einzuhalten, offline lauffähig und
@@ -30,7 +30,7 @@ direkt in einer Datei pflegbar.
 ## Starten
 
 ```
-country-process-wizard/index.html   ← einfach im Browser öffnen (Doppelklick)
+switcher/index.html   ← einfach im Browser öffnen (Doppelklick)
 ```
 
 Kein Build, kein Server nötig. (Optional lokaler Server, falls der Browser
@@ -109,7 +109,7 @@ Region-Schlüssel (Labels in `index.html → REGIONS`): `north-africa`,
 ## Aufbau
 
 ```
-country-process-wizard/
+switcher/
 ├── index.html                     # komplette App (UI, Engine, i18n, Print) – 0-CDN
 ├── data/
 │   └── countries.js               # ← QUELLE: 196 Länder + Prozesse (hier editieren)
@@ -129,7 +129,7 @@ Der Generator ist nur zum **erstmaligen** Erzeugen gedacht. Danach ist
 Dieses Projekt ist self-contained. Für ein eigenes Repository genügt:
 
 ```bash
-cp -r country-process-wizard /pfad/zum/neuen/repo
+cp -r switcher /pfad/zum/neuen/repo
 cd /pfad/zum/neuen/repo && git init && git add . && git commit -m "init"
 ```
 
