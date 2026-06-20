@@ -1,5 +1,8 @@
-hero-food.webp
-Quelle: Unsplash (https://unsplash.com/photos/0877df9cc836)
-Fotograf: Brooke Lark
-Lizenz: Unsplash License — kostenlos nutzbar (auch kommerziell), keine Attribution erforderlich.
-Bezogen optimiert via Unsplash-CDN (w=1280, q=40, webp). Jederzeit austauschbar.
+Hintergrund-Food-Fotos (rotieren) — Quelle Unsplash, Unsplash License
+(kostenlos nutzbar, auch kommerziell, keine Attribution erforderlich),
+optimiert via Unsplash-CDN (w=1280, webp). Jederzeit austauschbar.
+
+hero-1.webp  unsplash.com/photos/0877df9cc836  (Brooke Lark)
+hero-2.webp  unsplash.com/photos/10de6ba17061
+hero-3.webp  unsplash.com/photos/a57141f2eefd
+hero-4.webp  unsplash.com/photos/8f4f37790ca0

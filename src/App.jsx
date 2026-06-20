@@ -209,8 +209,10 @@ const PROTEINS = [
   { id: "gemüse", label: "Nur Gemüse", emoji: "🥦" },
 ];
 
-// Appetitanregendes Hero-Foto (public/img, base-pfad-sicher). Lizenz: Unsplash (frei).
-const HERO_IMG = (import.meta.env.BASE_URL || "/") + "img/hero-food.webp";
+// Appetitanregende Hero-Fotos (rotieren pro Laden). Lizenz: Unsplash (frei).
+const HERO_IMGS = ["hero-1.webp", "hero-2.webp", "hero-3.webp", "hero-4.webp"]
+  .map(f => (import.meta.env.BASE_URL || "/") + "img/" + f);
+const HERO_IMG = HERO_IMGS[Math.floor(Math.random() * HERO_IMGS.length)];
 
 // Beispiel-Rezepte (verschiedene Küchen) — zeigen auf der Startseite, wie ein
 // Vorschlag aussieht. Variiert beim Laden + per Tipp (zeigt die Bandbreite).
@@ -495,25 +497,34 @@ const CloseBar = ({ title, onClose }) => (
   </div>
 );
 
-const Layout = ({ children, photo }) => {
-  // Parallax: die feste Foto-Ebene wird beim Scrollen langsamer mitbewegt
-  // (direkt per Ref, kein React-Re-Render). Mobil-sicher (kein background-
-  // attachment:fixed, das auf iOS bricht). Respektiert „Reduzierte Bewegung".
+const Layout = ({ children, photo = true }) => {
+  // Foto-Hintergrund (durchgängig in allen Ansichten) mit GEGLÄTTETEM Parallax:
+  // die feste Foto-Ebene eilt dem Scrollen weich nach (lerp/ease, kein Snap,
+  // kein React-Re-Render). Mobil-sicher (kein background-attachment:fixed).
+  // „Glas leert sich": beim Runterscrollen wird der Schleier dezent dünner →
+  // das Foto klart leicht auf. Respektiert „Reduzierte Bewegung".
   const bgRef = useRef(null);
+  const scrimRef = useRef(null);
   useEffect(() => {
     if (!photo || !bgRef.current) return;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    const el = bgRef.current;
-    let raf = 0;
-    const apply = () => {
-      raf = 0;
-      const y = window.scrollY || window.pageYOffset || 0;
-      const ty = Math.min(y * 0.3, window.innerHeight * 0.25); // gedeckelt → keine Kanten
-      el.style.transform = `translate3d(0, ${ty}px, 0) scale(1.08)`;
+    const bg = bgRef.current, scrim = scrimRef.current;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    let cur = 0, target = 0, raf = 0;
+    const ease = () => {
+      cur += (target - cur) * 0.12;
+      if (Math.abs(target - cur) < 0.15) cur = target;
+      bg.style.transform = `translate3d(0, ${cur.toFixed(2)}px, 0) scale(1.08)`;
+      raf = cur !== target ? requestAnimationFrame(ease) : 0;
     };
-    const onScroll = () => { if (!raf) raf = requestAnimationFrame(apply); };
+    const onScroll = () => {
+      const y = window.scrollY || window.pageYOffset || 0;
+      target = Math.min(y * 0.32, window.innerHeight * 0.26);
+      if (reduce) { cur = target; bg.style.transform = `translate3d(0, ${cur}px, 0) scale(1.08)`; }
+      else if (!raf) raf = requestAnimationFrame(ease);
+      if (scrim) scrim.style.opacity = String(1 - Math.min(1, y / (window.innerHeight * 1.1)) * 0.25);
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
-    apply();
+    onScroll();
     return () => { window.removeEventListener("scroll", onScroll); if (raf) cancelAnimationFrame(raf); };
   }, [photo]);
 
@@ -525,7 +536,7 @@ const Layout = ({ children, photo }) => {
           backgroundImage: `url(${HERO_IMG})`, backgroundSize: "cover", backgroundPosition: "center top",
           willChange: "transform",
         }} />
-        <div aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "var(--photo-scrim)" }} />
+        <div ref={scrimRef} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "var(--photo-scrim)", transition: "opacity 0.2s linear" }} />
         <div style={{ maxWidth: "680px", margin: "0 auto", padding: "24px 24px 72px", position: "relative", zIndex: 1 }}>
           {children}
         </div>
@@ -541,7 +552,7 @@ const Layout = ({ children, photo }) => {
       animation: "bgShift 20s ease infinite",
       fontFamily: "'Outfit',sans-serif",
     }}>
-      <div style={{ maxWidth: "560px", margin: "0 auto", padding: "22px 20px 64px", position: "relative", zIndex: 1 }}>
+      <div style={{ maxWidth: "680px", margin: "0 auto", padding: "24px 24px 72px", position: "relative", zIndex: 1 }}>
         {children}
       </div>
     </div>
