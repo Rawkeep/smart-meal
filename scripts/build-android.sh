@@ -39,7 +39,9 @@ export PATH="$JAVA_HOME/bin:$PATH"
 
 # --- Build-Verzeichnis vorbereiten --------------------------------------------
 mkdir -p "$BUILD_DIR"
-cp "$ROOT/scripts/twa-manifest.pages.json" "$BUILD_DIR/twa-manifest.json"
+# Quelle: Root-Manifest (host smartmeal.rawkeep.com) — die alte
+# scripts/twa-manifest.pages.json zeigt auf die tote GitHub-Pages-URL.
+cp "${TWA_MANIFEST:-$ROOT/twa-manifest.json}" "$BUILD_DIR/twa-manifest.json"
 
 # --- Keystore (einmalig erzeugen) ---------------------------------------------
 if [ ! -f "$KEYSTORE" ]; then
