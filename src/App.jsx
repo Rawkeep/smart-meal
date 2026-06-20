@@ -2447,7 +2447,7 @@ NUR JSON (kein Markdown):
             </div>
 
             <Card anim="fadeUp" delay="0.3s">
-              <ST>👤 Portionen</ST>
+              <ST sub={`für ${persons} Person${persons > 1 ? "en" : ""}`}>👤 Portionen</ST>
               <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                 <button onClick={() => setPersons(Math.max(1, persons - 1))} style={{ width: "40px", height: "40px", borderRadius: "50%", border: "2px solid var(--card-border)", background: "var(--card)", fontSize: "20px", cursor: "pointer", color: "var(--ink)" }}>−</button>
                 <span style={{ fontFamily: "'Fraunces',serif", fontSize: "28px", fontWeight: 700, color: "var(--ink)", minWidth: "30px", textAlign: "center" }}>{persons}</span>
