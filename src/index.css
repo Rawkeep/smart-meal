@@ -22,14 +22,14 @@
   --saffron: #E0A52E;       /* Safran — Energie/Fett, warm */
   --wine: #8A2E48;          /* Wein — Alkohol */
   /* ─── Cards & lines ─── */
-  --card: rgba(255, 253, 249, 0.82);
-  --card-border: rgba(190, 170, 145, 0.30);
+  --card: rgba(255, 253, 249, 0.86);
+  --card-border: rgba(190, 170, 145, 0.42);
   --line: rgba(190, 170, 145, 0.22);
   /* Scrim über dem Food-Foto-Hintergrund — Foto bleibt als Atmosphäre sichtbar,
      Karten/Text bleiben lesbar. Dunkler im Dark-Mode. */
-  --photo-scrim: rgba(251, 246, 239, 0.82);
+  --photo-scrim: rgba(251, 246, 239, 0.55);
   /* ─── Radii ─── */
-  --R: 22px;
+  --R: 26px;
   --r: 13px;
   /* ─── Elevation (warm-tinted, layered) ─── */
   --shadow-sm: 0 1px 2px rgba(58, 38, 18, 0.05), 0 2px 6px rgba(58, 38, 18, 0.04);
@@ -49,7 +49,7 @@
   --bg1: #1A1216;
   --bg2: #221820;
   --bg3: #2B1F2A;
-  --photo-scrim: rgba(20, 14, 18, 0.85);
+  --photo-scrim: rgba(20, 14, 18, 0.62);
   --ink: #F4EAE2;
   --ink2: #D8C5BE;
   --ink3: #A38E8C;
@@ -64,8 +64,8 @@
   --plum: #B98FC0;
   --saffron: #ECC15E;
   --wine: #D77A93;
-  --card: rgba(46, 34, 44, 0.72);
-  --card-border: rgba(225, 200, 200, 0.12);
+  --card: rgba(46, 34, 44, 0.80);
+  --card-border: rgba(225, 200, 200, 0.18);
   --line: rgba(225, 200, 200, 0.10);
   --inset-hi: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.22);

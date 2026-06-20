@@ -526,7 +526,7 @@ const Layout = ({ children, photo }) => {
           willChange: "transform",
         }} />
         <div aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "var(--photo-scrim)" }} />
-        <div style={{ maxWidth: "560px", margin: "0 auto", padding: "22px 20px 64px", position: "relative", zIndex: 1 }}>
+        <div style={{ maxWidth: "680px", margin: "0 auto", padding: "24px 24px 72px", position: "relative", zIndex: 1 }}>
           {children}
         </div>
       </div>

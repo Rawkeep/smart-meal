@@ -205,7 +205,7 @@ const _safeReturn = (r) => {
 function _gatePage(msg, returnTo) {
   const feat = (icon, text) => `<div style="display:flex;align-items:flex-start;gap:11px;margin:0 0 11px"><div style="font-size:17px;line-height:1.4;flex-shrink:0">${icon}</div><div style="font-size:13px;color:#cbd5e1;line-height:1.45">${text}</div></div>`;
   return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Meal — Dein KI-Essensberater</title></head>
-<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;background:linear-gradient(180deg,rgba(11,16,30,.74),rgba(11,16,30,.93)),url('/smart-meal/img/hero-food.webp') center/cover no-repeat fixed,#0b1120;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0">
+<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;background:radial-gradient(120% 80% at 50% 0%,rgba(11,16,30,.42) 0%,rgba(11,16,30,.72) 60%,rgba(11,16,30,.9) 100%),url('/smart-meal/img/hero-food.webp') center/cover no-repeat fixed,#0b1120;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0">
 <main style="width:100%;max-width:380px;background:#161f33;border:1px solid #243049;padding:30px 28px;border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,.5)">
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
 <div style="width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:25px;background:linear-gradient(135deg,#e8896b,#c2415a);box-shadow:0 6px 18px rgba(194,65,90,.4)">🍽️</div>
