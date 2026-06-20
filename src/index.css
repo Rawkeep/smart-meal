@@ -25,6 +25,9 @@
   --card: rgba(255, 253, 249, 0.82);
   --card-border: rgba(190, 170, 145, 0.30);
   --line: rgba(190, 170, 145, 0.22);
+  /* Scrim über dem Food-Foto-Hintergrund — Foto bleibt als Atmosphäre sichtbar,
+     Karten/Text bleiben lesbar. Dunkler im Dark-Mode. */
+  --photo-scrim: rgba(251, 246, 239, 0.82);
   /* ─── Radii ─── */
   --R: 22px;
   --r: 13px;
@@ -46,6 +49,7 @@
   --bg1: #1A1216;
   --bg2: #221820;
   --bg3: #2B1F2A;
+  --photo-scrim: rgba(20, 14, 18, 0.85);
   --ink: #F4EAE2;
   --ink2: #D8C5BE;
   --ink3: #A38E8C;

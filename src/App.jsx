@@ -212,14 +212,15 @@ const PROTEINS = [
 // Appetitanregendes Hero-Foto (public/img, base-pfad-sicher). Lizenz: Unsplash (frei).
 const HERO_IMG = (import.meta.env.BASE_URL || "/") + "img/hero-food.webp";
 
-// Statisches Beispiel-Rezept — zeigt auf der Startseite, wie ein Vorschlag aussieht.
-const EXAMPLE_RECIPE = {
-  emoji: "🍲",
-  name: "Bibimbap mit Rind & Sesam",
-  beschreibung: "Buntes koreanisches Reisgericht: knackiges Gemüse, mariniertes Rind und ein Spiegelei auf warmem Reis — abgerundet mit nussig-würziger Gochujang-Sauce.",
-  kultur: "„Bibimbap“ heißt wörtlich „gemischter Reis“ — vor dem Essen wird traditionell alles kräftig untergerührt.",
-  zeit: "30 Min", kalorien: "ca. 540 kcal", schaerfe: 2, gerichtTyp: "Reisgericht", proteinTyp: "Rind",
-};
+// Beispiel-Rezepte (verschiedene Küchen) — zeigen auf der Startseite, wie ein
+// Vorschlag aussieht. Variiert beim Laden + per Tipp (zeigt die Bandbreite).
+const EXAMPLE_RECIPES = [
+  { emoji: "🍲", name: "Bibimbap mit Rind & Sesam", beschreibung: "Buntes koreanisches Reisgericht: knackiges Gemüse, mariniertes Rind und ein Spiegelei auf warmem Reis — abgerundet mit nussig-würziger Gochujang-Sauce.", kultur: "„Bibimbap“ heißt wörtlich „gemischter Reis“ — vor dem Essen wird traditionell alles kräftig untergerührt.", zeit: "30 Min", kalorien: "ca. 540 kcal", schaerfe: 2, gerichtTyp: "Reisgericht", proteinTyp: "Rind" },
+  { emoji: "🍜", name: "Pad Thai mit Garnelen", beschreibung: "Seidige Reisbandnudeln aus dem Wok, süß-salzig-sauer balanciert mit Tamarinde, knackigen Sprossen, Erdnüssen und einem Spritzer Limette.", kultur: "Thailands berühmtestes Street-Food — in den 1930ern als Nationalgericht populär gemacht.", zeit: "25 Min", kalorien: "ca. 480 kcal", schaerfe: 1, gerichtTyp: "Nudelgericht", proteinTyp: "Meeresfrüchte" },
+  { emoji: "🍳", name: "Shakshuka", beschreibung: "In würziger Tomaten-Paprika-Sauce pochierte Eier mit Kreuzkümmel und frischer Petersilie — direkt aus der Pfanne, mit Brot zum Tunken.", kultur: "Aus Nordafrika stammend, heute im ganzen Nahen Osten ein Brunch-Klassiker.", zeit: "20 Min", kalorien: "ca. 320 kcal", schaerfe: 1, gerichtTyp: "Aus der Pfanne", proteinTyp: "Ei" },
+  { emoji: "🍛", name: "Chana Masala", beschreibung: "Cremig-würziges Kichererbsen-Curry mit Tomaten, Ingwer und Garam Masala — herzhaft, vegan und voller Aroma.", kultur: "Ein nordindischer Klassiker; „chana“ bedeutet Kichererbsen.", zeit: "30 Min", kalorien: "ca. 410 kcal", schaerfe: 2, gerichtTyp: "Curry", proteinTyp: "Gemüse" },
+  { emoji: "🥢", name: "Teriyaki-Lachs-Bowl", beschreibung: "Glasierter Lachs mit selbstgemachter Teriyaki-Sauce auf Reis, dazu Edamame, Avocado und Sesam — frisch und sättigend.", kultur: "„Teriyaki“ beschreibt die glänzende Glasur aus Sojasauce, Mirin und Zucker.", zeit: "25 Min", kalorien: "ca. 560 kcal", schaerfe: 0, gerichtTyp: "Bowl", proteinTyp: "Fisch" },
+];
 
 const SEASONS = {
   0: "Grünkohl,Rosenkohl,Feldsalat,Pastinaken,Sellerie,Rote Bete,Wirsing",
@@ -494,12 +495,16 @@ const CloseBar = ({ title, onClose }) => (
   </div>
 );
 
-const Layout = ({ children }) => (
+const Layout = ({ children, photo }) => (
   <div style={{
     minHeight: "100vh",
-    background: "linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 40%,var(--bg3) 100%)",
-    backgroundSize: "200% 200%",
-    animation: "bgShift 20s ease infinite",
+    // photo: appetitliches Food-Foto fest hinter der ganzen Seite, mit Scrim
+    // darüber (Foto bleibt als Atmosphäre sichtbar, Karten/Text lesbar).
+    background: photo
+      ? `linear-gradient(var(--photo-scrim), var(--photo-scrim)), url(${HERO_IMG}) center top / cover no-repeat fixed, var(--bg1)`
+      : "linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 40%,var(--bg3) 100%)",
+    backgroundSize: photo ? undefined : "200% 200%",
+    animation: photo ? undefined : "bgShift 20s ease infinite",
     fontFamily: "'Outfit',sans-serif",
   }}>
     <div style={{ maxWidth: "560px", margin: "0 auto", padding: "22px 20px 64px", position: "relative", zIndex: 1 }}>
@@ -728,6 +733,7 @@ export default function App() {
   const [proteinPref, setProteinPref] = useState("egal"); // optional: Haupt-Protein
   const [shopMsg, setShopMsg] = useState("");          // kurze Bestätigung in der Einkaufsliste
   const [showMoreOpts, setShowMoreOpts] = useState(false); // Startseite: optionale Filter einklappen
+  const [exampleIdx, setExampleIdx] = useState(() => Math.floor(Math.random() * EXAMPLE_RECIPES.length)); // Beispiel-Vorschau variiert
   const [fridgeInput, setFridgeInput] = useState("");
   const [selectedIngredients, setSelectedIngredients] = useState([]);
   const [fridgeInputMode, setFridgeInputMode] = useState("chips"); // chips | text | photo
@@ -2196,9 +2202,10 @@ NUR JSON (kein Markdown):
   if (view === "home") {
     const ready = mode === "fridge" ? (selectedIngredients.length > 0 || fridgeInput.trim().length > 2) : (meal && cookTime && mood);
     const mo = new Date().getMonth();
+    const ex = EXAMPLE_RECIPES[exampleIdx % EXAMPLE_RECIPES.length];
 
     return (
-      <Layout>
+      <Layout photo>
         {/* Hero-Header — großes appetitanregendes Food-Foto mit Begrüßung darüber */}
         <div style={{
           position: "relative", marginTop: "10px", borderRadius: "20px", overflow: "hidden",
@@ -2347,25 +2354,30 @@ NUR JSON (kein Markdown):
         {/* Quick Mode */}
         {mode === "quick" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "14px" }}>
-            {/* Beispiel-Vorschau — zeigt neuen Nutzern, wie ein Vorschlag aussieht */}
-            <Card anim="fadeUp" delay="0.12s" style={{ padding: 0, overflow: "hidden" }}>
+            {/* Beispiel-Vorschau — variiert (verschiedene Küchen), tippen für ein anderes */}
+            <Card anim="fadeUp" delay="0.12s" style={{ padding: 0, overflow: "hidden", cursor: "pointer" }}
+              onClick={() => setExampleIdx(i => (i + 1) % EXAMPLE_RECIPES.length)}
+              title="Tippen für ein anderes Beispiel">
               <div style={{ display: "flex", gap: "12px", alignItems: "center", padding: "12px 14px 6px" }}>
-                <div style={{ fontSize: "38px", lineHeight: 1, flexShrink: 0 }}>{EXAMPLE_RECIPE.emoji}</div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--accent)", letterSpacing: ".4px", textTransform: "uppercase" }}>Beispiel · so sieht dein Vorschlag aus</div>
-                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: "17px", fontWeight: 800, color: "var(--ink)", lineHeight: 1.2 }}>{EXAMPLE_RECIPE.name}</div>
+                <div style={{ fontSize: "38px", lineHeight: 1, flexShrink: 0 }}>{ex.emoji}</div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--accent)", letterSpacing: ".4px", textTransform: "uppercase" }}>Beispiel · so sieht dein Vorschlag aus</div>
+                    <span style={{ fontSize: "11px", color: "var(--ink3)", flexShrink: 0 }}>🔄</span>
+                  </div>
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: "17px", fontWeight: 800, color: "var(--ink)", lineHeight: 1.2 }}>{ex.name}</div>
                 </div>
               </div>
               <div style={{ padding: "0 14px 13px" }}>
-                <p style={{ fontSize: "12.5px", color: "var(--ink2)", lineHeight: 1.5, margin: "0 0 8px", fontStyle: "italic", fontFamily: "'Fraunces',serif" }}>{EXAMPLE_RECIPE.beschreibung}</p>
+                <p style={{ fontSize: "12.5px", color: "var(--ink2)", lineHeight: 1.5, margin: "0 0 8px", fontStyle: "italic", fontFamily: "'Fraunces',serif" }}>{ex.beschreibung}</p>
                 <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "8px" }}>
-                  <Badge icon="⏱️" text={EXAMPLE_RECIPE.zeit} />
-                  <Badge icon="🔥" text={EXAMPLE_RECIPE.kalorien} />
-                  <Badge icon="🍴" text={EXAMPLE_RECIPE.gerichtTyp} />
-                  <Badge icon="🍗" text={EXAMPLE_RECIPE.proteinTyp} />
-                  <Badge icon="🌶️" text="mittelscharf" />
+                  <Badge icon="⏱️" text={ex.zeit} />
+                  <Badge icon="🔥" text={ex.kalorien} />
+                  <Badge icon="🍴" text={ex.gerichtTyp} />
+                  <Badge icon="🍗" text={ex.proteinTyp} />
+                  {ex.schaerfe > 0 && <Badge icon="🌶️" text={["", "leicht scharf", "mittelscharf", "scharf"][ex.schaerfe]} />}
                 </div>
-                <p style={{ fontSize: "11.5px", color: "var(--ink3)", lineHeight: 1.5, margin: 0 }}><strong style={{ color: "var(--saffron)" }}>📖 Herkunft:</strong> {EXAMPLE_RECIPE.kultur}</p>
+                <p style={{ fontSize: "11.5px", color: "var(--ink3)", lineHeight: 1.5, margin: 0 }}><strong style={{ color: "var(--saffron)" }}>📖 Herkunft:</strong> {ex.kultur}</p>
               </div>
             </Card>
 
