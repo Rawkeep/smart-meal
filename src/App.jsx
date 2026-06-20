@@ -779,6 +779,10 @@ export default function App() {
   const [suggestion, setSuggestion] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadMsg, setLoadMsg] = useState("");
+
+  // Bei Ansichtswechsel / neuem Rezept immer oben anfangen (SPA hält sonst die
+  // alte Scroll-Position → man landete im unteren Bereich des Ergebnisses).
+  useEffect(() => { window.scrollTo(0, 0); }, [view, suggestion]);
   const [history, setHistory] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [reviewedRecipes, setReviewedRecipes] = useState({});
