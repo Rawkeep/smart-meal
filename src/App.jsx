@@ -1560,6 +1560,19 @@ NUR JSON (kein Markdown):
           ))}
         </div>
         <Card anim="fadeUp" delay="0.1s">
+          {onbStep === 0 && (
+            <div style={{
+              background: "linear-gradient(135deg,rgba(178,58,72,0.08),rgba(126,90,134,0.08))",
+              border: "1px solid rgba(178,58,72,0.15)", borderRadius: "var(--r)",
+              padding: "12px 14px", marginBottom: "16px",
+            }}>
+              <p style={{ fontSize: "12.5px", color: "var(--ink2)", lineHeight: 1.55, margin: 0 }}>
+                👋 <strong>Kurz zu dir:</strong> Die folgenden Fragen helfen Smart Meal, Rezepte genau auf
+                dich zuzuschneiden — Allergien, Vorlieben und Ziele. Alles ist <strong>optional</strong> und
+                jederzeit in den <strong>Einstellungen</strong> änderbar.
+              </p>
+            </div>
+          )}
           <ST sub={cs.s}>{cs.t}</ST>
           <div style={{ animation: "fadeUp 0.3s ease both" }}>{cs.c}</div>
           <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
@@ -1571,6 +1584,12 @@ NUR JSON (kein Markdown):
               {onbStep < steps.length - 1 ? "Weiter →" : "Los geht's! 🚀"}
             </Btn>
           </div>
+          <button onClick={() => { saveProfile(profile); saveApiKey(apiKey); setView("home"); }} style={{
+            display: "block", margin: "14px auto 0", background: "none", border: "none",
+            color: "var(--ink3)", fontSize: "12.5px", cursor: "pointer", padding: "4px 8px", textDecoration: "underline",
+          }}>
+            Überspringen — später in den Einstellungen einrichten
+          </button>
         </Card>
       </Layout>
     );
@@ -2430,42 +2449,6 @@ NUR JSON (kein Markdown):
           {suggestion._imported && <Badge icon="📲" text="Importiert" />}
         </div>
 
-        {/* Full macros panel */}
-        {suggestion.makros && (
-          <Card anim="fadeUp" delay="0.12s" style={{ marginBottom: "12px" }}>
-            <ST icon="nutrition" sub="pro Person">Nährwerte</ST>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: "8px", marginTop: "8px" }}>
-              {[
-                { label: "Energie", n: suggestion.makros.kcal, unit: "kcal", c: "var(--saffron)" },
-                { label: "Protein", n: suggestion.makros.protein, unit: "g", c: "var(--berry)" },
-                { label: "Fett", n: suggestion.makros.fat, unit: "g", sub: `davon ges. ${suggestion.makros.satFat} g`, c: "var(--accent)" },
-                { label: "Kohlenhydrate", n: suggestion.makros.carbs, unit: "g", sub: `davon Zucker ${suggestion.makros.sugar} g`, c: "var(--petrol)" },
-                { label: "Ballaststoffe", n: suggestion.makros.fiber, unit: "g", c: "var(--herb)" },
-                { label: "Salz", n: suggestion.makros.salt, unit: "g", dec: 1, c: "var(--plum)" },
-              ].map(m => (
-                <div key={m.label} style={{
-                  padding: "10px", borderRadius: "10px",
-                  background: `color-mix(in srgb, ${m.c} 9%, transparent)`,
-                  border: `1px solid color-mix(in srgb, ${m.c} 22%, transparent)`,
-                  borderLeft: `3px solid ${m.c}`,
-                }}>
-                  <div style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 500 }}>{m.label}</div>
-                  <div style={{ fontSize: "16px", color: m.c, fontWeight: 700, fontFamily: "'Fraunces',serif", fontVariantNumeric: "tabular-nums" }}>
-                    <CountUp end={Number(m.n) || 0} decimals={m.dec || 0} />
-                    <span style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 600, marginLeft: "3px" }}>{m.unit}</span>
-                  </div>
-                  {m.sub && <div style={{ fontSize: "10px", color: "var(--ink3)", marginTop: "2px" }}>{m.sub}</div>}
-                </div>
-              ))}
-            </div>
-            {suggestion.makros.coverage < 0.8 && (
-              <p style={{ fontSize: "11px", color: "var(--ink3)", marginTop: "8px" }}>
-                ⚠️ Einige Zutaten ohne Nährwert-Referenz — Werte geschätzt.
-              </p>
-            )}
-          </Card>
-        )}
-
         {/* Health warnings */}
         {suggestion.warnungen?.length > 0 && (
           <Card anim="fadeUp" delay="0.13s" style={{ marginBottom: "12px" }}>
@@ -2633,6 +2616,44 @@ NUR JSON (kein Markdown):
             ))}
           </div>
         </Card>
+
+        {/* Full macros panel — bewusst nach der Zubereitung: erst Gericht,
+            Zutaten & Schritte, dann die Nährwert-Referenz (Kcal/Protein stehen
+            für den schnellen Blick schon oben in den Badges). */}
+        {suggestion.makros && (
+          <Card anim="fadeUp" delay="0.27s" style={{ marginBottom: "12px" }}>
+            <ST icon="nutrition" sub="pro Person">Nährwerte</ST>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: "8px", marginTop: "8px" }}>
+              {[
+                { label: "Energie", n: suggestion.makros.kcal, unit: "kcal", c: "var(--saffron)" },
+                { label: "Protein", n: suggestion.makros.protein, unit: "g", c: "var(--berry)" },
+                { label: "Fett", n: suggestion.makros.fat, unit: "g", sub: `davon ges. ${suggestion.makros.satFat} g`, c: "var(--accent)" },
+                { label: "Kohlenhydrate", n: suggestion.makros.carbs, unit: "g", sub: `davon Zucker ${suggestion.makros.sugar} g`, c: "var(--petrol)" },
+                { label: "Ballaststoffe", n: suggestion.makros.fiber, unit: "g", c: "var(--herb)" },
+                { label: "Salz", n: suggestion.makros.salt, unit: "g", dec: 1, c: "var(--plum)" },
+              ].map(m => (
+                <div key={m.label} style={{
+                  padding: "10px", borderRadius: "10px",
+                  background: `color-mix(in srgb, ${m.c} 9%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${m.c} 22%, transparent)`,
+                  borderLeft: `3px solid ${m.c}`,
+                }}>
+                  <div style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 500 }}>{m.label}</div>
+                  <div style={{ fontSize: "16px", color: m.c, fontWeight: 700, fontFamily: "'Fraunces',serif", fontVariantNumeric: "tabular-nums" }}>
+                    <CountUp end={Number(m.n) || 0} decimals={m.dec || 0} />
+                    <span style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 600, marginLeft: "3px" }}>{m.unit}</span>
+                  </div>
+                  {m.sub && <div style={{ fontSize: "10px", color: "var(--ink3)", marginTop: "2px" }}>{m.sub}</div>}
+                </div>
+              ))}
+            </div>
+            {suggestion.makros.coverage < 0.8 && (
+              <p style={{ fontSize: "11px", color: "var(--ink3)", marginTop: "8px" }}>
+                ⚠️ Einige Zutaten ohne Nährwert-Referenz — Werte geschätzt.
+              </p>
+            )}
+          </Card>
+        )}
 
         {/* Tip */}
         {suggestion.tipp && (
