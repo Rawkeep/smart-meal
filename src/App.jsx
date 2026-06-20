@@ -505,9 +505,10 @@ const Layout = ({ children, photo = true }) => {
   // das Foto klart leicht auf. Respektiert „Reduzierte Bewegung".
   const bgRef = useRef(null);
   const scrimRef = useRef(null);
+  const liquidRef = useRef(null);
   useEffect(() => {
     if (!photo || !bgRef.current) return;
-    const bg = bgRef.current, scrim = scrimRef.current;
+    const bg = bgRef.current, scrim = scrimRef.current, liquid = liquidRef.current;
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     let cur = 0, target = 0, raf = 0;
     const ease = () => {
@@ -521,7 +522,11 @@ const Layout = ({ children, photo = true }) => {
       target = Math.min(y * 0.32, window.innerHeight * 0.26);
       if (reduce) { cur = target; bg.style.transform = `translate3d(0, ${cur}px, 0) scale(1.08)`; }
       else if (!raf) raf = requestAnimationFrame(ease);
+      // Scroll-Fortschritt → Schleier dünner + Flüssigkeits-Pegel sinkt (Glas leert sich).
+      const max = (document.documentElement.scrollHeight - window.innerHeight) || 1;
+      const p = Math.min(1, Math.max(0, y / max));
       if (scrim) scrim.style.opacity = String(1 - Math.min(1, y / (window.innerHeight * 1.1)) * 0.25);
+      if (liquid) liquid.style.height = `${(1 - p) * 92 + 6}%`;
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
@@ -537,6 +542,21 @@ const Layout = ({ children, photo = true }) => {
           willChange: "transform",
         }} />
         <div ref={scrimRef} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "var(--photo-scrim)", transition: "opacity 0.2s linear" }} />
+        {/* Flüssigkeits-Pegel als Scroll-Indikator — sinkt beim Runterscrollen (Glas leert sich) */}
+        <div aria-hidden="true" style={{
+          position: "fixed", right: "11px", top: "17%", height: "66%", width: "6px", zIndex: 2,
+          pointerEvents: "none", borderRadius: "999px", overflow: "hidden",
+          background: "rgba(255,255,255,0.13)", border: "1px solid rgba(255,255,255,0.18)",
+          boxShadow: "inset 0 0 4px rgba(0,0,0,0.18)", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)",
+        }}>
+          <div ref={liquidRef} style={{
+            position: "absolute", left: 0, right: 0, bottom: 0, height: "98%", borderRadius: "999px",
+            background: "linear-gradient(180deg, rgba(95,201,214,0.95) 0%, rgba(44,122,134,0.92) 100%)",
+            boxShadow: "0 0 8px rgba(44,122,134,0.5)", transition: "height 0.14s linear",
+          }}>
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: "rgba(224,250,255,0.75)", borderRadius: "999px" }} />
+          </div>
+        </div>
         <div style={{ maxWidth: "680px", margin: "0 auto", padding: "24px 24px 72px", position: "relative", zIndex: 1 }}>
           {children}
         </div>
