@@ -182,6 +182,33 @@ const BUDGETS = [
   { id: "egal", label: "Egal", sub: "", emoji: "🤷" },
 ];
 
+// Optionale Verfeinerung à la Rezept-Blog: Art des Gerichts + Haupt-Protein.
+const DISH_TYPES = [
+  { id: "egal", label: "Egal", emoji: "🍽️" },
+  { id: "suppe", label: "Suppe/Eintopf", emoji: "🍲" },
+  { id: "nudeln", label: "Nudelgericht", emoji: "🍜" },
+  { id: "reis", label: "Reisgericht", emoji: "🍚" },
+  { id: "bowl", label: "Bowl/Salat", emoji: "🥗" },
+  { id: "gegrillt", label: "Gegrilltes", emoji: "🔥" },
+  { id: "wok", label: "Gebraten/Wok", emoji: "🍳" },
+  { id: "geschmort", label: "Geschmort", emoji: "🥘" },
+  { id: "ofen", label: "Aus dem Ofen", emoji: "🧑‍🍳" },
+  { id: "street", label: "Street Food", emoji: "🌮" },
+  { id: "süß", label: "Süßes/Dessert", emoji: "🍰" },
+];
+
+const PROTEINS = [
+  { id: "egal", label: "Egal", emoji: "🍽️" },
+  { id: "huhn", label: "Huhn", emoji: "🍗" },
+  { id: "rind", label: "Rind", emoji: "🥩" },
+  { id: "schwein", label: "Schwein", emoji: "🥓" },
+  { id: "fisch", label: "Fisch", emoji: "🐟" },
+  { id: "meeresfrüchte", label: "Meeresfrüchte", emoji: "🦐" },
+  { id: "tofu", label: "Tofu/Soja", emoji: "🧈" },
+  { id: "ei", label: "Ei", emoji: "🥚" },
+  { id: "gemüse", label: "Nur Gemüse", emoji: "🥦" },
+];
+
 const SEASONS = {
   0: "Grünkohl,Rosenkohl,Feldsalat,Pastinaken,Sellerie,Rote Bete,Wirsing",
   1: "Grünkohl,Rosenkohl,Feldsalat,Pastinaken,Sellerie,Rote Bete,Chicorée",
@@ -685,6 +712,9 @@ export default function App() {
   const [mood, setMood] = useState("");
   const [budget, setBudget] = useState("egal");
   const [persons, setPersons] = useState(2);
+  const [dishType, setDishType] = useState("egal");   // optional: Art des Gerichts
+  const [proteinPref, setProteinPref] = useState("egal"); // optional: Haupt-Protein
+  const [shopMsg, setShopMsg] = useState("");          // kurze Bestätigung in der Einkaufsliste
   const [fridgeInput, setFridgeInput] = useState("");
   const [selectedIngredients, setSelectedIngredients] = useState([]);
   const [fridgeInputMode, setFridgeInputMode] = useState("chips"); // chips | text | photo
@@ -1048,12 +1078,22 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
     // Shared rule block: every mode must honor meal-type + ingredient coherence.
     const coherenceRule = `\n\nKONSISTENZREGELN (STRIKT):\n- Jede in "zutaten" genannte Zutat MUSS in "schritte" vorkommen. Jede in "schritte" erwähnte Zutat MUSS in "zutaten" stehen.\n- Alle zutaten im Format "Menge + Einheit + Zutat" (z.B. "200 g Haferflocken").\n- ${stepRule}\n- Gib bei jedem Schritt, wo sinnvoll, Zeit und Hitze an.\n- Gericht-Name muss zum Mahlzeitentyp passen.`;
 
-    if (m === "fridge") return `${base}\n\nKÜHLSCHRANK-MODUS: Zutaten: ${fridgeItems.join(", ")}\nNur diese + Grundzutaten verwenden.${meal ? `\n- Mahlzeit: ${mealLabel} → ${mealRule}` : ""}\n${recent ? `Nicht wiederholen: ${recent}` : ""}${coherenceRule}\n\nNUR JSON (kein Markdown):\n{"name":"...","beschreibung":"1 Satz","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","gesundheitshinweis":"..."}`;
+    // Redaktioneller Mehrwert wie auf einem guten Rezept-Blog: appetitliche
+    // Beschreibung, Kultur-Story, Schärfegrad, Gericht-Typ/Protein, Zutaten-Ersatz.
+    const styleRule = `\n\nSTIL & MEHRWERT (wichtig):\n- "beschreibung": appetitlich & einladend wie ein gutes Food-Magazin, 1–2 Sätze – mach Lust aufs Gericht (Aromen, Textur), nicht nur sachlich.\n- "kultur": kurze Herkunft/Bedeutung des Gerichts (Story, Region, ggf. wörtliche Übersetzung des Namens), 1–2 Sätze. Bei schlichten Alltagsgerichten knapp halten.\n- "schaerfe": Schärfegrad 0–3 (0=nicht scharf, 1=mild, 2=mittelscharf, 3=scharf) – ehrlich einschätzen.\n- "gerichtTyp": Art des Gerichts (z.B. Suppe, Nudelgericht, Reisgericht, Bowl, Gegrilltes, Wok, Geschmortes, Street Food, Dessert).\n- "proteinTyp": Haupt-Protein/Hauptzutat (z.B. Huhn, Rind, Fisch, Tofu, Gemüse).\n- "ersatz": NUR für ungewöhnliche/Spezialzutaten (z.B. Gochujang, Fischsauce, Miso, Tamarinde): je {"zutat","was" (1 kurze Erklärung, was es ist),"ersatz" (leicht erhältliche Supermarkt-Alternative)}. Leeres Array [], wenn nichts Exotisches dabei ist.`;
+
+    // Optionale Verfeinerung (nur wenn gesetzt): Gericht-Typ + Haupt-Protein.
+    const prefLine = `${dishType && dishType !== "egal" ? `\n- Art des Gerichts: ${DISH_TYPES.find(d => d.id === dishType)?.label}` : ""}${proteinPref && proteinPref !== "egal" ? `\n- Haupt-Protein: ${PROTEINS.find(p => p.id === proteinPref)?.label}` : ""}`;
+
+    // Erweiterte JSON-Felder (Mehrwert) — an beide Detail-Rezept-Prompts angehängt.
+    const extraFields = `,"kultur":"1-2 Sätze Herkunft/Story","schaerfe":0,"gerichtTyp":"...","proteinTyp":"...","ersatz":[{"zutat":"...","was":"kurze Erklärung","ersatz":"Supermarkt-Alternative"}]`;
+
+    if (m === "fridge") return `${base}\n\nKÜHLSCHRANK-MODUS: Zutaten: ${fridgeItems.join(", ")}\nNur diese + Grundzutaten verwenden.${meal ? `\n- Mahlzeit: ${mealLabel} → ${mealRule}` : ""}${prefLine}\n${recent ? `Nicht wiederholen: ${recent}` : ""}${coherenceRule}${styleRule}\n\nNUR JSON (kein Markdown):\n{"name":"...","beschreibung":"appetitlich, 1-2 Sätze","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","gesundheitshinweis":"..."${extraFields}}`;
 
     if (m === "plan") return `${base}\n\nWOCHENPLAN: 5 Werktage (Mo–Fr), je Frühstück/Mittag/Abend. Budget: ${BUDGETS.find(b => b.id === budget)?.label || "normal"}. Abwechslungsreich!\n- Frühstück: NUR typische Frühstücksgerichte (Oats, Bowl, Toast, Rührei).\n- Mittag: sättigende Hauptgerichte.\n- Abend: eher leichter als Mittag.\n\nNUR JSON:\n{"plan":[{"tag":"Montag","frühstück":{"name":"...","emoji":"...","zeit":"XX Min"},"mittag":{"name":"...","emoji":"...","zeit":"XX Min"},"abend":{"name":"...","emoji":"...","zeit":"XX Min"}},...],  "einkaufsliste":["Zutat 1","Zutat 2",...]}`;
 
-    return `${base}\n\n- Mahlzeit: ${mealLabel} → ${mealRule}\n- Kochzeit: ${TIMES.find(x => x.id === cookTime)?.label || ""}\n- Stimmung: ${MOODS.find(x => x.id === mood)?.label || ""}\n- Budget: ${BUDGETS.find(x => x.id === budget)?.label || ""}\n${recent ? `- NICHT wiederholen: ${recent}` : ""}${coherenceRule}\n\nNUR JSON:\n{"name":"...","beschreibung":"1 Satz","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","weinempfehlung":"passender Wein/Getränk","gesundheitshinweis":"..."}`;
-  }, [profile, guestMode, guestAllergies, guestHistamin, guestDiet, history, persons, fridgeInput, selectedIngredients, budget, meal, cookTime, mood]);
+    return `${base}\n\n- Mahlzeit: ${mealLabel} → ${mealRule}\n- Kochzeit: ${TIMES.find(x => x.id === cookTime)?.label || ""}\n- Stimmung: ${MOODS.find(x => x.id === mood)?.label || ""}\n- Budget: ${BUDGETS.find(x => x.id === budget)?.label || ""}${prefLine}\n${recent ? `- NICHT wiederholen: ${recent}` : ""}${coherenceRule}${styleRule}\n\nNUR JSON:\n{"name":"...","beschreibung":"appetitlich, 1-2 Sätze","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","weinempfehlung":"passender Wein/Getränk","gesundheitshinweis":"..."${extraFields}}`;
+  }, [profile, guestMode, guestAllergies, guestHistamin, guestDiet, history, persons, fridgeInput, selectedIngredients, budget, meal, cookTime, mood, dishType, proteinPref]);
 
   // ─── Backend availability check ───
   const [backendAvailable, setBackendAvailable] = useState(null);
@@ -1709,6 +1749,54 @@ NUR JSON (kein Markdown):
               </Card>
             ))}
 
+            {/* An App / Lieferdienst übergeben — universelles Teilen (Web Share)
+                + Such-Deeplinks. Direkter Warenkorb-Import ist bei Picnic & Co.
+                technisch nicht möglich; die Liste wird kopiert und übergeben. */}
+            {(() => {
+              const open = shopList.filter(s => !s.checked);
+              const items = open.length ? open : shopList;
+              const recipeNames = [...new Set(shopList.map(s => s.recipe).filter(Boolean))];
+              const listText = `🛒 Einkaufsliste – Smart Meal${recipeNames.length ? ` (${recipeNames.join(", ")})` : ""}\n\n${items.map(i => `• ${i.name}`).join("\n")}`;
+              const flash = (m) => { setShopMsg(m); setTimeout(() => setShopMsg(""), 2400); };
+              const share = async () => {
+                try { if (navigator.share) { await navigator.share({ title: "Einkaufsliste – Smart Meal", text: listText }); return; } }
+                catch (e) { if (e?.name === "AbortError") return; }
+                try { await navigator.clipboard.writeText(listText); flash("Liste kopiert – in deiner App einfügen 📋"); } catch { flash("Teilen nicht verfügbar"); }
+              };
+              const copy = async () => { try { await navigator.clipboard.writeText(listText); flash("Liste kopiert ✓"); } catch { flash("Kopieren nicht verfügbar"); } };
+              const toStore = async (label, url) => { try { await navigator.clipboard.writeText(listText); } catch { /* ignore */ } flash(`Liste kopiert – im ${label}-Shop einfügen/suchen`); window.open(url, "_blank", "noopener"); };
+              const STORES = [
+                { label: "Picnic", emoji: "🚐", url: "https://picnic.app" },
+                { label: "Rewe", emoji: "🛒", url: "https://shop.rewe.de" },
+                { label: "Flink", emoji: "🛵", url: "https://www.goflink.com/de-DE/" },
+                { label: "Knuspr", emoji: "🥕", url: "https://www.knuspr.de" },
+                { label: "Bring!", emoji: "📝", url: "https://www.getbring.com/" },
+              ];
+              return (
+                <Card anim="fadeUp" style={{ marginBottom: "10px" }}>
+                  <ST sub="Teilen oder im Lieferdienst weiter einkaufen">📦 An App übergeben</ST>
+                  <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                    <Btn onClick={share} style={{ flex: 1 }}>📤 Teilen / an App senden</Btn>
+                    <Btn secondary onClick={copy} style={{ flexShrink: 0 }}>📋 Kopieren</Btn>
+                  </div>
+                  <p style={{ fontSize: "11.5px", color: "var(--ink3)", margin: "12px 0 7px" }}>Direkt im Lieferdienst weiter (Liste wird kopiert – dort einfügen/suchen):</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
+                    {STORES.map(s => (
+                      <button key={s.label} onClick={() => toStore(s.label, s.url)} style={{
+                        display: "inline-flex", alignItems: "center", gap: "6px", padding: "7px 12px",
+                        borderRadius: "999px", border: "1px solid var(--card-border)", background: "var(--card)",
+                        color: "var(--ink2)", fontSize: "12.5px", fontWeight: 600, cursor: "pointer", fontFamily: "'Outfit',sans-serif",
+                      }}>{s.emoji} {s.label}</button>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: "10.5px", color: "var(--ink3)", margin: "9px 0 0", lineHeight: 1.45 }}>
+                    Ein direkter Warenkorb-Import ist bei diesen Diensten technisch nicht möglich — die Liste wird kopiert; du fügst sie im Shop ein bzw. suchst die Artikel.
+                  </p>
+                  {shopMsg && <p style={{ fontSize: "12px", color: "var(--herb)", margin: "10px 0 0", fontWeight: 600 }}>{shopMsg}</p>}
+                </Card>
+              );
+            })()}
+
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "4px" }}>
               <Btn onClick={archiveShopList}>✅ Einkauf erledigt — archivieren</Btn>
               <Btn secondary onClick={clearShopList}>🗑️ Liste leeren</Btn>
@@ -2253,7 +2341,9 @@ NUR JSON (kein Markdown):
             <Card anim="fadeUp" delay="0.2s"><ST sub="Wie viel Zeit hast du?">⏱️ Kochzeit</ST><ChipGrid options={TIMES} selected={cookTime} onToggle={id => setCookTime(id === cookTime ? "" : id)} multi={false} showSub /></Card>
             <Card anim="fadeUp" delay="0.25s"><ST>🎨 Stimmung</ST><ChipGrid options={MOODS} selected={mood} onToggle={id => setMood(id === mood ? "" : id)} multi={false} colorMap /></Card>
             <Card anim="fadeUp" delay="0.3s"><ST>💰 Budget</ST><ChipGrid options={BUDGETS} selected={budget} onToggle={id => setBudget(id === budget ? "egal" : id)} multi={false} showSub /></Card>
-            <Card anim="fadeUp" delay="0.35s">
+            <Card anim="fadeUp" delay="0.32s"><ST sub="Optional — Lust auf etwas Bestimmtes?">🍴 Art des Gerichts</ST><ChipGrid options={DISH_TYPES} selected={dishType} onToggle={setDishType} multi={false} /></Card>
+            <Card anim="fadeUp" delay="0.34s"><ST sub="Optional">🍗 Protein</ST><ChipGrid options={PROTEINS} selected={proteinPref} onToggle={setProteinPref} multi={false} /></Card>
+            <Card anim="fadeUp" delay="0.36s">
               <ST>👤 Portionen</ST>
               <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                 <button onClick={() => setPersons(Math.max(1, persons - 1))} style={{ width: "40px", height: "40px", borderRadius: "50%", border: "2px solid var(--card-border)", background: "var(--card)", fontSize: "20px", cursor: "pointer", color: "var(--ink)" }}>−</button>
@@ -2445,9 +2535,21 @@ NUR JSON (kein Markdown):
           {suggestion.protein && <Badge icon="💪" text={suggestion.protein} />}
           {suggestion.schwierigkeit && <Badge icon="📊" text={suggestion.schwierigkeit} />}
           {suggestion.herkunft && <Badge icon="🌍" text={suggestion.herkunft} />}
+          {suggestion.gerichtTyp && <Badge icon="🍴" text={suggestion.gerichtTyp} />}
+          {suggestion.proteinTyp && <Badge icon="🍗" text={suggestion.proteinTyp} />}
+          {Number(suggestion.schaerfe) > 0 && <Badge icon="🌶️" text={["", "leicht scharf", "mittelscharf", "scharf"][Math.min(3, Number(suggestion.schaerfe))]} />}
           {suggestion._fallbackFromApi && <Badge icon="🧠" text="Offline-Fallback" />}
           {suggestion._imported && <Badge icon="📲" text="Importiert" />}
         </div>
+
+        {/* Kultur / Herkunft-Story — redaktioneller Mehrwert wie auf einem Rezept-Blog */}
+        {suggestion.kultur && (
+          <Card anim="fadeUp" delay="0.1s" style={{ marginBottom: "12px", background: "linear-gradient(135deg,rgba(232,148,58,0.07),rgba(178,58,72,0.05))", border: "1px solid rgba(232,148,58,0.18)" }}>
+            <p style={{ margin: 0, fontSize: "13.5px", color: "var(--ink2)", lineHeight: 1.6 }}>
+              <strong style={{ color: "var(--saffron)" }}>📖 Herkunft:</strong> {suggestion.kultur}
+            </p>
+          </Card>
+        )}
 
         {/* Health warnings */}
         {suggestion.warnungen?.length > 0 && (
@@ -2603,6 +2705,22 @@ NUR JSON (kein Markdown):
             </Card>
           );
         })()}
+
+        {/* Spezialzutaten & Ersatz — authentisch einkaufen oder clever ersetzen */}
+        {suggestion.ersatz?.length > 0 && (
+          <Card anim="fadeUp" delay="0.22s" style={{ marginBottom: "12px" }}>
+            <ST icon="ingredients" sub="authentisch einkaufen oder clever ersetzen">Zutaten-Kunde &amp; Ersatz</ST>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "8px" }}>
+              {suggestion.ersatz.map((e, i) => (
+                <div key={i} style={{ padding: "10px 12px", borderRadius: "10px", background: "var(--bg2)", border: "1px solid var(--card-border)" }}>
+                  <div style={{ fontSize: "13.5px", fontWeight: 700, color: "var(--ink)" }}>{e.zutat}</div>
+                  {e.was && <div style={{ fontSize: "12px", color: "var(--ink3)", marginTop: "2px", lineHeight: 1.45 }}>{e.was}</div>}
+                  {e.ersatz && <div style={{ fontSize: "12px", color: "var(--herb)", marginTop: "4px", lineHeight: 1.45 }}>↔ Ersatz: {e.ersatz}</div>}
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* Steps */}
         <Card anim="fadeUp" delay="0.25s" style={{ marginBottom: "12px" }}>
