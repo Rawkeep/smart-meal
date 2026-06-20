@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Country Process Wizard — Import / Export</title>
+<meta name="description" content="Klare bildliche Schritt-für-Schritt-Abläufe für Import & Export pro Land (196). Offline, 0-CDN, teilbar." />
+<style>
+  :root{
+    --bg:#0f1419; --panel:#171e26; --panel2:#1d2733; --line:#2a3744;
+    --txt:#e7eef5; --muted:#9fb0c0; --accent:#2f9e6f; --accent2:#3aa0ff;
+    --warn:#f0b429; --warnbg:#2b2410; --danger:#ef5350;
+    --done:#2f9e6f; --lock:#5b6b7a; --radius:14px; --shadow:0 6px 24px rgba(0,0,0,.35);
+    --maxw:1240px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:linear-gradient(180deg,#0c1116,#0f1419 220px);
+    color:var(--txt); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  button{font:inherit;cursor:pointer;color:inherit}
+  a{color:var(--accent2)}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 16px}
+
+  /* ---- Top bar ---- */
+  header.top{position:sticky;top:0;z-index:30;background:rgba(13,18,23,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .top .wrap{display:flex;align-items:center;gap:14px;height:60px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
+  .brand .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:17px}
+  .brand small{display:block;font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.4px}
+  .spacer{flex:1}
+  .langs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .langs button{border:0;background:transparent;color:var(--muted);padding:5px 9px;border-radius:7px;font-weight:600;font-size:13px}
+  .langs button.on{background:var(--accent);color:#04120b}
+
+  /* ---- Layout ---- */
+  .layout{display:grid;grid-template-columns:312px 1fr;gap:18px;padding:18px 0 60px}
+  @media(max-width:860px){.layout{grid-template-columns:1fr}}
+
+  /* ---- Sidebar ---- */
+  .side{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;align-self:start;position:sticky;top:78px;max-height:calc(100vh - 96px);display:flex;flex-direction:column}
+  .side .pad{padding:12px}
+  .search{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--txt)}
+  .search::placeholder{color:var(--muted)}
+  .filters{display:flex;gap:8px;margin-top:9px}
+  .filters select{flex:1;padding:8px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--txt);font-size:13px}
+  .clist{overflow:auto;border-top:1px solid var(--line)}
+  .crow{display:flex;align-items:center;gap:10px;padding:9px 12px;border:0;width:100%;text-align:left;background:transparent;border-bottom:1px solid rgba(42,55,68,.5)}
+  .crow:hover{background:var(--panel2)}
+  .crow.on{background:linear-gradient(90deg,rgba(47,158,111,.18),transparent);box-shadow:inset 3px 0 0 var(--accent)}
+  .crow .fl{font-size:21px;line-height:1}
+  .crow .nm{flex:1;min-width:0}
+  .crow .nm b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .crow .nm span{color:var(--muted);font-size:12px}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .dot.complete{background:var(--accent)} .dot.draft{background:var(--lock)}
+  .count{color:var(--muted);font-size:12px;padding:8px 12px}
+
+  /* ---- Main ---- */
+  .main{min-width:0}
+  .empty{display:grid;place-items:center;height:60vh;text-align:center;color:var(--muted)}
+  .empty .big{font-size:54px;margin-bottom:8px}
+
+  .chero{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .chero .flag{font-size:58px;line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}
+  .chero h1{margin:0;font-size:26px}
+  .chero .meta{color:var(--muted);font-size:13px;margin-top:4px;display:flex;gap:14px;flex-wrap:wrap}
+  .chero .meta b{color:var(--txt);font-weight:600}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px}
+  .badge.complete{background:rgba(47,158,111,.16);color:#7fe3b6;border:1px solid rgba(47,158,111,.4)}
+  .badge.draft{background:rgba(91,107,122,.18);color:#b6c4d2;border:1px solid var(--line)}
+
+  .tabs{display:flex;gap:6px;margin:16px 0}
+  .tabs button{border:1px solid var(--line);background:var(--panel);color:var(--muted);padding:9px 15px;border-radius:10px;font-weight:600;display:flex;align-items:center;gap:7px}
+  .tabs button.on{background:var(--accent2);border-color:var(--accent2);color:#021426}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+  .card h2{margin:0 0 12px;font-size:17px;display:flex;align-items:center;gap:9px}
+  .modeswitch{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:3px}
+  .modeswitch button{border:0;background:transparent;color:var(--muted);padding:8px 16px;border-radius:8px;font-weight:700;display:flex;gap:7px;align-items:center}
+  .modeswitch button.imp.on{background:var(--accent2);color:#021426}
+  .modeswitch button.exp.on{background:var(--accent);color:#04120b}
+
+  .note{display:flex;gap:10px;padding:11px 13px;border-radius:11px;background:var(--panel2);border:1px solid var(--line);margin-bottom:9px;font-size:14px}
+  .note .i{font-size:17px}
+  .note.warn{background:var(--warnbg);border-color:#5a4a12}
+
+  /* ---- Wizard ---- */
+  .wiz{display:grid;grid-template-columns:248px 1fr;gap:18px}
+  @media(max-width:760px){.wiz{grid-template-columns:1fr}}
+  .steplist{display:flex;flex-direction:column;gap:2px}
+  .sl{display:flex;align-items:center;gap:11px;padding:10px;border-radius:10px;border:0;background:transparent;text-align:left;width:100%;color:var(--muted)}
+  .sl:hover{background:var(--panel2)}
+  .sl.on{background:var(--panel2);color:var(--txt)}
+  .sl .num{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;background:var(--panel);border:1px solid var(--line);flex-shrink:0}
+  .sl.done .num{background:var(--done);color:#04120b;border-color:var(--done)}
+  .sl.on .num{background:var(--accent2);color:#021426;border-color:var(--accent2)}
+  .sl.locked{opacity:.55}
+  .sl .lab{font-size:13.5px;line-height:1.3}
+  .progress{height:7px;border-radius:5px;background:var(--panel2);overflow:hidden;margin:4px 0 12px}
+  .progress i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s}
+
+  .stepcard{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius);padding:20px;min-height:300px;display:flex;flex-direction:column}
+  .stepcard .ic{font-size:40px;line-height:1}
+  .stepcard .stitle{font-size:21px;font-weight:700;margin:8px 0 4px}
+  .stepcard .stitle .must{font-size:11px;font-weight:800;color:var(--warn);border:1px solid #5a4a12;background:var(--warnbg);padding:2px 7px;border-radius:6px;vertical-align:middle;margin-left:8px}
+  .stepcard .sdesc{color:var(--muted);margin-bottom:14px}
+  .docs{display:flex;flex-direction:column;gap:8px;margin:4px 0 14px}
+  .doc{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:11px;background:var(--panel);border:1px solid var(--line)}
+  .doc input{width:20px;height:20px;accent-color:var(--accent)}
+  .doc.checked{border-color:var(--accent);background:rgba(47,158,111,.08)}
+  .doc .dx{flex:1}
+  .doclbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+  .stepwarn{display:flex;gap:10px;padding:11px 13px;border-radius:11px;background:var(--warnbg);border:1px solid #5a4a12;color:#ffe39a;margin-top:auto}
+  .nav{display:flex;gap:10px;margin-top:16px;align-items:center}
+  .btn{border:1px solid var(--line);background:var(--panel);padding:11px 18px;border-radius:11px;font-weight:700;display:inline-flex;gap:8px;align-items:center}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#04120b}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .navhint{color:var(--muted);font-size:12.5px;margin-left:auto}
+  .complete-banner{text-align:center;padding:26px}
+  .complete-banner .big{font-size:46px}
+
+  /* ---- Map / locator ---- */
+  .mapwrap{display:grid;grid-template-columns:1fr 280px;gap:18px}
+  @media(max-width:760px){.mapwrap{grid-template-columns:1fr}}
+  .mapbox{background:#0b1117;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .mapbox svg{display:block;width:100%;height:auto}
+  .graticule{stroke:#22303c;stroke-width:.4}
+  .axis{stroke:#33485a;stroke-width:.7}
+  .land{fill:#1c2a36}
+  .marker{fill:var(--accent2)}
+  .markerpulse{fill:var(--accent2);opacity:.25}
+  .geoinfo .flag{font-size:64px;text-align:center}
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .kv b{color:var(--muted);font-weight:600}
+
+  /* ---- Slide / Folie ---- */
+  .slidebar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}
+  .deck{display:flex;flex-direction:column;gap:16px}
+  .slide{background:#fff;color:#10202c;border-radius:var(--radius);padding:26px 30px;border:1px solid #d7e0e8;box-shadow:var(--shadow);position:relative;break-inside:avoid}
+  .slide .sf{position:absolute;top:18px;right:24px;font-size:34px}
+  .slide .skick{color:#5a7184;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+  .slide h3{margin:6px 0 4px;font-size:24px}
+  .slide .ssub{color:#5a7184;margin-bottom:14px}
+  .slide .snum{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#2f9e6f;color:#fff;font-weight:800;margin-right:10px}
+  .slide ul{margin:10px 0 0;padding-left:20px}
+  .slide .swarn{margin-top:14px;background:#fff7e6;border:1px solid #f0d28a;color:#7a5b00;padding:10px 13px;border-radius:10px}
+  .slide .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .slide .chip{background:#eef4f9;border:1px solid #d7e0e8;border-radius:999px;padding:5px 11px;font-size:13px}
+  .slide .seq{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .slide .seq .s{background:#eef4f9;border:1px solid #d7e0e8;border-radius:9px;padding:7px 11px;font-size:13px}
+
+  .help{font-size:13px;color:var(--muted)}
+  .help code{background:var(--panel2);border:1px solid var(--line);padding:2px 6px;border-radius:6px;color:#cfe3ff}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--accent);color:#04120b;font-weight:700;padding:11px 18px;border-radius:12px;box-shadow:var(--shadow);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:50}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+  footer.foot{color:var(--muted);font-size:12px;text-align:center;padding:24px}
+
+  /* ---- Print: only the deck ---- */
+  @media print{
+    body{background:#fff}
+    header.top,.side,.tabs,.chero,.slidebar,.help,footer.foot,#wizView,#ovView,#mapView{display:none !important}
+    .layout{display:block;padding:0}
+    .deck{gap:0}
+    .slide{box-shadow:none;border:0;page-break-after:always;border-radius:0}
+  }
+  body.printone .slide:not(.printtarget){display:none}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <span class="logo">🌍</span>
+      <span>Country Process Wizard<small data-i="tagline">Import / Export · 196 Länder</small></span>
+    </div>
+    <span class="spacer"></span>
+    <div class="langs" id="langs">
+      <button data-lang="de">DE</button>
+      <button data-lang="en">EN</button>
+      <button data-lang="fr">FR</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap layout">
+  <!-- Sidebar -->
+  <aside class="side">
+    <div class="pad">
+      <input id="search" class="search" placeholder="" autocomplete="off" />
+      <div class="filters">
+        <select id="fRegion"></select>
+        <select id="fStatus"></select>
+      </div>
+    </div>
+    <div class="count" id="count"></div>
+    <div class="clist" id="clist"></div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main" id="main">
+    <div class="empty" id="emptyState">
+      <div>
+        <div class="big">🧭</div>
+        <p data-i="pickCountry">Wähle links ein Land, um den Ablauf zu starten.</p>
+      </div>
+    </div>
+
+    <div id="country" style="display:none">
+      <div class="chero">
+        <div class="flag" id="hFlag"></div>
+        <div>
+          <h1 id="hName"></h1>
+          <div class="meta" id="hMeta"></div>
+        </div>
+        <span class="spacer"></span>
+        <span class="badge" id="hBadge"></span>
+      </div>
+
+      <div class="tabs" id="tabs"></div>
+
+      <!-- Overview -->
+      <section id="ovView">
+        <div class="card">
+          <h2>🗂️ <span data-i="overview">Übersicht</span></h2>
+          <div id="ovNotes"></div>
+        </div>
+        <div class="card">
+          <div class="modeswitch" style="margin-bottom:14px" id="ovMode"></div>
+          <div id="ovSummary"></div>
+          <div class="seq" id="ovSeq" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+        </div>
+      </section>
+
+      <!-- Wizard -->
+      <section id="wizView" style="display:none">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px">
+            <div class="modeswitch" id="wizMode"></div>
+            <span class="spacer"></span>
+            <button class="btn ghost" id="resetProg">↺ <span data-i="reset">Zurücksetzen</span></button>
+          </div>
+          <div class="progress"><i id="progBar"></i></div>
+          <div class="wiz">
+            <div class="steplist" id="stepList"></div>
+            <div id="stepHost"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Map -->
+      <section id="mapView" style="display:none">
+        <div class="card">
+          <h2>🗺️ <span data-i="location">Standort / Karte</span></h2>
+          <div class="mapwrap">
+            <div class="mapbox" id="mapBox"></div>
+            <div class="geoinfo" id="geoInfo"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Slide / Folie -->
+      <section id="slideView" style="display:none">
+        <div class="card">
+          <h2>🖼️ <span data-i="slides">Folie / Übersicht (teilbar)</span></h2>
+          <div class="slidebar">
+            <div class="modeswitch" id="slMode"></div>
+            <span class="spacer"></span>
+            <button class="btn" id="btnPrint">🖨️ <span data-i="printDeck">Drucken / PDF</span></button>
+            <button class="btn" id="btnCopy">📋 <span data-i="copyText">Als Text kopieren</span></button>
+            <button class="btn" id="btnShare">🔗 <span data-i="share">Link teilen</span></button>
+            <button class="btn" id="btnJson">⬇️ JSON</button>
+          </div>
+          <p class="help" data-i="slideHelp"></p>
+          <div class="deck" id="deck"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<footer class="foot">
+  <span data-i="disclaimer"></span> ·
+  <span class="help" data-i="editHint"></span>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<!-- DATEN: direkt in data/countries.js editieren -->
+<script src="data/countries.js"></script>
+<script>
+/* ============================ App-Logik ================================= */
+const DB = window.COUNTRY_DATA || {countries:[],processes:{},meta:{}};
+
+/* ---- UI-Strings (DE/EN/FR) ---- */
+const I18N = {
+  de:{tagline:'Import / Export · 196 Länder',searchPH:'Land oder Code suchen…',allRegions:'Alle Regionen',
+      allStatus:'Alle',complete:'Ausgearbeitet',draft:'Entwurf',countN:'{n} Länder',
+      pickCountry:'Wähle links ein Land, um den Ablauf zu starten.',
+      overview:'Übersicht',wizard:'Wizard',location:'Standort / Karte',slides:'Folie',
+      import:'Import',export:'Export',capital:'Hauptstadt',region:'Region',currency:'Währung',
+      authority:'Behörde',leadtime:'Vorlauf',required:'Benötigte Dokumente',watch:'Achtung',
+      step:'Schritt',of:'von',next:'Weiter',prev:'Zurück',finish:'Abschließen',mustall:'Alle Pflicht-Dokumente bestätigen, um fortzufahren.',
+      mandatory:'Pflicht',reset:'Zurücksetzen',done:'Erledigt',allDone:'Ablauf vollständig durchlaufen!',
+      allDoneSub:'Alle Schritte bestätigt. Du kannst die Folie teilen oder drucken.',
+      printDeck:'Drucken / PDF',copyText:'Als Text kopieren',share:'Link teilen',sequence:'Reihenfolge',
+      slideHelp:'Jede Folie ist einzeln druckbar (🖨️ auf der Folie) – praktisch, wenn über einen Schritt diskutiert wird.',
+      slideProc:'Ablauf',slideOverview:'Länder-Übersicht',copied:'In Zwischenablage kopiert',
+      linkCopied:'Link kopiert',draftBanner:'Entwurf – generischer Standardablauf. Bitte in data/countries.js für dieses Land ausfüllen/prüfen.',
+      disclaimer:'Praxisnahe Vorlage, keine Rechtsberatung – Vorschriften ändern sich.',
+      editHint:'Bearbeiten: data/countries.js → processes["ISO2"].',printOne:'Diese Folie drucken'},
+  en:{tagline:'Import / Export · 196 countries',searchPH:'Search country or code…',allRegions:'All regions',
+      allStatus:'All',complete:'Detailed',draft:'Draft',countN:'{n} countries',
+      pickCountry:'Pick a country on the left to start the process.',
+      overview:'Overview',wizard:'Wizard',location:'Location / Map',slides:'Slide',
+      import:'Import',export:'Export',capital:'Capital',region:'Region',currency:'Currency',
+      authority:'Authority',leadtime:'Lead time',required:'Required documents',watch:'Watch out',
+      step:'Step',of:'of',next:'Next',prev:'Back',finish:'Finish',mustall:'Confirm all required documents to continue.',
+      mandatory:'Required',reset:'Reset',done:'Done',allDone:'Process completed!',
+      allDoneSub:'All steps confirmed. You can share or print the slide.',
+      printDeck:'Print / PDF',copyText:'Copy as text',share:'Share link',sequence:'Sequence',
+      slideHelp:'Each slide can be printed individually (🖨️ on the slide) – handy when a step is being discussed.',
+      slideProc:'Process',slideOverview:'Country overview',copied:'Copied to clipboard',
+      linkCopied:'Link copied',draftBanner:'Draft – generic default process. Please fill/verify this country in data/countries.js.',
+      disclaimer:'Practical template, not legal advice – regulations change.',
+      editHint:'Edit: data/countries.js → processes["ISO2"].',printOne:'Print this slide'},
+  fr:{tagline:'Import / Export · 196 pays',searchPH:'Rechercher pays ou code…',allRegions:'Toutes régions',
+      allStatus:'Tous',complete:'Détaillé',draft:'Brouillon',countN:'{n} pays',
+      pickCountry:'Choisissez un pays à gauche pour démarrer.',
+      overview:'Aperçu',wizard:'Assistant',location:'Localisation / Carte',slides:'Diapo',
+      import:'Import',export:'Export',capital:'Capitale',region:'Région',currency:'Devise',
+      authority:'Autorité',leadtime:'Délai',required:'Documents requis',watch:'Attention',
+      step:'Étape',of:'sur',next:'Suivant',prev:'Retour',finish:'Terminer',mustall:'Confirmez tous les documents requis pour continuer.',
+      mandatory:'Requis',reset:'Réinitialiser',done:'Fait',allDone:'Processus terminé !',
+      allDoneSub:'Toutes les étapes confirmées. Vous pouvez partager ou imprimer la diapo.',
+      printDeck:'Imprimer / PDF',copyText:'Copier le texte',share:'Partager le lien',sequence:'Séquence',
+      slideHelp:'Chaque diapo s’imprime séparément (🖨️ sur la diapo) – utile en cas de discussion sur une étape.',
+      slideProc:'Processus',slideOverview:'Aperçu du pays',copied:'Copié',
+      linkCopied:'Lien copié',draftBanner:'Brouillon – processus générique par défaut. À compléter/vérifier dans data/countries.js.',
+      disclaimer:'Modèle pratique, pas un conseil juridique – les règles changent.',
+      editHint:'Modifier : data/countries.js → processes["ISO2"].',printOne:'Imprimer cette diapo'}
+};
+
+const REGIONS = {
+  'north-africa':{de:'Nordafrika',en:'North Africa',fr:'Afrique du Nord'},
+  'west-africa':{de:'Westafrika',en:'West Africa',fr:'Afrique de l’Ouest'},
+  'central-africa':{de:'Zentralafrika',en:'Central Africa',fr:'Afrique centrale'},
+  'east-africa':{de:'Ostafrika',en:'East Africa',fr:'Afrique de l’Est'},
+  'southern-africa':{de:'Südliches Afrika',en:'Southern Africa',fr:'Afrique australe'},
+  'north-america':{de:'Nordamerika',en:'North America',fr:'Amérique du Nord'},
+  'central-america':{de:'Mittelamerika',en:'Central America',fr:'Amérique centrale'},
+  'caribbean':{de:'Karibik',en:'Caribbean',fr:'Caraïbes'},
+  'south-america':{de:'Südamerika',en:'South America',fr:'Amérique du Sud'},
+  'western-europe':{de:'Westeuropa',en:'Western Europe',fr:'Europe de l’Ouest'},
+  'northern-europe':{de:'Nordeuropa',en:'Northern Europe',fr:'Europe du Nord'},
+  'southern-europe':{de:'Südeuropa',en:'Southern Europe',fr:'Europe du Sud'},
+  'eastern-europe':{de:'Osteuropa',en:'Eastern Europe',fr:'Europe de l’Est'},
+  'west-asia':{de:'Westasien / Naher Osten',en:'West Asia / Middle East',fr:'Asie de l’Ouest'},
+  'central-asia':{de:'Zentralasien',en:'Central Asia',fr:'Asie centrale'},
+  'south-asia':{de:'Südasien',en:'South Asia',fr:'Asie du Sud'},
+  'east-asia':{de:'Ostasien',en:'East Asia',fr:'Asie de l’Est'},
+  'southeast-asia':{de:'Südostasien',en:'Southeast Asia',fr:'Asie du Sud-Est'},
+  'oceania':{de:'Ozeanien',en:'Oceania',fr:'Océanie'}
+};
+
+/* Generischer Standard-Ablauf für Länder ohne gepflegten Prozess (Entwurf). */
+const DEFAULT_PROCESS = {
+  import:{summary:{de:'Generischer Standard-Importablauf – bitte länderspezifisch prüfen.',en:'Generic default import process – please verify per country.',fr:'Processus import générique – à vérifier par pays.'},steps:[
+    s('📝',{de:'Vertrag & Incoterm',en:'Contract & Incoterm',fr:'Contrat & Incoterm'},{de:'Bestellung, Incoterm und Zahlungsart festlegen.',en:'Fix order, Incoterm and payment terms.',fr:'Fixer commande, Incoterm et paiement.'},[{de:'Proforma-Rechnung',en:'Proforma invoice',fr:'Facture proforma'}]),
+    s('🧾',{de:'Handelsdokumente',en:'Trade documents',fr:'Documents commerciaux'},{de:'Handelsrechnung, Packliste, Ursprungszeugnis vorbereiten.',en:'Prepare commercial invoice, packing list, certificate of origin.',fr:'Préparer facture, colisage, certificat d’origine.'},[{de:'Handelsrechnung',en:'Commercial invoice',fr:'Facture commerciale'},{de:'Packliste',en:'Packing list',fr:'Liste de colisage'},{de:'Ursprungszeugnis',en:'Certificate of origin',fr:'Certificat d’origine'}]),
+    s('🛡️',{de:'Genehmigungen / Inspektion',en:'Permits / inspection',fr:'Autorisations / inspection'},{de:'Einfuhrlizenzen, Konformität/Pre-Shipment-Inspektion prüfen (länderabhängig).',en:'Check import licences, conformity/pre-shipment inspection (country-specific).',fr:'Vérifier licences, conformité/inspection (selon le pays).'},[]),
+    s('🚢',{de:'Transport & B/L',en:'Transport & B/L',fr:'Transport & B/L'},{de:'Spediteur buchen, Konnossement/Frachtbrief ausstellen.',en:'Book forwarder, issue bill of lading/waybill.',fr:'Réserver, émettre le connaissement.'},[{de:'Konnossement (B/L)',en:'Bill of Lading',fr:'Connaissement'}]),
+    s('🏛️',{de:'Einfuhrzollanmeldung',en:'Import customs declaration',fr:'Déclaration en douane'},{de:'Anmeldung über zugelassenen Spediteur abgeben.',en:'File declaration via licensed broker.',fr:'Déposer via un commissionnaire agréé.'},[]),
+    s('💶',{de:'Abgaben zahlen',en:'Pay duties & taxes',fr:'Payer droits & taxes'},{de:'Zoll, Einfuhrsteuer und Gebühren begleichen.',en:'Pay duty, import tax and fees.',fr:'Régler droits, taxes et redevances.'},[]),
+    s('🚚',{de:'Freigabe & Lieferung',en:'Release & delivery',fr:'Mainlevée & livraison'},{de:'Nach Freigabe Ware abholen und zustellen.',en:'After release pick up and deliver goods.',fr:'Après mainlevée, enlever et livrer.'},[])
+  ]},
+  export:{summary:{de:'Generischer Standard-Exportablauf – bitte länderspezifisch prüfen.',en:'Generic default export process – please verify per country.',fr:'Processus export générique – à vérifier par pays.'},steps:[
+    s('📝',{de:'Vertrag & Incoterm',en:'Contract & Incoterm',fr:'Contrat & Incoterm'},{de:'Käufer, Incoterm und Zahlung festlegen.',en:'Fix buyer, Incoterm and payment.',fr:'Fixer acheteur, Incoterm et paiement.'},[]),
+    s('🧾',{de:'Exportdokumente',en:'Export documents',fr:'Documents export'},{de:'Rechnung, Packliste, Ursprungszeugnis, ggf. Sonderzeugnisse.',en:'Invoice, packing list, certificate of origin, special certs if needed.',fr:'Facture, colisage, origine, certificats spéciaux.'},[{de:'Handelsrechnung',en:'Commercial invoice',fr:'Facture commerciale'},{de:'Ursprungszeugnis',en:'Certificate of origin',fr:'Certificat d’origine'}]),
+    s('🏛️',{de:'Ausfuhranmeldung',en:'Export declaration',fr:'Déclaration d’export'},{de:'Ausfuhranmeldung bei der Zollbehörde abgeben.',en:'File export declaration with customs.',fr:'Déposer la déclaration d’export.'},[]),
+    s('🚢',{de:'Verladung & B/L',en:'Loading & B/L',fr:'Chargement & B/L'},{de:'Verladen und Konnossement ausstellen; Zielland-Anforderungen (z.B. BSC) beachten.',en:'Load and issue B/L; mind destination requirements (e.g. BSC).',fr:'Charger et émettre le B/L; exigences du pays cible (ex. BSC).'},[{de:'Konnossement (B/L)',en:'Bill of Lading',fr:'Connaissement'}]),
+    s('💶',{de:'Zahlungseingang',en:'Payment collection',fr:'Encaissement'},{de:'Zahlung abwickeln, Nachweise archivieren.',en:'Settle payment, archive proofs.',fr:'Régler le paiement, archiver les preuves.'},[])
+  ]}
+};
+function s(icon,title,desc,docs,warn){return{icon,title,desc,docs:docs||[],warn:warn||null}}
+
+/* ---------------- State ---------------- */
+let LANG = localStorage.getItem('cpw_lang') || 'de';
+let state = { code:null, view:'overview', mode:'import', step:0 };
+
+/* ---------------- Helpers ---------------- */
+const $ = (s,r=document)=>r.querySelector(s);
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e};
+const t = (v)=> v==null ? '' : (typeof v==='string' ? v : (v[LANG]||v.en||v.de||''));
+const T = (k)=> (I18N[LANG][k]||I18N.en[k]||k);
+const byCode = (c)=> DB.countries.find(x=>x.code===c);
+const procOf = (c)=> DB.processes[c] || null;
+const flow = (c,mode)=>{ const p=procOf(c); return (p&&p[mode]) ? p[mode] : DEFAULT_PROCESS[mode]; };
+const regionName = (r)=> t(REGIONS[r]||r);
+function toast(msg){const e=$('#toast');e.textContent=msg;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),1700)}
+
+/* progress persistence per country+mode */
+const pkey=(c,m)=>`cpw_prog_${c}_${m}`;
+const getProg=(c,m)=>{try{return JSON.parse(localStorage.getItem(pkey(c,m)))||{}}catch{return{}}};
+const setProg=(c,m,o)=>localStorage.setItem(pkey(c,m),JSON.stringify(o));
+
+/* ---------------- Static i18n paint ---------------- */
+function paintStatic(){
+  document.documentElement.lang=LANG;
+  document.querySelectorAll('[data-i]').forEach(n=>{const k=n.getAttribute('data-i');if(I18N[LANG][k])n.textContent=I18N[LANG][k]});
+  $('#search').placeholder=T('searchPH');
+  $('#langs').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG));
+  buildFilters();
+}
+
+/* ---------------- Sidebar ---------------- */
+function buildFilters(){
+  const fr=$('#fRegion'), fs=$('#fStatus');
+  const curR=fr.value, curS=fs.value;
+  fr.innerHTML=`<option value="">${T('allRegions')}</option>`+
+    Object.keys(REGIONS).map(k=>`<option value="${k}">${regionName(k)}</option>`).join('');
+  fs.innerHTML=`<option value="">${T('allStatus')}</option><option value="complete">${T('complete')}</option><option value="draft">${T('draft')}</option>`;
+  fr.value=curR||''; fs.value=curS||'';
+}
+function statusOf(c){return procOf(c.code)?'complete':'draft'}
+function renderList(){
+  const q=$('#search').value.trim().toLowerCase();
+  const fr=$('#fRegion').value, fs=$('#fStatus').value;
+  const rows=DB.countries.filter(c=>{
+    const nm=t(c.name).toLowerCase();
+    if(q && !(nm.includes(q)||c.code.toLowerCase().includes(q)||c.iso3.toLowerCase().includes(q)))return false;
+    if(fr && c.region!==fr)return false;
+    if(fs && statusOf(c)!==fs)return false;
+    return true;
+  }).sort((a,b)=>t(a.name).localeCompare(t(b.name)));
+  $('#count').textContent=T('countN').replace('{n}',rows.length);
+  const host=$('#clist'); host.innerHTML='';
+  rows.forEach(c=>{
+    const st=statusOf(c);
+    const b=el('button','crow'+(c.code===state.code?' on':''));
+    b.innerHTML=`<span class="fl">${c.flag}</span><span class="nm"><b>${t(c.name)}</b><span>${c.code} · ${regionName(c.region)}</span></span><span class="dot ${st}" title="${T(st)}"></span>`;
+    b.onclick=()=>{ selectCountry(c.code); };
+    host.appendChild(b);
+  });
+}
+
+/* ---------------- Country render ---------------- */
+const TAB_KEYS=[['overview','overview','🗂️'],['wizard','wizard','🧭'],['location','map','🗺️'],['slides','slide','🖼️']];
+function selectCountry(code){ state.code=code; state.step=0; if(!['overview','wizard','map','slide'].includes(state.view))state.view='overview'; syncHash(); renderAll(); }
+
+function modeSwitch(hostSel,onChange){
+  const h=$(hostSel); h.innerHTML='';
+  [['import','imp'],['export','exp']].forEach(([m,cls])=>{
+    const b=el('button',cls+(state.mode===m?' on':''),`${m==='import'?'📥':'📤'} ${T(m)}`);
+    b.onclick=()=>{state.mode=m;state.step=0;syncHash();onChange()};h.appendChild(b);
+  });
+}
+
+function renderAll(){
+  renderList();
+  const c=byCode(state.code);
+  if(!c){$('#emptyState').style.display='grid';$('#country').style.display='none';return}
+  $('#emptyState').style.display='none';$('#country').style.display='block';
+  // hero
+  $('#hFlag').textContent=c.flag;
+  $('#hName').textContent=t(c.name);
+  $('#hMeta').innerHTML=[
+    `<span>🏛️ <b>${c.capital}</b> · ${T('capital')}</span>`,
+    `<span>🌐 <b>${regionName(c.region)}</b></span>`,
+    `<span>💱 <b>${c.currency}</b> · ${T('currency')}</span>`,
+    `<span>🔖 <b>${c.code}/${c.iso3}</b></span>`
+  ].join('');
+  const st=statusOf(c);
+  $('#hBadge').className='badge '+st;
+  $('#hBadge').innerHTML=`<span class="dot ${st}"></span>${T(st)}`;
+  // tabs
+  const tabs=$('#tabs');tabs.innerHTML='';
+  TAB_KEYS.forEach(([labelKey,view,icon])=>{
+    const b=el('button',state.view===view?'on':'',`${icon} ${T(labelKey)}`);
+    b.onclick=()=>{state.view=view;syncHash();renderViews()};tabs.appendChild(b);
+  });
+  renderViews();
+}
+
+function renderViews(){
+  ['ovView','wizView','mapView','slideView'].forEach(id=>$('#'+id).style.display='none');
+  if(state.view==='overview'){$('#ovView').style.display='block';renderOverview()}
+  else if(state.view==='wizard'){$('#wizView').style.display='block';renderWizard()}
+  else if(state.view==='map'){$('#mapView').style.display='block';renderMap()}
+  else {$('#slideView').style.display='block';renderSlides()}
+  // reflect active tab
+  $('#tabs').querySelectorAll('button').forEach((b,i)=>b.classList.toggle('on',TAB_KEYS[i][1]===state.view));
+}
+
+/* ----- Overview ----- */
+function renderOverview(){
+  const c=byCode(state.code), p=procOf(c.code);
+  const notes=$('#ovNotes');notes.innerHTML='';
+  if(!p) notes.appendChild(el('div','note warn',`<span class="i">✏️</span><span>${T('draftBanner')}</span>`));
+  if(p){
+    if(p.authority)notes.appendChild(el('div','note',`<span class="i">🏛️</span><span><b>${T('authority')}:</b> ${t(p.authority)}</span>`));
+    if(p.leadtime)notes.appendChild(el('div','note',`<span class="i">⏱️</span><span><b>${T('leadtime')}:</b> ${t(p.leadtime)}</span>`));
+    (p.notes||[]).forEach(n=>notes.appendChild(el('div','note',`<span class="i">📌</span><span>${t(n)}</span>`)));
+  }
+  modeSwitch('#ovMode',renderOverview);
+  const f=flow(c.code,state.mode);
+  $('#ovSummary').innerHTML=`<p style="margin:0 0 12px;color:var(--muted)">${t(f.summary)}</p>`;
+  const seq=$('#ovSeq');seq.innerHTML='';
+  f.steps.forEach((stp,i)=>seq.appendChild(el('span','s',`<span style="background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 11px;display:inline-flex;gap:7px;align-items:center"><b style="color:var(--accent2)">${i+1}</b> ${stp.icon} ${t(stp.title)}</span>`)));
+}
+
+/* ----- Wizard (strict stepper) ----- */
+function renderWizard(){
+  const c=byCode(state.code);
+  modeSwitch('#wizMode',renderWizard);
+  const f=flow(c.code,state.mode);
+  const prog=getProg(c.code,state.mode);
+  const steps=f.steps;
+  const total=steps.length;
+  // first incomplete step is the max allowed
+  let firstOpen=steps.findIndex((stp,i)=>!isStepDone(stp,prog,i));
+  if(firstOpen<0)firstOpen=total; // all done
+  if(state.step>firstOpen)state.step=firstOpen;
+  const doneCount=steps.filter((stp,i)=>isStepDone(stp,prog,i)).length;
+  $('#progBar').style.width=(doneCount/total*100)+'%';
+
+  // step list
+  const sl=$('#stepList');sl.innerHTML='';
+  steps.forEach((stp,i)=>{
+    const done=isStepDone(stp,prog,i);
+    const locked=i>firstOpen;
+    const b=el('button','sl'+(i===state.step?' on':'')+(done?' done':'')+(locked?' locked':''));
+    b.innerHTML=`<span class="num">${done?'✓':i+1}</span><span class="lab">${stp.icon} ${t(stp.title)}</span>`;
+    b.disabled=locked;
+    b.onclick=()=>{if(!locked){state.step=i;syncHash();renderWizard()}};
+    sl.appendChild(b);
+  });
+
+  const host=$('#stepHost');host.innerHTML='';
+  if(state.step>=total){ // completed
+    host.appendChild(el('div','stepcard complete-banner',
+      `<div class="big">🎉</div><div class="stitle" style="justify-content:center">${T('allDone')}</div><p class="sdesc">${T('allDoneSub')}</p>`));
+    return;
+  }
+  const stp=steps[state.step];
+  const card=el('div','stepcard');
+  card.appendChild(el('div','ic',stp.icon));
+  card.appendChild(el('div','stitle',`${state.step+1}. ${t(stp.title)} <span class="must">${T('mandatory')}</span>`));
+  card.appendChild(el('div','sdesc',t(stp.desc)));
+  let allChecked=true;
+  if(stp.docs&&stp.docs.length){
+    card.appendChild(el('div','doclbl',T('required')));
+    const dwrap=el('div','docs');
+    stp.docs.forEach((d,di)=>{
+      const id=`d${state.step}_${di}`;
+      const checked=!!(prog[state.step]&&prog[state.step][di]);
+      if(!checked)allChecked=false;
+      const row=el('label','doc'+(checked?' checked':''));
+      row.innerHTML=`<input type="checkbox" ${checked?'checked':''}><span class="dx">${t(d)}</span>`;
+      row.querySelector('input').onchange=(e)=>{
+        const pr=getProg(c.code,state.mode);pr[state.step]=pr[state.step]||{};pr[state.step][di]=e.target.checked;setProg(c.code,state.mode,pr);renderWizard();
+      };
+      dwrap.appendChild(row);
+    });
+    card.appendChild(dwrap);
+  }
+  if(stp.warn)card.appendChild(el('div','stepwarn',`<span>⚠️</span><span><b>${T('watch')}:</b> ${t(stp.warn)}</span>`));
+
+  const nav=el('div','nav');
+  const prev=el('button','btn ghost',`← ${T('prev')}`);prev.disabled=state.step===0;
+  prev.onclick=()=>{state.step--;syncHash();renderWizard()};
+  const isLast=state.step===total-1;
+  const next=el('button','btn primary',(isLast?T('finish'):T('next'))+' →');
+  next.disabled=!allChecked;
+  next.onclick=()=>{
+    const pr=getProg(c.code,state.mode);pr['_done_'+state.step]=true;setProg(c.code,state.mode,pr);
+    state.step++;syncHash();renderWizard();
+  };
+  nav.appendChild(prev);nav.appendChild(next);
+  const hint=el('span','navhint',allChecked?`${T('step')} ${state.step+1} ${T('of')} ${total}`:T('mustall'));
+  nav.appendChild(hint);
+  card.appendChild(nav);
+  host.appendChild(card);
+}
+function isStepDone(stp,prog,i){
+  if(stp.docs&&stp.docs.length){ const o=prog[i]||{}; if(!stp.docs.every((_,di)=>o[di]))return false; }
+  return !!prog['_done_'+i];
+}
+
+/* ----- Map / locator ----- */
+function renderMap(){
+  const c=byCode(state.code);
+  const W=360,H=180;
+  const x=(c.lng+180), y=(90-c.lat);
+  let grat='';
+  for(let lng=-180;lng<=180;lng+=30)grat+=`<line class="graticule" x1="${lng+180}" y1="0" x2="${lng+180}" y2="${H}"/>`;
+  for(let lat=-90;lat<=90;lat+=30)grat+=`<line class="graticule" x1="0" y1="${90-lat}" x2="${W}" y2="${90-lat}"/>`;
+  const svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${t(c.name)}">
+    <rect x="0" y="0" width="${W}" height="${H}" fill="#0b1117"/>
+    ${grat}
+    <line class="axis" x1="0" y1="90" x2="${W}" y2="90"/>
+    <line class="axis" x1="180" y1="0" x2="180" y2="${H}"/>
+    <circle class="markerpulse" cx="${x}" cy="${y}" r="9"/>
+    <circle class="marker" cx="${x}" cy="${y}" r="3.2"/>
+    <text x="${Math.min(W-2,x+6)}" y="${Math.max(9,y-5)}" fill="#cfe3ff" font-size="8" font-family="sans-serif">${c.flag} ${c.code}</text>
+  </svg>`;
+  $('#mapBox').innerHTML=svg;
+  $('#geoInfo').innerHTML=
+    `<div class="flag">${c.flag}</div>`+
+    kv(T('region'),regionName(c.region))+
+    kv(T('capital'),c.capital)+
+    kv(T('currency'),c.currency)+
+    kv('ISO',`${c.code} / ${c.iso3}`)+
+    kv('Lat / Lng',`${c.lat.toFixed(2)}, ${c.lng.toFixed(2)}`);
+}
+const kv=(k,v)=>`<div class="kv"><b>${k}</b><span>${v}</span></div>`;
+
+/* ----- Slides / Folie (shareable, printable) ----- */
+function renderSlides(){
+  modeSwitch('#slMode',renderSlides);
+  const c=byCode(state.code), f=flow(c.code,state.mode), p=procOf(c.code);
+  const deck=$('#deck');deck.innerHTML='';
+  // title slide
+  const title=el('div','slide');
+  title.innerHTML=`<div class="sf">${c.flag}</div>
+    <div class="skick">${T(state.mode)} · ${T('slideProc')}</div>
+    <h3>${t(c.name)}</h3>
+    <div class="ssub">${regionName(c.region)} · ${c.capital} · ${c.currency} · ${c.code}/${c.iso3}</div>
+    <p>${t(f.summary)}</p>
+    <div class="seq">${f.steps.map((stp,i)=>`<span class="s"><b>${i+1}.</b> ${stp.icon} ${t(stp.title)}</span>`).join('')}</div>
+    ${p&&p.authority?`<div class="chips"><span class="chip">🏛️ ${t(p.authority)}</span>${p.leadtime?`<span class="chip">⏱️ ${t(p.leadtime)}</span>`:''}</div>`:''}`;
+  addPrintBtn(title);deck.appendChild(title);
+  // step slides
+  f.steps.forEach((stp,i)=>{
+    const sl=el('div','slide');
+    sl.innerHTML=`<div class="sf">${stp.icon}</div>
+      <div class="skick">${T('step')} ${i+1} / ${f.steps.length}</div>
+      <h3><span class="snum">${i+1}</span>${t(stp.title)}</h3>
+      <div class="ssub">${t(c.name)} · ${T(state.mode)}</div>
+      <p>${t(stp.desc)}</p>
+      ${stp.docs&&stp.docs.length?`<b>${T('required')}:</b><ul>${stp.docs.map(d=>`<li>${t(d)}</li>`).join('')}</ul>`:''}
+      ${stp.warn?`<div class="swarn">⚠️ <b>${T('watch')}:</b> ${t(stp.warn)}</div>`:''}`;
+    addPrintBtn(sl);deck.appendChild(sl);
+  });
+}
+function addPrintBtn(slide){
+  const b=el('button','btn ghost',`🖨️`);
+  b.title=T('printOne');b.style.cssText='position:absolute;bottom:16px;right:18px;padding:6px 10px';
+  b.onclick=()=>{document.body.classList.add('printone');slide.classList.add('printtarget');window.print();setTimeout(()=>{document.body.classList.remove('printone');slide.classList.remove('printtarget')},300)};
+  slide.appendChild(b);
+}
+
+/* ----- Share / export ----- */
+function processToText(){
+  const c=byCode(state.code), f=flow(c.code,state.mode), p=procOf(c.code);
+  let out=`${c.flag} ${t(c.name)} — ${T(state.mode).toUpperCase()}\n${regionName(c.region)} · ${c.capital} · ${c.currency} · ${c.code}/${c.iso3}\n`;
+  if(p&&p.authority)out+=`${T('authority')}: ${t(p.authority)}\n`;
+  out+=`\n${t(f.summary)}\n\n`;
+  f.steps.forEach((stp,i)=>{
+    out+=`${i+1}. ${t(stp.title)}\n   ${t(stp.desc)}\n`;
+    if(stp.docs&&stp.docs.length)out+=`   ${T('required')}: ${stp.docs.map(d=>t(d)).join(', ')}\n`;
+    if(stp.warn)out+=`   ⚠️ ${t(stp.warn)}\n`;
+  });
+  out+=`\n— ${T('disclaimer')}`;
+  return out;
+}
+
+/* ----- Hash routing ----- */
+function syncHash(){
+  if(!state.code)return;
+  location.hash=`/${state.code}/${state.mode}/${state.view}`;
+}
+function readHash(){
+  const m=location.hash.replace(/^#\//,'').split('/');
+  if(m[0]&&byCode(m[0].toUpperCase())){
+    state.code=m[0].toUpperCase();
+    if(['import','export'].includes(m[1]))state.mode=m[1];
+    if(['overview','wizard','map','slide'].includes(m[2]))state.view=m[2];
+  }
+}
+
+/* ---------------- Wire up ---------------- */
+function setLang(l){LANG=l;localStorage.setItem('cpw_lang',l);paintStatic();renderAll()}
+$('#langs').onclick=e=>{const b=e.target.closest('button');if(b)setLang(b.dataset.lang)};
+$('#search').oninput=renderList;
+$('#fRegion').onchange=renderList;
+$('#fStatus').onchange=renderList;
+$('#resetProg').onclick=()=>{if(!state.code)return;localStorage.removeItem(pkey(state.code,state.mode));state.step=0;renderWizard()};
+$('#btnPrint').onclick=()=>window.print();
+$('#btnCopy').onclick=async()=>{try{await navigator.clipboard.writeText(processToText());toast(T('copied'))}catch{toast('⚠')}};
+$('#btnShare').onclick=async()=>{
+  const url=location.href;const txt=processToText();
+  if(navigator.share){try{await navigator.share({title:t(byCode(state.code).name),text:txt,url});return}catch{}}
+  try{await navigator.clipboard.writeText(url);toast(T('linkCopied'))}catch{toast('⚠')}
+};
+$('#btnJson').onclick=()=>{
+  const c=byCode(state.code);
+  const data={country:c,process:procOf(c.code)||{note:'default',...DEFAULT_PROCESS}};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`process_${c.code}.json`;a.click();URL.revokeObjectURL(a.href);
+};
+window.addEventListener('hashchange',()=>{const prev=state.code;readHash();if(state.code!==prev)selectCountry(state.code);else renderViews()});
+
+/* ---------------- Boot ---------------- */
+readHash();
+paintStatic();
+renderAll();
+</script>
+</body>
+</html>
