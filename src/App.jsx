@@ -511,27 +511,38 @@ const Layout = ({ children, photo = true }) => {
     if (!photo || !bgRef.current) return;
     const bg = bgRef.current, scrim = scrimRef.current, liquid = liquidRef.current;
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    let cur = 0, target = 0, raf = 0;
-    const ease = () => {
-      cur += (target - cur) * 0.12;
-      if (Math.abs(target - cur) < 0.15) cur = target;
-      bg.style.transform = `translate3d(0, ${cur.toFixed(2)}px, 0) scale(1.08)`;
-      raf = cur !== target ? requestAnimationFrame(ease) : 0;
-    };
-    const onScroll = () => {
-      const y = window.scrollY || window.pageYOffset || 0;
-      target = Math.min(y * 0.32, window.innerHeight * 0.26);
-      if (reduce) { cur = target; bg.style.transform = `translate3d(0, ${cur}px, 0) scale(1.08)`; }
-      else if (!raf) raf = requestAnimationFrame(ease);
-      // Scroll-Fortschritt → Schleier dünner + Flüssigkeits-Pegel sinkt (Glas leert sich).
+    let curY = window.scrollY || window.pageYOffset || 0, raf = 0;
+    // Alle Ebenen aus EINEM (geglätteten) Scrollwert ableiten → synchron & weich:
+    // Parallax-Drift, sanftes Einzoomen (scale wächst beim Runterscrollen),
+    // dünner werdender Schleier und sinkender Flüssigkeitspegel.
+    const apply = (y) => {
+      const drift = Math.min(y * 0.34, window.innerHeight * 0.28);
       const max = (document.documentElement.scrollHeight - window.innerHeight) || 1;
       const p = Math.min(1, Math.max(0, y / max));
-      if (scrim) scrim.style.opacity = String(1 - Math.min(1, y / (window.innerHeight * 1.1)) * 0.25);
+      const scale = 1.08 + p * 0.10; // einzoomend beim Scrollen
+      bg.style.transform = `translate3d(0, ${drift.toFixed(2)}px, 0) scale(${scale.toFixed(4)})`;
+      if (scrim) scrim.style.opacity = String(1 - Math.min(1, y / (window.innerHeight * 1.1)) * 0.28);
       if (liquid) liquid.style.height = `${(1 - p) * 92 + 6}%`;
     };
+    const loop = () => {
+      const targetY = window.scrollY || window.pageYOffset || 0;
+      curY += (targetY - curY) * 0.14;            // lerp → weiches Nachziehen
+      if (Math.abs(targetY - curY) < 0.2) curY = targetY;
+      apply(curY);
+      raf = curY !== targetY ? requestAnimationFrame(loop) : 0;
+    };
+    const onScroll = () => {
+      if (reduce) { curY = window.scrollY || 0; apply(curY); return; }
+      if (!raf) raf = requestAnimationFrame(loop);
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => { window.removeEventListener("scroll", onScroll); if (raf) cancelAnimationFrame(raf); };
+    window.addEventListener("resize", onScroll, { passive: true });
+    apply(curY);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, [photo]);
 
   if (photo) {
@@ -540,9 +551,9 @@ const Layout = ({ children, photo = true }) => {
         <div ref={bgRef} aria-hidden="true" style={{
           position: "fixed", left: 0, right: 0, top: "-30vh", height: "160vh", zIndex: 0, pointerEvents: "none",
           backgroundImage: `url(${HERO_IMG})`, backgroundSize: "cover", backgroundPosition: "center top",
-          willChange: "transform",
+          willChange: "transform", transformOrigin: "center center",
         }} />
-        <div ref={scrimRef} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "var(--photo-scrim)", transition: "opacity 0.2s linear" }} />
+        <div ref={scrimRef} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "var(--photo-scrim)", willChange: "opacity" }} />
         {/* Flüssigkeits-Pegel als Scroll-Indikator — sinkt beim Runterscrollen (Glas leert sich) */}
         <div aria-hidden="true" style={{
           position: "fixed", right: "11px", top: "17%", height: "66%", width: "6px", zIndex: 2,
@@ -553,7 +564,7 @@ const Layout = ({ children, photo = true }) => {
           <div ref={liquidRef} style={{
             position: "absolute", left: 0, right: 0, bottom: 0, height: "98%", borderRadius: "999px",
             background: "linear-gradient(180deg, rgba(95,201,214,0.95) 0%, rgba(44,122,134,0.92) 100%)",
-            boxShadow: "0 0 8px rgba(44,122,134,0.5)", transition: "height 0.14s linear",
+            boxShadow: "0 0 8px rgba(44,122,134,0.5)", willChange: "height",
           }}>
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: "rgba(224,250,255,0.75)", borderRadius: "999px" }} />
           </div>
