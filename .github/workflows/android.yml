@@ -15,6 +15,9 @@ name: Build Android APK (TWA)
 
 on:
   workflow_dispatch: {}
+  push:
+    tags:
+      - "apk-*"   # Tag pushen (z. B. apk-1) löst einen Build aus
 
 jobs:
   build:
