@@ -172,6 +172,7 @@ const MOODS = [
   { id: "süß", label: "Süß", emoji: "🍰", color: "#D48ABF" },
   { id: "gesund", label: "Gesund", emoji: "💚", color: "#4A9A5A" },
   { id: "proteinreich", label: "Protein", emoji: "💪", color: "#5A7ABF" },
+  { id: "gehoben", label: "Gehoben", emoji: "🎩", color: "#7E5A86" },
   { id: "random", label: "Surprise!", emoji: "🎲", color: "#8A6ABF" },
 ];
 
