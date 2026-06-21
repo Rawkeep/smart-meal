@@ -2441,7 +2441,12 @@ NUR JSON (kein Markdown):
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
                     <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--accent)", letterSpacing: ".4px", textTransform: "uppercase" }}>Beispiel · so sieht dein Vorschlag aus</div>
-                    <span style={{ fontSize: "11px", color: "var(--ink3)", flexShrink: 0 }}>🔄</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setExampleIdx(i => { let n = i; if (EXAMPLE_RECIPES.length > 1) { while (n === i) n = Math.floor(Math.random() * EXAMPLE_RECIPES.length); } return n; }); }}
+                      title="Anderes Beispiel anzeigen" aria-label="Anderes Beispiel anzeigen"
+                      style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "5px", border: "1px solid var(--card-border)", background: "var(--card)", color: "var(--accent)", fontSize: "11px", fontWeight: 700, padding: "5px 10px", borderRadius: "999px", cursor: "pointer" }}>
+                      🔄 Neu
+                    </button>
                   </div>
                   <div style={{ fontFamily: "var(--font-display)", fontSize: "17px", fontWeight: 800, color: "var(--ink)", lineHeight: 1.2 }}>{ex.name}</div>
                 </div>
@@ -2455,7 +2460,9 @@ NUR JSON (kein Markdown):
                   <Badge icon="🍗" text={ex.proteinTyp} />
                   {ex.schaerfe > 0 && <Badge icon="🌶️" text={["", "leicht scharf", "mittelscharf", "scharf"][ex.schaerfe]} />}
                 </div>
-                <p style={{ fontSize: "11.5px", color: "var(--ink3)", lineHeight: 1.5, margin: 0 }}><strong style={{ color: "var(--saffron)" }}>📖 Herkunft:</strong> {ex.kultur}</p>
+                <div style={{ background: "rgba(232,148,58,0.08)", borderLeft: "3px solid var(--saffron)", borderRadius: "8px", padding: "7px 10px" }}>
+                  <p style={{ fontSize: "11.5px", color: "var(--ink2)", lineHeight: 1.5, margin: 0 }}><strong style={{ color: "var(--saffron)" }}>📖 Herkunft:</strong> {ex.kultur}</p>
+                </div>
               </div>
             </Card>
 
@@ -2684,11 +2691,15 @@ NUR JSON (kein Markdown):
           {suggestion._imported && <Badge icon="📲" text="Importiert" />}
         </div>
 
-        {/* Kultur / Herkunft-Story — redaktioneller Mehrwert wie auf einem Rezept-Blog */}
-        {suggestion.kultur && (
-          <Card anim="fadeUp" delay="0.1s" style={{ marginBottom: "12px", background: "linear-gradient(135deg,rgba(232,148,58,0.07),rgba(178,58,72,0.05))", border: "1px solid rgba(232,148,58,0.18)" }}>
-            <p style={{ margin: 0, fontSize: "13.5px", color: "var(--ink2)", lineHeight: 1.6 }}>
-              <strong style={{ color: "var(--saffron)" }}>📖 Herkunft:</strong> {suggestion.kultur}
+        {/* Kultur / Herkunft-Story — redaktioneller Mehrwert, jetzt bei JEDEM Vorschlag
+            (Offline-Rezepte haben oft nur das Herkunftsland → als Fallback nutzen). */}
+        {(suggestion.kultur || suggestion.herkunft) && (
+          <Card anim="fadeUp" delay="0.1s" style={{ marginBottom: "12px", background: "linear-gradient(135deg,rgba(232,148,58,0.12),rgba(178,58,72,0.06))", borderLeft: "4px solid var(--saffron)" }}>
+            <div style={{ fontSize: "10px", fontWeight: 800, letterSpacing: ".6px", textTransform: "uppercase", color: "var(--saffron)", marginBottom: "5px" }}>
+              📖 Herkunft{suggestion.herkunft ? ` · ${suggestion.herkunft}` : ""}
+            </div>
+            <p style={{ margin: 0, fontSize: "14px", color: "var(--ink2)", lineHeight: 1.6, fontFamily: "var(--font-display)" }}>
+              {suggestion.kultur || (/international/i.test(suggestion.herkunft || "") ? "Ein internationaler Klassiker." : `Ein Klassiker aus ${suggestion.herkunft}.`)}
             </p>
           </Card>
         )}
