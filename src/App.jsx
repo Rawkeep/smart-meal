@@ -4,7 +4,7 @@ import { FOODS, FOOD_CATEGORIES } from "./data/foods";
 import { CROSS_ALLERGIES, ADDITIVES, ADDITIVE_CATEGORIES, NUTRIENT_DEFICIENCIES, METABOLISM_CONDITIONS, HEALTH_GOALS } from "./data/health";
 import { WELLNESS_CATEGORIES, WELLNESS_DISCLAIMER, NUTRITION_ARTICLES, SPORT_TIPS, HOME_REMEDIES, HEALTH_TIPS } from "./data/wellness";
 import { generateOfflineSuggestion } from "./swarm/index";
-import { buildDeclarationFromText, displayDeclaration } from "./swarm/declaration";
+import { buildDeclarationFromText, displayDeclaration, lineDeclarationCodes } from "./swarm/declaration";
 import { recordLike, recordDislike } from "./swarm/learning-engine";
 import { generateOfflinePlan } from "./swarm/plan-generator";
 import { PROVIDERS, DEFAULT_PROVIDER, getProvider, isValidKey, callTextProvider, callVisionProvider } from "./ai/providers";
@@ -1212,13 +1212,16 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
 
     // Redaktioneller Mehrwert wie auf einem guten Rezept-Blog: appetitliche
     // Beschreibung, Kultur-Story, Schärfegrad, Gericht-Typ/Protein, Zutaten-Ersatz.
-    const styleRule = `\n\nSTIL & MEHRWERT (wichtig):\n- "beschreibung": appetitlich & einladend wie ein gutes Food-Magazin, 1–2 Sätze – mach Lust aufs Gericht (Aromen, Textur), nicht nur sachlich.\n- "kultur": kurze Herkunft/Bedeutung des Gerichts (Story, Region, ggf. wörtliche Übersetzung des Namens), 1–2 Sätze. Bei schlichten Alltagsgerichten knapp halten.\n- "schaerfe": Schärfegrad 0–3 (0=nicht scharf, 1=mild, 2=mittelscharf, 3=scharf) – ehrlich einschätzen.\n- "gerichtTyp": Art des Gerichts (z.B. Suppe, Nudelgericht, Reisgericht, Bowl, Gegrilltes, Wok, Geschmortes, Street Food, Dessert).\n- "proteinTyp": Haupt-Protein/Hauptzutat (z.B. Huhn, Rind, Fisch, Tofu, Gemüse).\n- "ersatz": NUR für ungewöhnliche/Spezialzutaten (z.B. Gochujang, Fischsauce, Miso, Tamarinde): je {"zutat","was" (1 kurze Erklärung, was es ist),"ersatz" (leicht erhältliche Supermarkt-Alternative)}. Leeres Array [], wenn nichts Exotisches dabei ist.`;
+    const styleRule = `\n\nSTIL & MEHRWERT (wichtig):\n- "beschreibung": appetitlich & einladend wie ein gutes Food-Magazin, 1–2 Sätze – mach Lust aufs Gericht (Aromen, Textur), nicht nur sachlich.\n- "kultur": kurze Herkunft/Bedeutung des Gerichts (Story, Region, ggf. wörtliche Übersetzung des Namens), 1–2 Sätze. Bei schlichten Alltagsgerichten knapp halten.\n- "schaerfe": Schärfegrad 0–3 (0=nicht scharf, 1=mild, 2=mittelscharf, 3=scharf) – ehrlich einschätzen.\n- "gerichtTyp": Art des Gerichts (z.B. Suppe, Nudelgericht, Reisgericht, Bowl, Gegrilltes, Wok, Geschmortes, Street Food, Dessert).\n- "proteinTyp": Haupt-Protein/Hauptzutat (z.B. Huhn, Rind, Fisch, Tofu, Gemüse).\n- "ersatz": NUR für ungewöhnliche/Spezialzutaten (z.B. Gochujang, Fischsauce, Miso, Tamarinde): je {"zutat","was" (1 kurze Erklärung, was es ist),"ersatz" (leicht erhältliche Supermarkt-Alternative)}. Leeres Array [], wenn nichts Exotisches dabei ist.
+- "schritte": lebendig und sensorisch schreiben — nenne Erkennungsmerkmale über Aussehen, Geruch und Geräusch (z.B. "bis es goldbraun ist und nussig duftet", "wenn es im heißen Öl zischt"), nicht nur mechanisch. Tonfall richtet sich nach der Koch-Erfahrung (siehe unten).
+- "zutatenGruppen": Zutaten thematisch gruppieren, WENN es die Übersicht verbessert (z.B. "Brühe", "Marinade", "Sauce", "Gewürze", "Einlage", "Topping", "Beilage"). Nutze exakt dieselben Zutaten wie in "zutaten" (das bleibt die vollständige Liste für die Kennzeichnung). Bei einfachen Gerichten leeres Array [].
+- "schluss": EIN warmer, einladender Schlusssatz zum Servieren/Genießen (1 Satz), passend zur Küche.`;
 
     // Optionale Verfeinerung (nur wenn gesetzt): Gericht-Typ + Haupt-Protein.
     const prefLine = `${dishType && dishType !== "egal" ? `\n- Art des Gerichts: ${DISH_TYPES.find(d => d.id === dishType)?.label}` : ""}${proteinPref && proteinPref !== "egal" ? `\n- Haupt-Protein: ${PROTEINS.find(p => p.id === proteinPref)?.label}` : ""}`;
 
     // Erweiterte JSON-Felder (Mehrwert) — an beide Detail-Rezept-Prompts angehängt.
-    const extraFields = `,"kultur":"1-2 Sätze Herkunft/Story","schaerfe":0,"gerichtTyp":"...","proteinTyp":"...","ersatz":[{"zutat":"...","was":"kurze Erklärung","ersatz":"Supermarkt-Alternative"}]`;
+    const extraFields = `,"kultur":"1-2 Sätze Herkunft/Story","schaerfe":0,"gerichtTyp":"...","proteinTyp":"...","ersatz":[{"zutat":"...","was":"kurze Erklärung","ersatz":"Supermarkt-Alternative"}],"zutatenGruppen":[{"titel":"z.B. Sauce/Marinade/Topping","zutaten":["Menge + Zutat"]}],"schluss":"warmer Schlusssatz zum Servieren"`;
 
     if (m === "fridge") return `${base}\n\nKÜHLSCHRANK-MODUS: Zutaten: ${fridgeItems.join(", ")}\nNur diese + Grundzutaten verwenden.${meal ? `\n- Mahlzeit: ${mealLabel} → ${mealRule}` : ""}${prefLine}\n${recent ? `Nicht wiederholen: ${recent}` : ""}${coherenceRule}${styleRule}${skillRule}\n\nNUR JSON (kein Markdown):\n{"name":"...","beschreibung":"appetitlich, 1-2 Sätze","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","weinempfehlung":"passender Wein/Drink inkl. alkoholfreier Alternative","gesundheitshinweis":"..."${extraFields}}`;
 
@@ -2814,25 +2817,55 @@ NUR JSON (kein Markdown):
           });
           const alk = decl.alkohol || {};
           const declAllerg = decl.allergene.length;
+          // Trailing Allergen-Suffix wie " (G)" für die Anzeige entfernen.
+          const stripSuffix = (t) => String(t).replace(/\s*\((?:[A-R]\d?)(?:\s*,\s*[A-R]\d?)*\)\s*$/, "").trim();
+          // Eine Zutatenzeile (Text + farbige Allergen-/Zusatzstoff-Marker) als Aufzählung.
+          const ingRow = (text, allergens, additives, key) => (
+            <div key={key} style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "14px", color: "var(--ink)", lineHeight: 1.5 }}>
+              <span style={{ width: "6px", height: "6px", borderRadius: "50%", marginTop: "8px", background: "var(--herb)", flexShrink: 0 }} />
+              <span>
+                {text}
+                {allergens.map(code => (<span key={`a${code}`} style={markStyle("allergen")} title={`Allergen ${code}: ${aLabel[code] || code}`}>{code}</span>))}
+                {additives.map(n => (<span key={`z${n}`} style={markStyle("additive")} title={`Zusatzstoff ${n}: ${zLabel[n] || n}`}>{n}</span>))}
+              </span>
+            </div>
+          );
+          const groups = Array.isArray(suggestion.zutatenGruppen) ? suggestion.zutatenGruppen.filter(g => g && (g.zutaten || []).length) : [];
           return (
             <Card anim="fadeUp" delay="0.2s" style={{ marginBottom: "12px" }}>
               <ST icon="ingredients" sub={`Für ${persons} Person${persons > 1 ? "en" : ""}`}>Inhaltsstoffe</ST>
-              <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
-                {decl.lines.map((l, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "11px", fontSize: "14px", color: "var(--ink)", lineHeight: 1.5 }}>
-                    <span style={{ minWidth: "22px", height: "22px", borderRadius: "8px", marginTop: "1px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, color: "var(--herb)", background: "color-mix(in srgb, var(--herb) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--herb) 24%, transparent)", flexShrink: 0, fontFamily: "var(--font-display)" }}>{i + 1}</span>
-                    <span>
-                      {l.text}
-                      {l.allergens.map(code => (
-                        <span key={`a${code}`} style={markStyle("allergen")} title={`Allergen ${code}: ${aLabel[code] || code}`}>{code}</span>
-                      ))}
-                      {l.additives.map(n => (
-                        <span key={`z${n}`} style={markStyle("additive")} title={`Zusatzstoff ${n}: ${zLabel[n] || n}`}>{n}</span>
-                      ))}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              {groups.length ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "13px" }}>
+                  {groups.map((g, gi) => (
+                    <div key={gi}>
+                      {g.titel && <p style={{ fontSize: "11px", fontWeight: 800, letterSpacing: ".4px", textTransform: "uppercase", color: "var(--petrol)", margin: "0 0 7px" }}>{g.titel}</p>}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
+                        {g.zutaten.map((line, li) => {
+                          const { allergens, additives } = lineDeclarationCodes(line);
+                          return ingRow(stripSuffix(line), allergens, additives, `${gi}-${li}`);
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
+                  {decl.lines.map((l, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "11px", fontSize: "14px", color: "var(--ink)", lineHeight: 1.5 }}>
+                      <span style={{ minWidth: "22px", height: "22px", borderRadius: "8px", marginTop: "1px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, color: "var(--herb)", background: "color-mix(in srgb, var(--herb) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--herb) 24%, transparent)", flexShrink: 0, fontFamily: "var(--font-display)" }}>{i + 1}</span>
+                      <span>
+                        {l.text}
+                        {l.allergens.map(code => (
+                          <span key={`a${code}`} style={markStyle("allergen")} title={`Allergen ${code}: ${aLabel[code] || code}`}>{code}</span>
+                        ))}
+                        {l.additives.map(n => (
+                          <span key={`z${n}`} style={markStyle("additive")} title={`Zusatzstoff ${n}: ${zLabel[n] || n}`}>{n}</span>
+                        ))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Kennzeichnung — farbcodierte Legende, erklärt jeden Marker oben. */}
               <details style={{ marginTop: "16px", paddingTop: "13px", borderTop: "1px solid var(--card-border)" }}>
@@ -2947,7 +2980,7 @@ NUR JSON (kein Markdown):
             })}
           </div>
           <p style={{ fontSize: "13px", color: "var(--ink2)", margin: "16px 0 0", lineHeight: 1.55, fontFamily: "var(--font-display)", fontStyle: "italic", textAlign: "center" }}>
-            Guten Appetit! 🍽️ Schön, dass du mitgekocht hast{suggestion.herkunft ? ` – Aromen aus ${suggestion.herkunft}` : ""}.
+            {suggestion.schluss || `Guten Appetit! 🍽️ Schön, dass du mitgekocht hast${suggestion.herkunft ? ` – Aromen aus ${suggestion.herkunft}` : ""}.`}
           </p>
         </Card>
 
@@ -2972,7 +3005,7 @@ NUR JSON (kein Markdown):
                 <div style={{ fontSize: "13px", fontWeight: 800, letterSpacing: ".5px", textTransform: "uppercase", color: "var(--petrol)", marginBottom: "14px" }}>Schritt {i + 1} / {steps.length}</div>
                 <p style={{ fontSize: "clamp(20px,5.5vw,28px)", lineHeight: 1.45, color: "var(--ink)", margin: 0, fontFamily: "var(--font-display)" }}>{renderCues(steps[i])}</p>
                 {isLast && (
-                  <p style={{ fontSize: "15px", color: "var(--ink2)", marginTop: "20px", fontStyle: "italic", fontFamily: "var(--font-display)" }}>Guten Appetit! 🍽️ Danke, dass du mitgekocht hast{suggestion.herkunft ? ` – Aromen aus ${suggestion.herkunft}` : ""}.</p>
+                  <p style={{ fontSize: "15px", color: "var(--ink2)", marginTop: "20px", fontStyle: "italic", fontFamily: "var(--font-display)" }}>{suggestion.schluss || `Guten Appetit! 🍽️ Danke, dass du mitgekocht hast${suggestion.herkunft ? ` – Aromen aus ${suggestion.herkunft}` : ""}.`}</p>
                 )}
               </div>
               <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
