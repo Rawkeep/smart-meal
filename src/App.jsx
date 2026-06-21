@@ -773,7 +773,7 @@ const defaultProfile = {
 const COOK_SKILLS = [
   { id: "anfänger", label: "Anfänger", emoji: "🐣", sub: "Erklär mir alles" },
   { id: "normal", label: "Geübt", emoji: "🍳", sub: "Solide Basics" },
-  { id: "profi", label: "Profi", emoji: "👨‍🍳", sub: "Knapp & schnell" },
+  { id: "profi", label: "Profi", emoji: "👨‍🍳", sub: "Sterneküche-Niveau" },
 ];
 
 const ACTIVITY_LEVELS = [
@@ -1156,13 +1156,21 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
       ? "STRIKT ein SNACK – kleine Portion, keine vollständige Hauptmahlzeit."
       : "";
 
-    // Step detail scales with the user's self-rated cooking experience.
+    // Step detail + register + difficulty + drink pairing scale with the
+    // user's self-rated cooking experience (profile.cookSkill).
     const skill = profile.cookSkill || "normal";
     const stepRule = skill === "anfänger"
-      ? `Schritte ausführlich und anfängerfreundlich, 6–9 Stück. Erkläre Technik-Begriffe kurz (z.B. "anschwitzen = bei mittlerer Hitze glasig braten"), nenne konkrete Temperaturen/Stufen, Zeiten ("ca. 5 Min, bis goldbraun") und woran man erkennt, dass etwas fertig ist. Keine Roman-Sätze – klar und schrittweise.`
+      ? `Schritte ausführlich und an die Hand nehmend, 7–10 Stück – begleite wie ein Mentor durch den Prozess. Erkläre JEDEN Fachbegriff sofort in Klammern (z.B. "anschwitzen (bei mittlerer Hitze in etwas Fett glasig garen, ohne Farbe)"). Nenne konkrete Temperaturen/Herdstufen, Zeiten ("ca. 5 Min, bis goldbraun") und klare Gar-Erkennung ("fertig, wenn …"). Gib, wo nötig, einen Utensilien-Workaround an, falls Standard-Equipment fehlt (z.B. ohne Küchenwaage: 1 gehäufter EL Mehl ≈ 15 g; Ei ohne Schneebesen mit einer Gabel kräftig verquirlen; Teig ohne Maschine 8–10 Min von Hand kneten). Klar, ruhig, ermutigend – keine Roman-Sätze.`
       : skill === "profi"
-      ? `Schritte knapp und effizient, 4–6 Stück. Setze Grundtechniken voraus, keine Erklärungen von Basics.`
-      : `Schritte konkret und chronologisch, 5–7 Stück. Mit Zeiten und Hitzestufen, kurze Hinweise auf Gar-Erkennung. Nicht übererklären.`;
+      ? `Schritte präzise, dicht und effizient, 5–7 Stück, in konsequenter Küchen-Fachsprache wie in der Sterneküche (z.B. Mise en place, blanchieren, sautieren, déglacieren, montieren, nappieren, glacieren, reduzieren, à point, konfieren). Setze alle Grundtechniken voraus, KEINE Erklärung von Basics. Benenne Garpunkte, Konsistenzen und Timing professionell.`
+      : `Schritte konkret und chronologisch, 6–8 Stück, mit Zeiten und Hitzestufen. Nutze ruhig Fachbegriffe, erkläre aber jeden potenziell unbekannten Begriff knapp in Klammern (z.B. "blanchieren (kurz in kochendem Wasser garen, dann eiskalt abschrecken)"), damit ein Lerneffekt entsteht. Nicht übererklären.`;
+
+    // Anspruch, Sprachregister und Getränke-Pairing je Erfahrungsstufe.
+    const skillRule = skill === "anfänger"
+      ? `\n\nKOCH-ERFAHRUNG = ANFÄNGER:\n- Ton: geduldig, ermutigend, wie ein Handlauf durch den Kochprozess.\n- Schwierigkeit: zugänglich-moderat (wie "Geübt"), "schwierigkeit" höchstens "Mittel" – gut machbare Gerichte mit solider Technik, nichts Einschüchterndes.\n- Fachbegriffe immer sofort erklären; bei speziellem Equipment eine Alternative nennen (Waage/Schneebesen/Knetmaschine/Sieb etc.).\n- "weinempfehlung": einfaches, leicht verfügbares Getränk (z.B. Schorle, unkomplizierter Wein) PLUS eine alkoholfreie Alternative – in einem Satz, warum es passt.`
+      : skill === "profi"
+      ? `\n\nKOCH-ERFAHRUNG = PROFI (Sterneküche-Niveau):\n- Ton: konsequente professionelle Fachsprache, knapp und präzise – wie in einer Sterne-Brigade.\n- Schwierigkeit: anspruchsvoll – hebe das Gericht an (verfeinerte Technik/Komponenten, Sauce, Textur, präzise Garpunkte); "schwierigkeit" tendenziell "Anspruchsvoll".\n- "weinempfehlung": auf Sommelier-Niveau – konkrete Rebsorte/Region/Stil ODER passende Spirituose, plus eine hochwertige alkoholfreie Begleitung; Pairing in einem knappen Satz begründen.`
+      : `\n\nKOCH-ERFAHRUNG = GEÜBT (solide Basics):\n- Ton: kompetent und effizient; Fachbegriffe erlaubt, aber bei möglichem Unbekanntsein direkt kurz erklären (Lerneffekt).\n- Schwierigkeit: moderat ("schwierigkeit" meist "Mittel"), gern mit einer kleinen Technik zum Dazulernen.\n- "weinempfehlung": konkretes Pairing (Rebsorte/Stil) inklusive alkoholfreier Alternative, kurz begründet.`;
 
     // Shared rule block: every mode must honor meal-type + ingredient coherence.
     const coherenceRule = `\n\nKONSISTENZREGELN (STRIKT):\n- Jede in "zutaten" genannte Zutat MUSS in "schritte" vorkommen. Jede in "schritte" erwähnte Zutat MUSS in "zutaten" stehen.\n- Alle zutaten im Format "Menge + Einheit + Zutat" (z.B. "200 g Haferflocken").\n- ${stepRule}\n- Gib bei jedem Schritt, wo sinnvoll, Zeit und Hitze an.\n- Gericht-Name muss zum Mahlzeitentyp passen.`;
@@ -1177,11 +1185,11 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
     // Erweiterte JSON-Felder (Mehrwert) — an beide Detail-Rezept-Prompts angehängt.
     const extraFields = `,"kultur":"1-2 Sätze Herkunft/Story","schaerfe":0,"gerichtTyp":"...","proteinTyp":"...","ersatz":[{"zutat":"...","was":"kurze Erklärung","ersatz":"Supermarkt-Alternative"}]`;
 
-    if (m === "fridge") return `${base}\n\nKÜHLSCHRANK-MODUS: Zutaten: ${fridgeItems.join(", ")}\nNur diese + Grundzutaten verwenden.${meal ? `\n- Mahlzeit: ${mealLabel} → ${mealRule}` : ""}${prefLine}\n${recent ? `Nicht wiederholen: ${recent}` : ""}${coherenceRule}${styleRule}\n\nNUR JSON (kein Markdown):\n{"name":"...","beschreibung":"appetitlich, 1-2 Sätze","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","gesundheitshinweis":"..."${extraFields}}`;
+    if (m === "fridge") return `${base}\n\nKÜHLSCHRANK-MODUS: Zutaten: ${fridgeItems.join(", ")}\nNur diese + Grundzutaten verwenden.${meal ? `\n- Mahlzeit: ${mealLabel} → ${mealRule}` : ""}${prefLine}\n${recent ? `Nicht wiederholen: ${recent}` : ""}${coherenceRule}${styleRule}${skillRule}\n\nNUR JSON (kein Markdown):\n{"name":"...","beschreibung":"appetitlich, 1-2 Sätze","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","weinempfehlung":"passender Wein/Drink inkl. alkoholfreier Alternative","gesundheitshinweis":"..."${extraFields}}`;
 
     if (m === "plan") return `${base}\n\nWOCHENPLAN: 5 Werktage (Mo–Fr), je Frühstück/Mittag/Abend. Budget: ${BUDGETS.find(b => b.id === budget)?.label || "normal"}. Abwechslungsreich!\n- Frühstück: NUR typische Frühstücksgerichte (Oats, Bowl, Toast, Rührei).\n- Mittag: sättigende Hauptgerichte.\n- Abend: eher leichter als Mittag.\n\nNUR JSON:\n{"plan":[{"tag":"Montag","frühstück":{"name":"...","emoji":"...","zeit":"XX Min"},"mittag":{"name":"...","emoji":"...","zeit":"XX Min"},"abend":{"name":"...","emoji":"...","zeit":"XX Min"}},...],  "einkaufsliste":["Zutat 1","Zutat 2",...]}`;
 
-    return `${base}\n\n- Mahlzeit: ${mealLabel} → ${mealRule}\n- Kochzeit: ${TIMES.find(x => x.id === cookTime)?.label || ""}\n- Stimmung: ${MOODS.find(x => x.id === mood)?.label || ""}\n- Budget: ${BUDGETS.find(x => x.id === budget)?.label || ""}${prefLine}\n${recent ? `- NICHT wiederholen: ${recent}` : ""}${coherenceRule}${styleRule}\n\nNUR JSON:\n{"name":"...","beschreibung":"appetitlich, 1-2 Sätze","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","weinempfehlung":"passender Wein/Getränk","gesundheitshinweis":"..."${extraFields}}`;
+    return `${base}\n\n- Mahlzeit: ${mealLabel} → ${mealRule}\n- Kochzeit: ${TIMES.find(x => x.id === cookTime)?.label || ""}\n- Stimmung: ${MOODS.find(x => x.id === mood)?.label || ""}\n- Budget: ${BUDGETS.find(x => x.id === budget)?.label || ""}${prefLine}\n${recent ? `- NICHT wiederholen: ${recent}` : ""}${coherenceRule}${styleRule}${skillRule}\n\nNUR JSON:\n{"name":"...","beschreibung":"appetitlich, 1-2 Sätze","zutaten":["Menge + Zutat"],"schritte":["..."],"zeit":"XX Min","kalorien":"ca. XXX kcal","protein":"ca. XX g","tipp":"...","emoji":"...","schwierigkeit":"Leicht|Mittel|Anspruchsvoll","tags":["..."],"herkunft":"Land/Region","weinempfehlung":"passender Wein/Drink inkl. alkoholfreier Alternative","gesundheitshinweis":"..."${extraFields}}`;
   }, [profile, guestMode, guestAllergies, guestHistamin, guestDiet, history, persons, fridgeInput, selectedIngredients, budget, meal, cookTime, mood, dishType, proteinPref]);
 
   // ─── Backend availability check ───

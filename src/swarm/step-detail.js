@@ -34,6 +34,16 @@ const TECHNIQUES = [
   { re: /\bkochen\b/i,           hint: "in reichlich Salzwasser garen (Packungsangabe beachten)", gloss: null },
 ];
 
+// Beginner-only: workarounds when special equipment might be missing. Each tip
+// is offered at most once per recipe and only if the step text suggests it.
+const UTENSIL_TIPS = [
+  { re: /\bkneten|knete\b|\bteig\b/i, tip: "kein Knethaken? Einfach 8–10 Min mit leicht bemehlten Händen kräftig kneten, bis der Teig glatt und elastisch ist" },
+  { re: /abwieg|\bwiege\b|\bwiegen\b|abmessen/i, tip: "keine Küchenwaage? Faustwerte: 1 gehäufter EL Mehl ≈ 15 g, Zucker ≈ 12 g, Butter ≈ 15 g" },
+  { re: /schaumig|steif schlag|eischnee|sahne.*schlag|aufschlag/i, tip: "kein Mixer? Mit einem Schneebesen und etwas Geduld geht es auch – nur etwas länger schlagen" },
+  { re: /passier|durch ein sieb|sieben/i, tip: "kein Sieb? Ein sauberes Küchentuch über eine Schüssel spannen und durchdrücken" },
+  { re: /püriere/i, tip: "kein Stabmixer? Mit Gabel oder Kartoffelstampfer fein zerdrücken" },
+];
+
 // Does the step already give a concrete time/temperature cue?
 const hasTimingCue = (s) => /\bmin\b|minute|°|sekunden|std\b|stunde/i.test(s);
 
@@ -81,6 +91,13 @@ export function enrichSteps(steps, profile = {}) {
     // Frame the recipe with a prep tip and a serving check so true beginners
     // are never left guessing.
     out.unshift("Tipp vorab: Lies alle Schritte einmal durch und stelle dir Zutaten und Werkzeuge bereit (Mise en place) – so wird's entspannt.");
+    // Utensil workarounds (max. 3), in case standard equipment is missing.
+    const tips = [];
+    for (const u of UTENSIL_TIPS) {
+      if (tips.length >= 3) break;
+      if (steps.some((s) => u.re.test(s))) tips.push(u.tip);
+    }
+    if (tips.length) out.splice(1, 0, `Kein Profi-Equipment nötig: ${tips.join("; ")}.`);
     const last = out[out.length - 1] || "";
     if (!/serv|anricht|teller|genieß/i.test(last)) {
       out.push("Zum Schluss alles hübsch anrichten und sofort genießen.");
