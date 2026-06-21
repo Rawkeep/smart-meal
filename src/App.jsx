@@ -562,11 +562,12 @@ const Layout = ({ children, photo = true }) => {
       // Zweite Ebene (Tiefe): Vignette driftet langsamer & verdichtet sich → Parallax-Tiefe.
       if (depth) tl.fromTo(depth, { y: 0, opacity: 0.10 }, { y: driftMax * 0.45, opacity: 0.42 }, 0);
       if (scrim) tl.fromTo(scrim, { opacity: 1 }, { opacity: 0.72 }, 0);
-      // Wasserpegel: EIGENER Tracker (kein träger Parallax-Scrub) → exaktes
-      // 1:1-Mapping über die GANZE Seite, leert bis ganz unten.
-      if (liquid) ScrollTrigger.create({
-        start: 0, end: "max", scrub: 0.3, invalidateOnRefresh: true,
-        onUpdate: (self) => { liquid.style.height = `${(6 + (1 - self.progress) * 92).toFixed(1)}%`; },
+      // Wasserpegel: eigener, gescrubbter Tween → BIDIREKTIONAL. Beim Runter-
+      // scrollen läuft das Wasser ab (98% → 6%), beim Hochscrollen füllt es sich
+      // wieder; exakt über die ganze Seite bis ans Ende.
+      if (liquid) gsap.fromTo(liquid, { height: "98%" }, {
+        height: "6%", ease: "none",
+        scrollTrigger: { start: 0, end: "max", scrub: 0.5, invalidateOnRefresh: true },
       });
     });
     return () => ctx.revert();
