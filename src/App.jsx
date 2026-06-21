@@ -2677,6 +2677,10 @@ NUR JSON (kein Markdown):
 
   // ─── Result ───
   if (view === "result" && suggestion) {
+    const aromen = suggestion.herkunft ? (/international/i.test(suggestion.herkunft) ? " – internationale Aromen" : ` – Aromen aus ${suggestion.herkunft}`) : "";
+    const closingLine = suggestion.schluss || `Guten Appetit! 🍽️ Schön, dass du mitgekocht hast${aromen}.`;
+    const stepsTotal = suggestion.schritte?.length || 0;
+    const allDone = stepsTotal > 0 && doneSteps.size >= stepsTotal;
     if (suggestion.error) return (
       <Layout>
         <div style={{ paddingTop: "40px" }}>
@@ -2990,9 +2994,11 @@ NUR JSON (kein Markdown):
               );
             })}
           </div>
-          <p style={{ fontSize: "13px", color: "var(--ink2)", margin: "16px 0 0", lineHeight: 1.55, fontFamily: "var(--font-display)", fontStyle: "italic", textAlign: "center" }}>
-            {suggestion.schluss || `Guten Appetit! 🍽️ Schön, dass du mitgekocht hast${suggestion.herkunft ? ` – Aromen aus ${suggestion.herkunft}` : ""}.`}
-          </p>
+          {allDone && (
+            <p style={{ fontSize: "13px", color: "var(--herb)", margin: "16px 0 0", lineHeight: 1.55, fontFamily: "var(--font-display)", fontStyle: "italic", textAlign: "center", animation: "fadeUp 0.5s ease both" }}>
+              {closingLine}
+            </p>
+          )}
         </Card>
 
         {/* Geführter Koch-Modus — Vollbild, ein Schritt groß, Bildschirm bleibt an */}
@@ -3016,7 +3022,7 @@ NUR JSON (kein Markdown):
                 <div style={{ fontSize: "13px", fontWeight: 800, letterSpacing: ".5px", textTransform: "uppercase", color: "var(--petrol)", marginBottom: "14px" }}>Schritt {i + 1} / {steps.length}</div>
                 <p style={{ fontSize: "clamp(20px,5.5vw,28px)", lineHeight: 1.45, color: "var(--ink)", margin: 0, fontFamily: "var(--font-display)" }}>{renderCues(steps[i])}</p>
                 {isLast && (
-                  <p style={{ fontSize: "15px", color: "var(--ink2)", marginTop: "20px", fontStyle: "italic", fontFamily: "var(--font-display)" }}>{suggestion.schluss || `Guten Appetit! 🍽️ Danke, dass du mitgekocht hast${suggestion.herkunft ? ` – Aromen aus ${suggestion.herkunft}` : ""}.`}</p>
+                  <p style={{ fontSize: "15px", color: "var(--ink2)", marginTop: "20px", fontStyle: "italic", fontFamily: "var(--font-display)" }}>{closingLine}</p>
                 )}
               </div>
               <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
