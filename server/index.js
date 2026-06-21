@@ -212,10 +212,13 @@ function _gatePage(msg, returnTo) {
   const startGate = msg ? "show-gate" : "";
   const hero = `/smart-meal/img/hero-${1 + Math.floor(Math.random() * 4)}.webp`; // rotiert pro Aufruf
   return `<!doctype html><html lang="de" class="${startGate}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Meal — Dein KI-Essensberater</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box}
 html,body{margin:0}
-body{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;overflow-x:hidden;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#e2e8f0;background:#0b1120}
+body{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;overflow-x:hidden;font-family:'Outfit',system-ui,-apple-system,"Segoe UI",sans-serif;font-feature-settings:"kern" 1,"liga" 1;color:#e2e8f0;background:#0b1120}
+.brand .nm,.quote,.gate-h{font-family:'Fraunces',Georgia,serif;font-optical-sizing:auto}
 .bgwrap{position:fixed;inset:0;overflow:hidden;z-index:-2}
 .bg{position:absolute;inset:0;background:url('${hero}') center/cover no-repeat;transform:scale(1.06);animation:kb 28s ease-in-out infinite alternate,gi 1.5s ease both;will-change:transform}
 .ov{position:fixed;inset:0;z-index:-1;background:radial-gradient(120% 85% at 50% 0%,rgba(11,16,30,.40) 0%,rgba(11,16,30,.74) 58%,rgba(11,16,30,.93) 100%)}
@@ -427,8 +430,10 @@ function _buyPage(msg, code) {
 <div style="font-family:ui-monospace,monospace;font-size:15px;letter-spacing:.5px;background:#0f172a;border:1px solid #334155;border-radius:9px;padding:12px;word-break:break-all;color:#a7f3d0;margin-bottom:14px">${_htmlAttr(code)}</div>
 <form method="POST" action="/__gate"><input type="hidden" name="code" value="${_htmlAttr(code)}"><input type="hidden" name="returnTo" value="/smart-meal/"><button type="submit" style="width:100%;padding:11px;border:0;border-radius:9px;background:#10b981;color:#fff;font-size:14px;font-weight:600;cursor:pointer">Jetzt eintreten →</button></form>`
     : `<div style="background:#7f1d1d;color:#fecaca;font-size:13px;padding:10px 12px;border-radius:8px">${_htmlAttr(msg || "Fehler")}</div>`;
-  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Meal — Kauf</title></head>
-<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f172a;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0">
+  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Meal — Kauf</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet"></head>
+<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f172a;font-family:'Outfit',system-ui,-apple-system,sans-serif;color:#e2e8f0">
 <div style="background:#1e293b;padding:32px 28px;border-radius:16px;width:340px;box-shadow:0 10px 40px rgba(0,0,0,.4)">
 <div style="font-size:32px;text-align:center;margin-bottom:6px">🍽️</div>
 <h1 style="font-size:18px;margin:0 0 14px;text-align:center">Smart Meal</h1>${body}</div></body></html>`;

@@ -284,7 +284,7 @@ const ProviderSelect = ({ value, onChange }) => (
       style={{
         width: "100%", padding: "10px 12px", borderRadius: "var(--r)",
         border: "2px solid var(--card-border)", background: "var(--card)",
-        fontFamily: "'Outfit',sans-serif", fontSize: "14px", color: "var(--ink)",
+        fontFamily: "var(--font-ui)", fontSize: "14px", color: "var(--ink)",
         outline: "none", boxSizing: "border-box", cursor: "pointer",
       }}
     >
@@ -328,7 +328,7 @@ const Chip = ({ active, onClick, children, color, small }) => (
     background: active ? `linear-gradient(135deg,${color || "var(--accent)"},${color || "var(--accent2)"})` : "var(--card)",
     color: active ? "#fff" : "var(--ink2)",
     fontSize: small ? "13px" : "14px",
-    fontFamily: "'Outfit',sans-serif",
+    fontFamily: "var(--font-ui)",
     fontWeight: active ? 600 : 400,
     cursor: "pointer",
     transition: "all 0.25s cubic-bezier(0.34,1.56,0.64,1)",
@@ -450,14 +450,14 @@ const ST = ({ children, sub, icon }) => (
   <div style={{ marginBottom: "10px" }}>
     <h3 style={{
       display: "flex", alignItems: "center", gap: "9px",
-      fontFamily: "'Fraunces',serif", fontSize: "17px", fontWeight: 700,
+      fontFamily: "var(--font-display)", fontSize: "17px", fontWeight: 700,
       color: "var(--ink)", letterSpacing: "-0.3px",
     }}>
       {icon && <Icon name={icon} />}
       {children}
     </h3>
     {sub && <p style={{
-      fontFamily: "'Outfit',sans-serif", fontSize: "13px",
+      fontFamily: "var(--font-ui)", fontSize: "13px",
       color: "var(--ink3)", marginTop: "2px", marginLeft: icon ? "28px" : 0,
     }}>{sub}</p>}
   </div>
@@ -469,7 +469,7 @@ const Btn = ({ children, onClick, disabled, secondary, style: s }) => (
     border: secondary ? "2px solid var(--card-border)" : "none",
     background: secondary ? "var(--card)" : disabled ? "var(--ink3)" : "linear-gradient(135deg,var(--berry) 0%,var(--plum) 100%)",
     color: secondary ? "var(--ink2)" : "#fff",
-    fontSize: "15px", fontWeight: 700, fontFamily: "'Outfit',sans-serif",
+    fontSize: "15px", fontWeight: 700, fontFamily: "var(--font-ui)",
     cursor: disabled ? "not-allowed" : "pointer",
     boxShadow: secondary || disabled ? "none" : "0 6px 20px rgba(178,58,72,0.32)",
     transition: "all 0.25s ease", letterSpacing: "0.3px",
@@ -482,7 +482,7 @@ const Badge = ({ icon, text }) => (
   <div style={{
     padding: "5px 12px", borderRadius: "20px", background: "var(--card)",
     border: "1px solid var(--card-border)", fontSize: "12px", color: "var(--ink2)",
-    fontWeight: 500, fontFamily: "'Outfit',sans-serif", fontVariantNumeric: "tabular-nums",
+    fontWeight: 500, fontFamily: "var(--font-ui)", fontVariantNumeric: "tabular-nums",
     display: "inline-flex", alignItems: "center", gap: "4px",
   }}>{icon} {text}</div>
 );
@@ -492,7 +492,7 @@ const CloseBar = ({ title, onClose }) => (
     display: "flex", justifyContent: "space-between", alignItems: "center",
     padding: "16px 0", animation: "fadeUp 0.3s ease both",
   }}>
-    <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: "24px", color: "var(--ink)", fontWeight: 800 }}>{title}</h2>
+    <h2 style={{ fontFamily: "var(--font-display)", fontSize: "24px", color: "var(--ink)", fontWeight: 800 }}>{title}</h2>
     <button onClick={onClose} style={{ background: "none", border: "none", fontSize: "24px", cursor: "pointer", color: "var(--ink2)" }}>✕</button>
   </div>
 );
@@ -535,7 +535,7 @@ const Layout = ({ children, photo = true }) => {
 
   if (photo) {
     return (
-      <div style={{ minHeight: "100vh", position: "relative", background: "var(--bg1)", fontFamily: "'Outfit',sans-serif" }}>
+      <div style={{ minHeight: "100vh", position: "relative", background: "var(--bg1)", fontFamily: "var(--font-ui)" }}>
         <div ref={bgRef} aria-hidden="true" style={{
           position: "fixed", left: 0, right: 0, top: "-30vh", height: "160vh", zIndex: 0, pointerEvents: "none",
           backgroundImage: `url(${HERO_IMG})`, backgroundSize: "cover", backgroundPosition: "center top",
@@ -570,7 +570,7 @@ const Layout = ({ children, photo = true }) => {
       background: "linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 40%,var(--bg3) 100%)",
       backgroundSize: "200% 200%",
       animation: "bgShift 20s ease infinite",
-      fontFamily: "'Outfit',sans-serif",
+      fontFamily: "var(--font-ui)",
     }}>
       <div style={{ maxWidth: "680px", margin: "0 auto", padding: "24px 24px 72px", position: "relative", zIndex: 1 }}>
         {children}
@@ -583,7 +583,7 @@ const InputField = ({ value, onChange, placeholder, multiline, style: s }) => {
   const base = {
     width: "100%", padding: "14px 16px", borderRadius: "var(--r)",
     border: "2px solid var(--card-border)", background: "var(--card)",
-    fontFamily: "'Outfit',sans-serif", fontSize: "14px", color: "var(--ink)",
+    fontFamily: "var(--font-ui)", fontSize: "14px", color: "var(--ink)",
     outline: "none", boxSizing: "border-box", ...s,
   };
   if (multiline) return <textarea value={value} onChange={onChange} placeholder={placeholder} style={{ ...base, minHeight: "90px", resize: "vertical", lineHeight: 1.6 }} />;
@@ -619,7 +619,7 @@ const IngredientPicker = ({ selected, onToggle, profile }) => {
         style={{
           width: "100%", padding: "10px 14px", borderRadius: "var(--r)",
           border: "2px solid var(--card-border)", background: "var(--card)",
-          fontFamily: "'Outfit',sans-serif", fontSize: "14px", color: "var(--ink)",
+          fontFamily: "var(--font-ui)", fontSize: "14px", color: "var(--ink)",
           outline: "none", boxSizing: "border-box", marginBottom: "10px",
         }}
       />
@@ -631,7 +631,7 @@ const IngredientPicker = ({ selected, onToggle, profile }) => {
               background: activeCategory === cat.id ? "var(--accent)" : "var(--bg2)",
               color: activeCategory === cat.id ? "#fff" : "var(--ink3)",
               fontSize: "12px", fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap",
-              fontFamily: "'Outfit',sans-serif", transition: "all 0.2s ease",
+              fontFamily: "var(--font-ui)", transition: "all 0.2s ease",
             }}>{cat.emoji} {cat.label}</button>
           ))}
         </div>
@@ -646,7 +646,7 @@ const IngredientPicker = ({ selected, onToggle, profile }) => {
               background: isSelected ? "linear-gradient(135deg,var(--accent),var(--accent2))" : "var(--card)",
               color: isSelected ? "#fff" : "var(--ink2)",
               fontSize: "12px", fontWeight: isSelected ? 600 : 400, cursor: "pointer",
-              fontFamily: "'Outfit',sans-serif", transition: "all 0.2s ease",
+              fontFamily: "var(--font-ui)", transition: "all 0.2s ease",
               display: "flex", alignItems: "center", gap: "3px",
             }}>
               <span>{food.emoji}</span>
@@ -739,7 +739,7 @@ const PhotoUpload = ({ onResult, apiKey, backendAvailable, provider = "claude", 
         width: "100%", padding: "14px", borderRadius: "var(--r)",
         border: "2px dashed var(--card-border)", background: "var(--bg2)",
         color: "var(--ink2)", fontSize: "14px", fontWeight: 500,
-        cursor: uploading ? "wait" : "pointer", fontFamily: "'Outfit',sans-serif",
+        cursor: uploading ? "wait" : "pointer", fontFamily: "var(--font-ui)",
         transition: "all 0.2s ease", display: "flex", alignItems: "center",
         justifyContent: "center", gap: "8px",
       }}>
@@ -1456,7 +1456,7 @@ NUR JSON (kein Markdown):
         <Card anim="scaleIn">
           <div style={{ textAlign: "center", marginBottom: "16px" }}>
             <div style={{ fontSize: "48px", marginBottom: "12px" }}>🔑</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", color: "var(--ink)", fontSize: "20px", marginBottom: "8px" }}>
+            <h2 style={{ fontFamily: "var(--font-display)", color: "var(--ink)", fontSize: "20px", marginBottom: "8px" }}>
               {freemiumInfo.freemium && freemiumInfo.remaining <= 0 ? "Tageslimit erreicht" : "Eigenen API-Key verwenden"}
             </h2>
             <p style={{ color: "var(--ink3)", fontSize: "13px", lineHeight: 1.5 }}>
@@ -1500,7 +1500,7 @@ NUR JSON (kein Markdown):
             style={{
               width: "100%", padding: "12px 14px", borderRadius: "var(--r)",
               border: "2px solid var(--card-border)", background: "var(--card)",
-              fontFamily: "'Outfit',sans-serif", fontSize: "14px", color: "var(--ink)",
+              fontFamily: "var(--font-ui)", fontSize: "14px", color: "var(--ink)",
               outline: "none", boxSizing: "border-box", marginBottom: "4px",
             }}
           />
@@ -1526,7 +1526,7 @@ NUR JSON (kein Markdown):
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "90vh" }}>
         <div style={{ textAlign: "center", animation: "scaleIn 0.5s ease both" }}>
           <div style={{ fontSize: "72px", animation: "float 2s ease infinite" }}>🍽️</div>
-          <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: "28px", color: "var(--ink)", marginTop: "12px", fontWeight: 900 }}>Was esse ich?</h1>
+          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "28px", color: "var(--ink)", marginTop: "12px", fontWeight: 900 }}>Was esse ich?</h1>
         </div>
       </div>
     </Layout>
@@ -1598,7 +1598,7 @@ NUR JSON (kein Markdown):
               padding: "10px 14px", borderRadius: "var(--r)", textAlign: "left",
               border: active ? "2px solid var(--accent)" : "2px solid var(--card-border)",
               background: active ? "linear-gradient(135deg,var(--accent),var(--accent2))" : "var(--card)",
-              color: active ? "#fff" : "var(--ink2)", cursor: "pointer", fontFamily: "'Outfit',sans-serif",
+              color: active ? "#fff" : "var(--ink2)", cursor: "pointer", fontFamily: "var(--font-ui)",
               transition: "all 0.2s ease",
             }}>
               <div style={{ fontSize: "14px", fontWeight: 600 }}>{m.emoji} {m.label}</div>
@@ -1640,7 +1640,7 @@ NUR JSON (kein Markdown):
                       background: active ? "var(--accent)" : "var(--card)",
                       color: active ? "#fff" : a.risk === "high" ? "#C44040" : "var(--ink2)",
                       fontWeight: active ? 600 : a.risk === "high" ? 500 : 400,
-                      cursor: "pointer", fontFamily: "'Outfit',sans-serif",
+                      cursor: "pointer", fontFamily: "var(--font-ui)",
                     }}>{a.label}</button>;
                   })}
                 </div>
@@ -1663,7 +1663,7 @@ NUR JSON (kein Markdown):
           <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-ant-api03-..." style={{
             width: "100%", padding: "14px 16px", borderRadius: "var(--r)",
             border: "2px solid var(--card-border)", background: "var(--card)",
-            fontFamily: "'Outfit',sans-serif", fontSize: "14px", color: "var(--ink)",
+            fontFamily: "var(--font-ui)", fontSize: "14px", color: "var(--ink)",
             outline: "none", boxSizing: "border-box",
           }} />
           <p style={{ fontSize: "11px", color: "var(--ink3)", marginTop: "6px" }}>🔒 Bleibt lokal in deinem Browser gespeichert. Optional – du kannst das auch später machen.</p>
@@ -1676,7 +1676,7 @@ NUR JSON (kein Markdown):
       <Layout photo>
         <div style={{ textAlign: "center", padding: "26px 0 16px" }}>
           <div style={{ fontSize: "54px", animation: "float 3s ease infinite, fadeUp 0.55s ease both", filter: "drop-shadow(0 6px 14px rgba(0,0,0,.35))" }}>🍽️</div>
-          <h1 style={{ fontFamily: "'Fraunces',serif", fontStyle: "italic", fontSize: "clamp(28px,7.5vw,44px)", color: "var(--ink)", fontWeight: 900, margin: "10px 0 0", lineHeight: 1.08, letterSpacing: "-0.5px", textShadow: "0 2px 16px var(--photo-scrim)", animation: "scaleIn 0.75s cubic-bezier(0.16,1,0.3,1) both 0.15s" }}>„Was esse ich heute?“</h1>
+          <h1 style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontSize: "clamp(28px,7.5vw,44px)", color: "var(--ink)", fontWeight: 900, margin: "10px 0 0", lineHeight: 1.08, letterSpacing: "-0.5px", textShadow: "0 2px 16px var(--photo-scrim)", animation: "scaleIn 0.75s cubic-bezier(0.16,1,0.3,1) both 0.15s" }}>„Was esse ich heute?“</h1>
           <p style={{ fontSize: "14.5px", color: "var(--ink2)", marginTop: "8px", lineHeight: 1.5, textShadow: "0 1px 8px var(--photo-scrim)", animation: "fadeUp 0.6s ease both 0.42s" }}>Dein persönlicher Essens-Berater — gleich auf dich zugeschnitten.</p>
         </div>
         <div style={{ display: "flex", gap: "6px", justifyContent: "center", marginBottom: "16px", animation: "fadeUp 0.6s ease both 0.55s" }}>
@@ -1737,7 +1737,7 @@ NUR JSON (kein Markdown):
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
                 <div onClick={() => openRecipe(f, { overlay: "favs" })} style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontSize: "20px", marginRight: "8px" }}>{f.emoji}</span>
-                  <strong style={{ fontFamily: "'Fraunces',serif", color: "var(--ink)" }}>{f.name}</strong>
+                  <strong style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{f.name}</strong>
                   <div style={{ fontSize: "12px", color: "var(--ink3)", marginTop: "2px" }}>
                     {[f.beschreibung, f.zeit, f.herkunft].filter(Boolean).join(" · ")}
                   </div>
@@ -1790,7 +1790,7 @@ NUR JSON (kein Markdown):
               flex: 1, padding: "9px 6px", borderRadius: "10px", border: "none",
               background: shopTab === t.id ? "linear-gradient(135deg,var(--accent),var(--accent2))" : "transparent",
               color: shopTab === t.id ? "#fff" : "var(--ink3)", fontSize: "13px",
-              fontWeight: shopTab === t.id ? 600 : 400, fontFamily: "'Outfit',sans-serif", cursor: "pointer",
+              fontWeight: shopTab === t.id ? 600 : 400, fontFamily: "var(--font-ui)", cursor: "pointer",
             }}>{t.l}</button>
           ))}
         </div>
@@ -1874,7 +1874,7 @@ NUR JSON (kein Markdown):
                       <button key={s.label} onClick={() => toStore(s.label, s.url)} style={{
                         display: "inline-flex", alignItems: "center", gap: "6px", padding: "7px 12px",
                         borderRadius: "999px", border: "1px solid var(--card-border)", background: "var(--card)",
-                        color: "var(--ink2)", fontSize: "12.5px", fontWeight: 600, cursor: "pointer", fontFamily: "'Outfit',sans-serif",
+                        color: "var(--ink2)", fontSize: "12.5px", fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-ui)",
                       }}>{s.emoji} {s.label}</button>
                     ))}
                   </div>
@@ -1901,7 +1901,7 @@ NUR JSON (kein Markdown):
               <Card key={entry.date} anim="fadeUp" delay={`${i * 0.04}s`}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
-                    <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--ink)", fontFamily: "'Fraunces',serif" }}>
+                    <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>
                       {new Date(entry.date).toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" })}
                     </div>
                     <div style={{ fontSize: "11px", color: "var(--ink3)", marginTop: "2px" }}>
@@ -2068,7 +2068,7 @@ NUR JSON (kein Markdown):
                   onChange={e => updateReminder({ ...reminder, time: e.target.value })}
                   style={{
                     padding: "8px 10px", borderRadius: "var(--r)", border: "2px solid var(--card-border)",
-                    background: "var(--card)", color: "var(--ink)", fontFamily: "'Outfit',sans-serif", fontSize: "14px",
+                    background: "var(--card)", color: "var(--ink)", fontFamily: "var(--font-ui)", fontSize: "14px",
                   }}
                 />
                 Uhr
@@ -2089,7 +2089,7 @@ NUR JSON (kein Markdown):
           <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder={`${getProvider(provider).placeholder} (leer lassen für Offline-KI)`} style={{
             width: "100%", padding: "10px 14px", borderRadius: "var(--r)",
             border: "2px solid var(--card-border)", background: "var(--card)",
-            fontFamily: "'Outfit',sans-serif", fontSize: "14px", color: "var(--ink)",
+            fontFamily: "var(--font-ui)", fontSize: "14px", color: "var(--ink)",
             outline: "none", boxSizing: "border-box",
           }} />
           {apiKey && <button onClick={() => { setApiKey(""); save(K.apiKey, ""); }} style={{
@@ -2184,7 +2184,7 @@ NUR JSON (kein Markdown):
             <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
               <span style={{ fontSize: "26px" }}>{a.emoji}</span>
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontFamily: "'Fraunces',serif", fontSize: "16px", fontWeight: 700, color: "var(--ink)" }}>{a.title}</h3>
+                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "16px", fontWeight: 700, color: "var(--ink)" }}>{a.title}</h3>
                 <p style={{ fontSize: "12px", color: "var(--ink3)", marginTop: "2px", lineHeight: 1.5 }}>{a.summary}</p>
               </div>
             </div>
@@ -2208,7 +2208,7 @@ NUR JSON (kein Markdown):
               background: wellnessTab === c.id ? "linear-gradient(135deg,var(--accent),var(--accent2))" : "var(--card)",
               color: wellnessTab === c.id ? "#fff" : "var(--ink2)",
               fontSize: "13px", fontWeight: wellnessTab === c.id ? 600 : 400,
-              fontFamily: "'Outfit',sans-serif", cursor: "pointer", flexShrink: 0,
+              fontFamily: "var(--font-ui)", cursor: "pointer", flexShrink: 0,
             }}>{c.emoji} {c.label}</button>
           ))}
         </div>
@@ -2220,7 +2220,7 @@ NUR JSON (kein Markdown):
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {HOME_REMEDIES.map((r, i) => (
               <Card key={r.id} anim="fadeUp" delay={`${i * 0.04}s`}>
-                <h3 style={{ fontFamily: "'Fraunces',serif", fontSize: "16px", fontWeight: 700, color: "var(--ink)", marginBottom: "8px" }}>{r.emoji} {r.title}</h3>
+                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "16px", fontWeight: 700, color: "var(--ink)", marginBottom: "8px" }}>{r.emoji} {r.title}</h3>
                 <ul style={{ margin: 0, paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "6px" }}>
                   {r.remedies.map((x, j) => <li key={j} style={{ fontSize: "13px", color: "var(--ink2)", lineHeight: 1.55 }}>{x}</li>)}
                 </ul>
@@ -2245,7 +2245,7 @@ NUR JSON (kein Markdown):
             {/* Personalized hooks from the user's own profile */}
             {(profile.deficiencies?.length > 0 || profile.goals?.length > 0) && (
               <Card anim="fadeUp" style={{ background: "linear-gradient(135deg,rgba(34,139,34,0.05),rgba(60,179,113,0.05))", border: "1px solid rgba(34,139,34,0.15)" }}>
-                <h3 style={{ fontFamily: "'Fraunces',serif", fontSize: "15px", fontWeight: 700, color: "#228B22", marginBottom: "8px" }}>🎯 Für dich persönlich</h3>
+                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "15px", fontWeight: 700, color: "#228B22", marginBottom: "8px" }}>🎯 Für dich persönlich</h3>
                 {(profile.goals || []).map(id => {
                   const g = HEALTH_GOALS.find(h => h.id === id);
                   return g ? <p key={id} style={{ fontSize: "12px", color: "var(--ink2)", lineHeight: 1.5, marginBottom: "4px" }}><strong>{g.emoji} {g.label}:</strong> {g.tip}</p> : null;
@@ -2305,7 +2305,7 @@ NUR JSON (kein Markdown):
           </div>
           <div style={{ padding: "0 18px 16px", color: "#fff" }}>
             <p style={{ fontSize: "13.5px", margin: "0 0 2px", opacity: .94, textShadow: "0 1px 6px rgba(0,0,0,.55)" }}>{profile.avatar || "🧑‍🍳"} {greet()}{profile.name ? `, ${profile.name}` : ""} 👋</p>
-            <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: "30px", fontWeight: 900, letterSpacing: "-1px", margin: 0, color: "#fff", textShadow: "0 2px 16px rgba(0,0,0,.6)" }}>Was esse ich heute?</h1>
+            <h1 style={{ fontFamily: "var(--font-display)", fontSize: "30px", fontWeight: 900, letterSpacing: "-1px", margin: 0, color: "#fff", textShadow: "0 2px 16px rgba(0,0,0,.6)" }}>Was esse ich heute?</h1>
           </div>
         </div>
         <div style={{ display: "flex", gap: "6px", marginTop: "10px", flexWrap: "wrap", animation: "fadeUp 0.4s ease both", animationDelay: "0.05s" }}>
@@ -2333,7 +2333,7 @@ NUR JSON (kein Markdown):
               padding: "10px 4px", borderRadius: "var(--r)",
               border: "1px solid var(--card-border)", background: "var(--card)",
               cursor: "pointer", textAlign: "center", position: "relative",
-              fontFamily: "'Outfit',sans-serif", transition: "all 0.2s ease",
+              fontFamily: "var(--font-ui)", transition: "all 0.2s ease",
             }}>
               <div style={{ fontSize: "18px" }}>{a.i}</div>
               <div style={{ fontSize: "10px", color: "var(--ink3)", marginTop: "2px", fontWeight: 500 }}>{a.l}</div>
@@ -2374,7 +2374,7 @@ NUR JSON (kein Markdown):
                 background: mode === t.id ? "linear-gradient(135deg,var(--accent),var(--accent2))" : "transparent",
                 color: mode === t.id ? "#fff" : "var(--ink3)",
                 fontSize: "13px", fontWeight: mode === t.id ? 600 : 400,
-                fontFamily: "'Outfit',sans-serif", cursor: "pointer", transition: "all 0.25s ease",
+                fontFamily: "var(--font-ui)", cursor: "pointer", transition: "all 0.25s ease",
               }}>
                 <div style={{ fontSize: "18px" }}>{t.e}</div>
                 <div style={{ marginTop: "2px" }}>{t.l}</div>
@@ -2398,7 +2398,7 @@ NUR JSON (kein Markdown):
                 background: offlineMode ? "linear-gradient(135deg,rgba(178,58,72,0.08),rgba(126,90,134,0.08))" : "var(--card)",
                 color: offlineMode ? "var(--accent)" : "var(--ink3)",
                 fontSize: "12px", fontWeight: offlineMode ? 600 : 400,
-                fontFamily: "'Outfit',sans-serif",
+                fontFamily: "var(--font-ui)",
                 cursor: isOnline ? "pointer" : "not-allowed",
                 opacity: isOnline ? 1 : 0.85,
                 transition: "all 0.25s ease",
@@ -2412,7 +2412,7 @@ NUR JSON (kein Markdown):
                 display: "flex", alignItems: "center", gap: "4px",
                 padding: "6px 12px", borderRadius: "20px",
                 background: "rgba(196,64,64,0.1)", color: "#C44040",
-                fontSize: "11px", fontWeight: 600, fontFamily: "'Outfit',sans-serif",
+                fontSize: "11px", fontWeight: 600, fontFamily: "var(--font-ui)",
                 border: "1px solid rgba(196,64,64,0.25)",
               }}>
                 🔌 Kein Netz – Offline-Modus
@@ -2435,11 +2435,11 @@ NUR JSON (kein Markdown):
                     <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--accent)", letterSpacing: ".4px", textTransform: "uppercase" }}>Beispiel · so sieht dein Vorschlag aus</div>
                     <span style={{ fontSize: "11px", color: "var(--ink3)", flexShrink: 0 }}>🔄</span>
                   </div>
-                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: "17px", fontWeight: 800, color: "var(--ink)", lineHeight: 1.2 }}>{ex.name}</div>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: "17px", fontWeight: 800, color: "var(--ink)", lineHeight: 1.2 }}>{ex.name}</div>
                 </div>
               </div>
               <div style={{ padding: "0 14px 13px" }}>
-                <p style={{ fontSize: "12.5px", color: "var(--ink2)", lineHeight: 1.5, margin: "0 0 8px", fontStyle: "italic", fontFamily: "'Fraunces',serif" }}>{ex.beschreibung}</p>
+                <p style={{ fontSize: "12.5px", color: "var(--ink2)", lineHeight: 1.5, margin: "0 0 8px", fontStyle: "italic", fontFamily: "var(--font-display)" }}>{ex.beschreibung}</p>
                 <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "8px" }}>
                   <Badge icon="⏱️" text={ex.zeit} />
                   <Badge icon="🔥" text={ex.kalorien} />
@@ -2461,7 +2461,7 @@ NUR JSON (kein Markdown):
                 width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
                 padding: "13px 16px", borderRadius: "var(--r)", cursor: "pointer",
                 background: "var(--card)", border: "1px solid var(--card-border)",
-                color: "var(--ink2)", fontFamily: "'Outfit',sans-serif", fontSize: "14px", fontWeight: 600,
+                color: "var(--ink2)", fontFamily: "var(--font-ui)", fontSize: "14px", fontWeight: 600,
               }}>
                 <span>⚙️ Mehr Optionen <span style={{ color: "var(--ink3)", fontWeight: 400, fontSize: "12px" }}>· Budget, Art, Protein</span>
                   {(budget !== "egal" || dishType !== "egal" || proteinPref !== "egal") && <span style={{ marginLeft: "8px", fontSize: "10px", color: "#fff", background: "var(--accent)", borderRadius: "8px", padding: "1px 7px", fontWeight: 700 }}>aktiv</span>}
@@ -2481,7 +2481,7 @@ NUR JSON (kein Markdown):
               <ST sub={`für ${persons} Person${persons > 1 ? "en" : ""}`}>👤 Portionen</ST>
               <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                 <button onClick={() => setPersons(Math.max(1, persons - 1))} style={{ width: "40px", height: "40px", borderRadius: "50%", border: "2px solid var(--card-border)", background: "var(--card)", fontSize: "20px", cursor: "pointer", color: "var(--ink)" }}>−</button>
-                <span style={{ fontFamily: "'Fraunces',serif", fontSize: "28px", fontWeight: 700, color: "var(--ink)", minWidth: "30px", textAlign: "center" }}>{persons}</span>
+                <span style={{ fontFamily: "var(--font-display)", fontSize: "28px", fontWeight: 700, color: "var(--ink)", minWidth: "30px", textAlign: "center" }}>{persons}</span>
                 <button onClick={() => setPersons(Math.min(12, persons + 1))} style={{ width: "40px", height: "40px", borderRadius: "50%", border: "2px solid var(--card-border)", background: "var(--card)", fontSize: "20px", cursor: "pointer", color: "var(--ink)" }}>+</button>
               </div>
             </Card>
@@ -2510,7 +2510,7 @@ NUR JSON (kein Markdown):
                     background: fridgeInputMode === t.id ? "var(--accent)" : "var(--bg2)",
                     color: fridgeInputMode === t.id ? "#fff" : "var(--ink3)",
                     fontSize: "12px", fontWeight: fridgeInputMode === t.id ? 600 : 400,
-                    cursor: "pointer", fontFamily: "'Outfit',sans-serif",
+                    cursor: "pointer", fontFamily: "var(--font-ui)",
                     transition: "all 0.2s ease",
                   }}>{t.emoji} {t.label}</button>
                 ))}
@@ -2565,7 +2565,7 @@ NUR JSON (kein Markdown):
               <div style={{ display: "flex", flexDirection: "column", gap: "10px", animation: "fadeUp 0.4s ease both" }}>
                 {weekPlan.plan?.map((day, i) => (
                   <Card key={i} anim="fadeUp" delay={`${i * 0.06}s`}>
-                    <h4 style={{ fontFamily: "'Fraunces',serif", fontSize: "16px", color: "var(--ink)", marginBottom: "10px", fontWeight: 700 }}>{day.tag}</h4>
+                    <h4 style={{ fontFamily: "var(--font-display)", fontSize: "16px", color: "var(--ink)", marginBottom: "10px", fontWeight: 700 }}>{day.tag}</h4>
                     {["frühstück", "mittag", "abend"].map(t => {
                       const m = day[t];
                       if (!m) return null;
@@ -2602,7 +2602,7 @@ NUR JSON (kein Markdown):
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "80vh" }}>
         <div style={{ textAlign: "center", animation: "scaleIn 0.4s ease both" }}>
           <div style={{ fontSize: "64px", animation: "cookSpin 2.5s ease infinite" }}>🍳</div>
-          <p style={{ fontFamily: "'Fraunces',serif", fontSize: "20px", color: "var(--ink)", marginTop: "16px", fontWeight: 700 }}>{loadMsg}</p>
+          <p style={{ fontFamily: "var(--font-display)", fontSize: "20px", color: "var(--ink)", marginTop: "16px", fontWeight: 700 }}>{loadMsg}</p>
           <div style={{ marginTop: "16px", height: "3px", width: "160px", borderRadius: "2px", background: "var(--card-border)", overflow: "hidden", margin: "16px auto 0" }}>
             <div style={{ height: "100%", width: "40%", borderRadius: "2px", background: "linear-gradient(90deg,var(--accent),var(--accent3))", animation: "shimmer 1.5s ease infinite", backgroundSize: "200% 100%" }} />
           </div>
@@ -2618,7 +2618,7 @@ NUR JSON (kein Markdown):
         <div style={{ paddingTop: "40px" }}>
           <Card anim="scaleIn" style={{ textAlign: "center" }}>
             <div style={{ fontSize: "56px", marginBottom: "12px" }}>😅</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", color: "var(--ink)", fontSize: "20px" }}>Ups!</h2>
+            <h2 style={{ fontFamily: "var(--font-display)", color: "var(--ink)", fontSize: "20px" }}>Ups!</h2>
             <p style={{ color: "var(--ink3)", marginTop: "6px", fontSize: "14px" }}>
               {suggestion.message || "Konnte kein Gericht generieren. Versuch's nochmal!"}
             </p>
@@ -2658,8 +2658,8 @@ NUR JSON (kein Markdown):
             <div style={{ position: "absolute", top: "12%", left: "20%", width: "44%", height: "30%", borderRadius: "50%", background: "radial-gradient(circle, rgba(255,255,255,0.28) 0%, transparent 70%)", filter: "blur(3px)" }} />
             <div style={{ position: "relative", fontSize: "82px", animation: "float 3s ease infinite", filter: "drop-shadow(0 10px 16px rgba(60,30,10,0.30))" }}>{suggestion.emoji || "🍽️"}</div>
           </div>
-          <h1 style={{ position: "relative", fontFamily: "'Fraunces',serif", fontSize: "27px", fontWeight: 900, color: "var(--ink)", marginTop: "10px", letterSpacing: "-0.5px", lineHeight: 1.15, padding: "0 16px" }}>{suggestion.name}</h1>
-          <p style={{ position: "relative", fontSize: "14px", color: "var(--ink2)", marginTop: "8px", lineHeight: 1.55, padding: "0 22px", fontStyle: "italic", fontFamily: "'Fraunces',serif", fontWeight: 400 }}>{suggestion.beschreibung}</p>
+          <h1 style={{ position: "relative", fontFamily: "var(--font-display)", fontSize: "27px", fontWeight: 900, color: "var(--ink)", marginTop: "10px", letterSpacing: "-0.5px", lineHeight: 1.15, padding: "0 16px" }}>{suggestion.name}</h1>
+          <p style={{ position: "relative", fontSize: "14px", color: "var(--ink2)", marginTop: "8px", lineHeight: 1.55, padding: "0 22px", fontStyle: "italic", fontFamily: "var(--font-display)", fontWeight: 400 }}>{suggestion.beschreibung}</p>
         </div>
 
         {/* Meta */}
@@ -2710,14 +2710,14 @@ NUR JSON (kein Markdown):
             background: isFav ? "linear-gradient(135deg,#E05555,#C44040)" : "var(--card)",
             color: isFav ? "#fff" : "var(--ink2)",
             fontSize: "14px", fontWeight: 600, cursor: "pointer",
-            fontFamily: "'Outfit',sans-serif", transition: "all 0.3s ease",
+            fontFamily: "var(--font-ui)", transition: "all 0.3s ease",
             animation: isFav ? "heartPop 0.4s ease" : "none",
           }}>{isFav ? "❤️ Gespeichert" : "🤍 Speichern"}</button>
           <button onClick={() => { addToShopList(suggestion.zutaten, suggestion.name); setShopTab("list"); setOverlay("shop"); }} style={{
             flex: 1, padding: "12px", borderRadius: "var(--r)",
             border: "2px solid var(--card-border)", background: "var(--card)",
             color: "var(--ink2)", fontSize: "14px", fontWeight: 600,
-            cursor: "pointer", fontFamily: "'Outfit',sans-serif",
+            cursor: "pointer", fontFamily: "var(--font-ui)",
           }}>🛒 Einkaufsliste</button>
         </div>
 
@@ -2746,7 +2746,7 @@ NUR JSON (kein Markdown):
           const markStyle = (k) => ({
             display: "inline-block", marginLeft: "4px", padding: "1px 6px", borderRadius: "6px",
             fontSize: "10px", fontWeight: 800, lineHeight: 1.5, verticalAlign: "1px", cursor: "help",
-            fontFamily: "'Fraunces',serif", color: C[k].fg, background: C[k].bg, border: `1px solid ${C[k].bd}`,
+            fontFamily: "var(--font-display)", color: C[k].fg, background: C[k].bg, border: `1px solid ${C[k].bd}`,
           });
           const chip = (bg, bd) => ({
             display: "inline-flex", alignItems: "center", gap: "7px", padding: "5px 11px",
@@ -2756,7 +2756,7 @@ NUR JSON (kein Markdown):
           const badge = (fg) => ({
             minWidth: "22px", height: "22px", borderRadius: "999px", display: "inline-flex",
             alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800,
-            color: "#fff", background: fg, fontFamily: "'Fraunces',serif",
+            color: "#fff", background: fg, fontFamily: "var(--font-display)",
           });
           const alk = decl.alkohol || {};
           return (
@@ -2765,7 +2765,7 @@ NUR JSON (kein Markdown):
               <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
                 {decl.lines.map((l, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "11px", fontSize: "14px", color: "var(--ink)", lineHeight: 1.5 }}>
-                    <span style={{ minWidth: "22px", height: "22px", borderRadius: "8px", marginTop: "1px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, color: "var(--herb)", background: "color-mix(in srgb, var(--herb) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--herb) 24%, transparent)", flexShrink: 0, fontFamily: "'Fraunces',serif" }}>{i + 1}</span>
+                    <span style={{ minWidth: "22px", height: "22px", borderRadius: "8px", marginTop: "1px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, color: "var(--herb)", background: "color-mix(in srgb, var(--herb) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--herb) 24%, transparent)", flexShrink: 0, fontFamily: "var(--font-display)" }}>{i + 1}</span>
                     <span>
                       {l.text}
                       {l.allergens.map(code => (
@@ -2782,7 +2782,7 @@ NUR JSON (kein Markdown):
               {/* Kennzeichnung — farbcodierte Legende, erklärt jeden Marker oben. */}
               <div style={{ marginTop: "16px", paddingTop: "13px", borderTop: "1px solid var(--card-border)", display: "flex", flexDirection: "column", gap: "13px" }}>
                 <div>
-                  <p style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "12px", color: "var(--ink2)", fontWeight: 700, margin: "0 0 2px", fontFamily: "'Fraunces',serif" }}>
+                  <p style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "12px", color: "var(--ink2)", fontWeight: 700, margin: "0 0 2px", fontFamily: "var(--font-display)" }}>
                     <Icon name="label" size={15} /> Kennzeichnung — alles offen erklärt
                   </p>
                   <p style={{ fontSize: "11px", color: "var(--ink3)", margin: 0, lineHeight: 1.5 }}>
@@ -2796,7 +2796,7 @@ NUR JSON (kein Markdown):
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
                       {decl.allergene.map(a => (
                         <span key={a.code} style={chip(C.allergen.bg, C.allergen.bd)}>
-                          <strong style={{ color: C.allergen.fg, fontFamily: "'Fraunces',serif", fontWeight: 800 }}>{a.code}</strong>
+                          <strong style={{ color: C.allergen.fg, fontFamily: "var(--font-display)", fontWeight: 800 }}>{a.code}</strong>
                           {a.label}
                         </span>
                       ))}
@@ -2891,7 +2891,7 @@ NUR JSON (kein Markdown):
                   borderLeft: `3px solid ${m.c}`,
                 }}>
                   <div style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 500 }}>{m.label}</div>
-                  <div style={{ fontSize: "16px", color: m.c, fontWeight: 700, fontFamily: "'Fraunces',serif", fontVariantNumeric: "tabular-nums" }}>
+                  <div style={{ fontSize: "16px", color: m.c, fontWeight: 700, fontFamily: "var(--font-display)", fontVariantNumeric: "tabular-nums" }}>
                     <CountUp end={Number(m.n) || 0} decimals={m.dec || 0} />
                     <span style={{ fontSize: "11px", color: "var(--ink3)", fontWeight: 600, marginLeft: "3px" }}>{m.unit}</span>
                   </div>
@@ -3022,10 +3022,10 @@ NUR JSON (kein Markdown):
               <button onClick={() => setSourcesOpen(o => !o)} style={{
                 width: "100%", background: "none", border: "none", cursor: "pointer",
                 display: "flex", justifyContent: "space-between", alignItems: "center",
-                padding: 0, fontFamily: "'Outfit',sans-serif", textAlign: "left",
+                padding: 0, fontFamily: "var(--font-ui)", textAlign: "left",
               }}>
                 <div>
-                  <h3 style={{ fontFamily: "'Fraunces',serif", fontSize: "17px", fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.3px" }}>
+                  <h3 style={{ fontFamily: "var(--font-display)", fontSize: "17px", fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.3px" }}>
                     📋 Quellen & Nachweis
                   </h3>
                   <p style={{ fontSize: "13px", color: "var(--ink3)", marginTop: "2px" }}>
@@ -3056,7 +3056,7 @@ NUR JSON (kein Markdown):
                       background: isReviewed ? "rgba(34,139,34,0.1)" : "var(--card)",
                       color: isReviewed ? "#228B22" : "var(--ink3)",
                       fontSize: "12px", fontWeight: isReviewed ? 600 : 500,
-                      fontFamily: "'Outfit',sans-serif", cursor: "pointer",
+                      fontFamily: "var(--font-ui)", cursor: "pointer",
                     }}>
                       {isReviewed ? "✓ Manuell geprüft" : "☐ Manuell prüfen & freigeben"}
                     </button>
@@ -3065,7 +3065,7 @@ NUR JSON (kein Markdown):
                       padding: "8px 14px", borderRadius: "20px",
                       border: "1px solid var(--card-border)", background: "var(--card)",
                       color: "var(--ink2)", fontSize: "12px", fontWeight: 500,
-                      fontFamily: "'Outfit',sans-serif", cursor: "pointer",
+                      fontFamily: "var(--font-ui)", cursor: "pointer",
                     }}>📋 Gastro-Export (Text)</button>
                   </div>
 
@@ -3086,7 +3086,7 @@ NUR JSON (kein Markdown):
             width: "100%", padding: "12px", borderRadius: "var(--r)",
             border: "2px solid var(--card-border)", background: "var(--card)",
             color: "var(--ink2)", fontSize: "14px", fontWeight: 600,
-            cursor: "pointer", fontFamily: "'Outfit',sans-serif",
+            cursor: "pointer", fontFamily: "var(--font-ui)",
           }}>📄 Rezept als PDF speichern</button>
         </div>
 

@@ -23,7 +23,7 @@ export default class ErrorBoundary extends Component {
           alignItems: "center",
           justifyContent: "center",
           background: "linear-gradient(135deg, #f8f6f0 0%, #e8e4d8 100%)",
-          fontFamily: "'Outfit', sans-serif",
+          fontFamily: "var(--font-ui)",
           padding: "20px",
         }}>
           <div style={{
@@ -39,7 +39,7 @@ export default class ErrorBoundary extends Component {
               Oops!
             </div>
             <h1 style={{
-              fontFamily: "'Fraunces', serif",
+              fontFamily: "var(--font-display)",
               fontSize: "22px",
               color: "#2c2c2c",
               marginBottom: "12px",
@@ -66,7 +66,7 @@ export default class ErrorBoundary extends Component {
                 fontSize: "15px",
                 fontWeight: 600,
                 cursor: "pointer",
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "var(--font-ui)",
                 boxShadow: "0 4px 12px rgba(232,148,58,0.3)",
               }}
             >
