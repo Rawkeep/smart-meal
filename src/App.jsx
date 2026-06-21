@@ -217,6 +217,16 @@ const PROTEINS = [
 const HERO_IMGS = ["hero-1.webp", "hero-2.webp", "hero-3.webp", "hero-4.webp"]
   .map(f => (import.meta.env.BASE_URL || "/") + "img/" + f);
 const HERO_IMG = HERO_IMGS[Math.floor(Math.random() * HERO_IMGS.length)];
+// Aktuelles Hero-Bild als Live-CSS-Variable (--hero-img) → Layout-Hintergrund
+// und Home-Hero greifen darauf zu. rotateHero() würfelt ein anderes Bild und
+// aktualisiert sofort beide (wird bei jedem Generieren aufgerufen).
+let _heroIdx = Math.max(0, HERO_IMGS.indexOf(HERO_IMG));
+const _applyHero = () => { try { document.documentElement.style.setProperty("--hero-img", `url(${HERO_IMGS[_heroIdx]})`); } catch { /* ssr-safe */ } };
+const rotateHero = () => {
+  if (HERO_IMGS.length > 1) { let n = _heroIdx; while (n === _heroIdx) n = Math.floor(Math.random() * HERO_IMGS.length); _heroIdx = n; }
+  _applyHero();
+};
+_applyHero();
 
 // Beispiel-Rezepte (verschiedene Küchen) — zeigen auf der Startseite, wie ein
 // Vorschlag aussieht. Variiert beim Laden + per Tipp (zeigt die Bandbreite).
@@ -578,7 +588,7 @@ const Layout = ({ children, photo = true }) => {
       <div style={{ minHeight: "100vh", position: "relative", background: "var(--bg1)", fontFamily: "var(--font-ui)" }}>
         <div ref={bgRef} aria-hidden="true" style={{
           position: "fixed", left: 0, right: 0, top: "-30vh", height: "160vh", zIndex: 0, pointerEvents: "none",
-          backgroundImage: `url(${HERO_IMG})`, backgroundSize: "cover", backgroundPosition: "center top",
+          backgroundImage: `var(--hero-img, url(${HERO_IMG}))`, backgroundSize: "cover", backgroundPosition: "center top",
           willChange: "transform", transformOrigin: "center center",
         }} />
         <div ref={depthRef} aria-hidden="true" style={{
@@ -1325,6 +1335,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
 
   // ─── Generate ───
   const generate = useCallback(async (m) => {
+    rotateHero(); // bei jedem Generieren ein neues Hintergrundbild
     setLoading(true);
     setSuggestion(null);
     setViewingSaved(false);
@@ -2379,7 +2390,7 @@ NUR JSON (kein Markdown):
         <div style={{
           position: "relative", marginTop: "10px", borderRadius: "20px", overflow: "hidden",
           minHeight: "172px", display: "flex", flexDirection: "column", justifyContent: "space-between",
-          backgroundImage: `linear-gradient(168deg, rgba(18,11,16,.22) 0%, rgba(18,11,16,.5) 52%, rgba(18,11,16,.88) 100%), url(${HERO_IMG})`,
+          backgroundImage: `linear-gradient(168deg, rgba(18,11,16,.22) 0%, rgba(18,11,16,.5) 52%, rgba(18,11,16,.88) 100%), var(--hero-img, url(${HERO_IMG}))`,
           backgroundSize: "cover", backgroundPosition: "center",
           boxShadow: "0 14px 36px rgba(40,20,12,0.22)", animation: "fadeUp 0.4s ease both",
         }}>

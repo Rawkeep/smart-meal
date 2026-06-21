@@ -1,0 +1,103 @@
+name: Build Android APK (TWA)
+
+# Baut die signierte TWA-APK + AAB aus der gehosteten PWA mit Bubblewrap und
+# stellt sie als Download-Artefakte bereit. Manuell auslösbar ("Run workflow").
+#
+# EINMALIGE Secrets (Repo → Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64    PFLICHT. Base64 des Keystores:
+#       Linux:  base64 -w0 build/android-keystore.keystore
+#       macOS:  base64 -i build/android-keystore.keystore | pbcopy
+#   ANDROID_KEYSTORE_PASSWORD  Store-Passwort (Default: smartmeal)
+#   ANDROID_KEY_PASSWORD       Key-Passwort   (Default: smartmeal)
+#   ANDROID_KEY_ALIAS          Alias          (Default: smartmeal)
+#
+# Version/Build-Nummer steuert twa-manifest.json (appVersionName/appVersionCode).
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # für das Veröffentlichen als Release
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: yes | sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+
+      - name: Decode keystore
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KS_B64" ]; then
+            echo "::error::Secret ANDROID_KEYSTORE_BASE64 fehlt — Keystore als Base64 hinterlegen (siehe Workflow-Kommentar)."
+            exit 1
+          fi
+          mkdir -p build/android
+          echo "$KS_B64" | base64 -d > build/android/android-keystore.keystore
+          echo "Keystore-Größe: $(wc -c < build/android/android-keystore.keystore) Bytes"
+
+      - name: Build TWA (Bubblewrap)
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'smartmeal' }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'smartmeal' }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || 'smartmeal' }}
+        run: |
+          set -e
+          # Bubblewrap erwartet teils einen top-level 'tools'-Ordner im SDK.
+          [ -e "$ANDROID_HOME/tools" ] || ln -s "$ANDROID_HOME/cmdline-tools/latest" "$ANDROID_HOME/tools" || true
+          cd build/android
+          cp ../../twa-manifest.json ./twa-manifest.json
+          KS="$PWD/android-keystore.keystore"
+          # signingKey im Manifest auf den dekodierten Keystore + Alias setzen
+          node -e "const f='./twa-manifest.json';const m=require(f);m.signingKey={path:'$KS',alias:'$KEY_ALIAS'};require('fs').writeFileSync(f,JSON.stringify(m,null,2))"
+          npx -y @bubblewrap/cli@latest updateConfig --jdkPath "$JAVA_HOME" --androidSdkPath "$ANDROID_HOME"
+          # Projekt aus twa-manifest.json (re)generieren; Version aus dem Manifest übernehmen
+          VN="$(node -e "process.stdout.write(String(require('./twa-manifest.json').appVersionName||'1.0.0'))")"
+          printf '%s\n\n\n\n' "$VN" | npx -y @bubblewrap/cli@latest update
+          npx -y @bubblewrap/cli@latest build --skipPwaValidation < /dev/null
+          echo "── Build-Ausgabe ──"
+          ls -la
+
+      - name: Upload APK & AAB (Build-Artefakt)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smart-meal-android-build-${{ github.run_number }}
+          path: |
+            build/android/*.apk
+            build/android/*.aab
+          if-no-files-found: warn
+          retention-days: 30
+
+      # Veröffentlicht die APK als Release mit STABILEM Download-Link, damit man
+      # sie direkt auf dem Tablet im Browser öffnen & installieren kann.
+      - name: Publish APK to Release (direkt aufs Tablet)
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: Smart Meal — Android (neueste APK)
+          prerelease: true
+          body: |
+            Direkt installierbare Android-App (TWA).
+            Auf dem Tablet: diese Seite öffnen → **app-release-signed.apk** antippen
+            → herunterladen → installieren (einmalig „Installieren aus unbekannten
+            Quellen" für den Browser erlauben).
+            Version laut twa-manifest.json.
+          files: |
+            build/android/*.apk
+            build/android/*.aab
