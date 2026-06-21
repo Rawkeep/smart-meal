@@ -203,46 +203,123 @@ const _safeReturn = (r) => {
   return v.startsWith("/") && !v.startsWith("//") ? v : "/smart-meal/";
 };
 function _gatePage(msg, returnTo) {
-  const feat = (icon, text) => `<div style="display:flex;align-items:flex-start;gap:11px;margin:0 0 11px"><div style="font-size:17px;line-height:1.4;flex-shrink:0">${icon}</div><div style="font-size:13px;color:#cbd5e1;line-height:1.45">${text}</div></div>`;
+  // Zwei-Phasen-„Login": (1) cinematische, werbeartige Intro — Name + Infos
+  // fliegen groß ein und erregen Aufmerksamkeit; am Ende „Eintauchen?" →
+  // (2) erst dann erscheint die Zugangscode-Eingabe. Bei Fehler/ohne JS wird
+  // die Eingabe direkt gezeigt (progressive enhancement).
+  const feat = (icon, text, delay) =>
+    `<li class="r" style="animation-delay:${delay}s"><span class="fi">${icon}</span><span>${text}</span></li>`;
+  const startGate = msg ? "show-gate" : "";
   const hero = `/smart-meal/img/hero-${1 + Math.floor(Math.random() * 4)}.webp`; // rotiert pro Aufruf
-  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Meal — Dein KI-Essensberater</title>
+  return `<!doctype html><html lang="de" class="${startGate}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Meal — Dein KI-Essensberater</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#0b1120;overflow-x:hidden;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0}
+html,body{margin:0}
+body{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;overflow-x:hidden;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#e2e8f0;background:#0b1120}
 .bgwrap{position:fixed;inset:0;overflow:hidden;z-index:-2}
 .bg{position:absolute;inset:0;background:url('${hero}') center/cover no-repeat;transform:scale(1.06);animation:kb 28s ease-in-out infinite alternate,gi 1.5s ease both;will-change:transform}
-.ov{position:fixed;inset:0;z-index:-1;background:radial-gradient(120% 85% at 50% 0%,rgba(11,16,30,.40) 0%,rgba(11,16,30,.72) 58%,rgba(11,16,30,.92) 100%)}
-main{animation:fu .85s cubic-bezier(.16,1,.3,1) both}
-.s{animation:fu .7s cubic-bezier(.16,1,.3,1) both}
+.ov{position:fixed;inset:0;z-index:-1;background:radial-gradient(120% 85% at 50% 0%,rgba(11,16,30,.40) 0%,rgba(11,16,30,.74) 58%,rgba(11,16,30,.93) 100%)}
+.phase{width:100%}
+/* JS aktiv: nur eine Phase zeigen. Ohne JS: beide sichtbar (Fallback). */
+.js #gate{display:none}
+.js.show-gate #intro{display:none}
+.js.show-gate #gate{display:block}
+/* ---- Intro / Werbung ---- */
+#intro{max-width:540px;margin:0 auto;text-align:center}
+.brand{display:inline-flex;align-items:center;gap:13px;margin:0 auto 22px}
+.logo{width:54px;height:54px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:29px;background:linear-gradient(135deg,#e8896b,#c2415a);box-shadow:0 10px 26px rgba(194,65,90,.5)}
+.brand .nm{font-size:23px;font-weight:800;letter-spacing:-.4px;text-align:left;line-height:1.1}
+.brand .tg{font-size:12.5px;color:#9fb2cc;font-weight:500}
+.quote{font-size:clamp(34px,8vw,56px);font-weight:800;font-style:italic;color:#f4e6cd;line-height:1.04;letter-spacing:-1px;margin:0 0 16px;text-shadow:0 6px 30px rgba(0,0,0,.5)}
+.lede{font-size:clamp(15px,2.6vw,18px);color:#cdd8ea;line-height:1.55;max-width:30em;margin:0 auto 26px}
+.feats{list-style:none;padding:0;margin:0 auto 30px;max-width:30em;display:flex;flex-direction:column;gap:13px;text-align:left}
+.feats li{display:flex;align-items:flex-start;gap:13px;font-size:15px;color:#dde6f4;line-height:1.4}
+.feats .fi{font-size:21px;line-height:1.2;flex-shrink:0;filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))}
+.cta-q{font-size:15px;color:#9fb2cc;margin:0 0 13px;font-weight:500}
+.btn{border:0;border-radius:13px;cursor:pointer;font-weight:800;color:#fff;background:linear-gradient(135deg,#e8896b,#c2415a);box-shadow:0 12px 30px rgba(194,65,90,.45)}
+.btn.big{font-size:18px;padding:17px 40px;letter-spacing:.2px;animation:smGlow 2.6s ease-in-out infinite}
+.btn.big:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.btn.big:active{transform:translateY(0)}
+/* ---- Gate / Code ---- */
+#gate{max-width:380px;margin:0 auto}
+.gatecard{background:#161f33;border:1px solid #243049;padding:28px 26px;border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,.5)}
+.gatecard .brand{margin-bottom:18px}
+.gatecard .logo{width:44px;height:44px;border-radius:12px;font-size:23px}
+.gatecard .nm{font-size:18px}
+.gate-h{font-size:19px;font-weight:700;margin:0 0 4px;letter-spacing:-.3px}
+.gate-s{font-size:13px;color:#9fb2cc;margin:0 0 18px;line-height:1.5}
+.lbl{display:block;font-size:12px;color:#8aa0c0;font-weight:600;margin-bottom:7px}
+.err{background:#7f1d1d;color:#fecaca;font-size:12.5px;padding:9px 11px;border-radius:9px;margin-bottom:11px;line-height:1.4}
+#code{width:100%;padding:13px;border-radius:11px;border:1px solid #334155;background:#0d1525;color:#e2e8f0;font-size:15px;margin-bottom:12px;letter-spacing:.6px}
+#code:focus{outline:none;border-color:#e8896b;box-shadow:0 0 0 3px rgba(232,137,107,.18)}
+.gatecard .btn{width:100%;padding:13px;font-size:15px}
+.gatecard .btn:hover{filter:brightness(1.06)}
+.back{display:block;margin:14px auto 0;background:none;border:0;color:#7e8ea6;font-size:13px;cursor:pointer;padding:5px}
+.back:hover{color:#aebbd0}
+.fine{font-size:11px;color:#64748b;text-align:center;margin:16px 0 0;line-height:1.5}
+/* ---- Reveal-Animationen ---- */
+.r{opacity:0;animation:smFly .72s cubic-bezier(.2,.75,.25,1) both}
+.quote.r{animation-name:smPop;animation-duration:.85s}
+@keyframes smFly{from{opacity:0;transform:translateY(34px)}to{opacity:1;transform:none}}
+@keyframes smPop{0%{opacity:0;transform:scale(.9) translateY(26px)}60%{opacity:1}100%{opacity:1;transform:none}}
+@keyframes smGlow{0%,100%{box-shadow:0 12px 30px rgba(194,65,90,.4)}50%{box-shadow:0 14px 40px rgba(232,137,107,.7)}}
 @keyframes kb{0%{transform:scale(1.06) translate(0,0)}100%{transform:scale(1.2) translate(-2%,-2.5%)}}
-@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @keyframes gi{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.bg{animation:gi 1s ease both;transform:none}main,.s{animation:none}}
+@media(prefers-reduced-motion:reduce){.r{animation:none;opacity:1}.btn.big{animation:none}.bg{animation:gi 1s ease both;transform:none}}
 </style></head>
 <body>
+<script>document.documentElement.classList.add('js')</script>
 <div class="bgwrap"><div class="bg"></div></div><div class="ov"></div>
-<main style="width:100%;max-width:380px;background:rgba(22,31,51,.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid #243049;padding:30px 28px;border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,.55)">
-<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
-<div style="width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:25px;background:linear-gradient(135deg,#e8896b,#c2415a);box-shadow:0 6px 18px rgba(194,65,90,.4)">🍽️</div>
-<div><div style="font-size:19px;font-weight:700;letter-spacing:-.3px">Smart Meal</div><div style="font-size:12px;color:#8aa0c0">Dein KI-Essensberater</div></div>
-</div>
-<div style="margin:0 0 17px">
-<p style="font-size:22px;font-weight:700;font-style:italic;color:#f2e4cb;line-height:1.2;margin:0 0 8px;letter-spacing:-.3px">„Was esse ich heute?"</p>
-<p style="font-size:13px;color:#aebbd0;line-height:1.55;margin:0">Milliarden Menschen fragen sich das jeden Tag — genau dafür gibt es Smart Meal. Deine Antwort in Sekunden, abgestimmt auf dich.</p>
-</div>
-${feat("🥗", "Rezepte nach Vorlieben, Allergien &amp; Zielen — mit Nährwerten &amp; Allergen-Kennzeichnung")}
-${feat("🌶️", "Mit Herkunft-Story, Schärfegrad &amp; cleveren Zutaten-Ersätzen")}
-${feat("📸", "Zutaten per Foto erkennen, Reste verkochen &amp; Wochenplan")}
-${feat("🛒", "Einkaufsliste direkt an Bring!, Picnic &amp; Co. übergeben")}
-<form method="POST" action="/__gate" style="margin:20px 0 0;padding-top:18px;border-top:1px solid #243049">
-<label for="code" style="display:block;font-size:12px;color:#8aa0c0;font-weight:600;margin-bottom:7px">Dein Zugangscode</label>
-${msg ? `<div style="background:#7f1d1d;color:#fecaca;font-size:12px;padding:8px 10px;border-radius:8px;margin-bottom:10px">${_htmlAttr(msg)}</div>` : ""}
-<input type="hidden" name="returnTo" value="${_htmlAttr(_safeReturn(returnTo))}">
-<input id="code" name="code" type="text" inputmode="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" autofocus required placeholder="z. B. SMEAL-XXXX-XXXX" style="width:100%;box-sizing:border-box;padding:12px 13px;border-radius:10px;border:1px solid #334155;background:#0d1525;color:#e2e8f0;font-size:14px;margin-bottom:11px;letter-spacing:.5px">
-<button type="submit" style="width:100%;padding:12px;border:0;border-radius:10px;background:linear-gradient(135deg,#e8896b,#c2415a);color:#fff;font-size:14px;font-weight:700;cursor:pointer">Eintreten →</button>
-</form>
-<p style="font-size:11px;color:#64748b;text-align:center;margin:14px 0 0;line-height:1.5">🔒 Funktioniert auch offline · keine Konten, kein Tracking</p>
-</main></body></html>`;
+
+<section id="intro" class="phase">
+  <div class="brand r" style="animation-delay:.05s">
+    <div class="logo">🍽️</div>
+    <div><div class="nm">Smart Meal</div><div class="tg">Dein KI-Essensberater</div></div>
+  </div>
+  <h1 class="quote r" style="animation-delay:.3s">„Was esse&nbsp;ich heute?"</h1>
+  <p class="lede r" style="animation-delay:.58s">Milliarden Menschen fragen sich das jeden Tag — genau dafür gibt es Smart Meal. Deine Antwort in Sekunden, abgestimmt auf dich.</p>
+  <ul class="feats">
+    ${feat("🥗", "Rezepte nach Vorlieben, Allergien &amp; Zielen — mit Nährwerten &amp; Allergen-Kennzeichnung", 0.85)}
+    ${feat("🌶️", "Mit Herkunft-Story, Schärfegrad &amp; cleveren Zutaten-Ersätzen", 1.0)}
+    ${feat("📸", "Zutaten per Foto erkennen, Reste verkochen &amp; Wochenplan", 1.15)}
+    ${feat("🛒", "Einkaufsliste direkt an Bring!, Picnic &amp; Co. übergeben", 1.3)}
+  </ul>
+  <div class="r" style="animation-delay:1.55s">
+    <div class="cta-q">Bereit? Möchtest du eintauchen?</div>
+    <button type="button" id="enterBtn" class="btn big">Eintauchen →</button>
+  </div>
+</section>
+
+<section id="gate" class="phase">
+  <div class="gatecard">
+    <div class="brand r" style="animation-delay:.02s">
+      <div class="logo">🍽️</div>
+      <div><div class="nm">Smart Meal</div><div class="tg">Dein KI-Essensberater</div></div>
+    </div>
+    <p class="gate-h r" style="animation-delay:.1s">Schön, dass du da bist.</p>
+    <p class="gate-s r" style="animation-delay:.16s">Gib deinen persönlichen Zugangscode ein, um einzutreten.</p>
+    <form method="POST" action="/__gate" class="r" style="animation-delay:.22s">
+      <label class="lbl" for="code">Dein Zugangscode</label>
+      ${msg ? `<div class="err">${_htmlAttr(msg)}</div>` : ""}
+      <input type="hidden" name="returnTo" value="${_htmlAttr(_safeReturn(returnTo))}">
+      <input id="code" name="code" type="text" inputmode="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" autofocus required placeholder="z. B. SMEAL-XXXX-XXXX">
+      <button type="submit" class="btn">Eintreten →</button>
+    </form>
+    <button type="button" id="backBtn" class="back">← Zurück zur Übersicht</button>
+    <p class="fine">🔒 Funktioniert auch offline · keine Konten, kein Tracking</p>
+  </div>
+</section>
+
+<script>
+(function(){
+  var root=document.documentElement, code=document.getElementById('code');
+  function show(gate){ root.classList.toggle('show-gate', gate); if(gate&&code){ try{ code.focus(); }catch(e){} } }
+  var e=document.getElementById('enterBtn'); if(e) e.addEventListener('click', function(){ show(true); });
+  var b=document.getElementById('backBtn'); if(b) b.addEventListener('click', function(){ show(false); });
+  if(root.classList.contains('show-gate')&&code){ try{ code.focus(); }catch(e){} }
+})();
+</script>
+</body></html>`;
 }
 
 const _validAppToken = (req) => {

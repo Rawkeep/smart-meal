@@ -1674,12 +1674,12 @@ NUR JSON (kein Markdown):
 
     return (
       <Layout photo>
-        <div style={{ textAlign: "center", padding: "28px 0 20px", animation: "fadeUp 0.5s ease both" }}>
-          <div style={{ fontSize: "56px", animation: "float 3s ease infinite", filter: "drop-shadow(0 6px 14px rgba(0,0,0,.35))" }}>🍽️</div>
-          <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: "32px", color: "var(--ink)", fontWeight: 900, marginTop: "8px", letterSpacing: "-1px", textShadow: "0 1px 10px var(--photo-scrim)" }}>Was esse ich?</h1>
-          <p style={{ fontSize: "14px", color: "var(--ink2)", marginTop: "4px", textShadow: "0 1px 8px var(--photo-scrim)" }}>Dein persönlicher Essens-Berater</p>
+        <div style={{ textAlign: "center", padding: "26px 0 16px" }}>
+          <div style={{ fontSize: "54px", animation: "float 3s ease infinite, fadeUp 0.55s ease both", filter: "drop-shadow(0 6px 14px rgba(0,0,0,.35))" }}>🍽️</div>
+          <h1 style={{ fontFamily: "'Fraunces',serif", fontStyle: "italic", fontSize: "clamp(28px,7.5vw,44px)", color: "var(--ink)", fontWeight: 900, margin: "10px 0 0", lineHeight: 1.08, letterSpacing: "-0.5px", textShadow: "0 2px 16px var(--photo-scrim)", animation: "scaleIn 0.75s cubic-bezier(0.16,1,0.3,1) both 0.15s" }}>„Was esse ich heute?“</h1>
+          <p style={{ fontSize: "14.5px", color: "var(--ink2)", marginTop: "8px", lineHeight: 1.5, textShadow: "0 1px 8px var(--photo-scrim)", animation: "fadeUp 0.6s ease both 0.42s" }}>Dein persönlicher Essens-Berater — gleich auf dich zugeschnitten.</p>
         </div>
-        <div style={{ display: "flex", gap: "6px", justifyContent: "center", marginBottom: "16px" }}>
+        <div style={{ display: "flex", gap: "6px", justifyContent: "center", marginBottom: "16px", animation: "fadeUp 0.6s ease both 0.55s" }}>
           {steps.map((_, i) => (
             <div key={i} style={{
               width: i === onbStep ? "28px" : "8px", height: "8px", borderRadius: "4px",
@@ -1688,7 +1688,7 @@ NUR JSON (kein Markdown):
             }} />
           ))}
         </div>
-        <Card anim="fadeUp" delay="0.1s">
+        <Card anim="fadeUp" delay="0.65s">
           {onbStep === 0 && (
             <div style={{
               background: "linear-gradient(135deg,rgba(178,58,72,0.08),rgba(126,90,134,0.08))",
