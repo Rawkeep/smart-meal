@@ -562,7 +562,12 @@ const Layout = ({ children, photo = true }) => {
       // Zweite Ebene (Tiefe): Vignette driftet langsamer & verdichtet sich → Parallax-Tiefe.
       if (depth) tl.fromTo(depth, { y: 0, opacity: 0.10 }, { y: driftMax * 0.45, opacity: 0.42 }, 0);
       if (scrim) tl.fromTo(scrim, { opacity: 1 }, { opacity: 0.72 }, 0);
-      if (liquid) tl.fromTo(liquid, { height: "98%" }, { height: "6%" }, 0);
+      // Wasserpegel: EIGENER Tracker (kein träger Parallax-Scrub) → exaktes
+      // 1:1-Mapping über die GANZE Seite, leert bis ganz unten.
+      if (liquid) ScrollTrigger.create({
+        start: 0, end: "max", scrub: 0.3, invalidateOnRefresh: true,
+        onUpdate: (self) => { liquid.style.height = `${(6 + (1 - self.progress) * 92).toFixed(1)}%`; },
+      });
     });
     return () => ctx.revert();
   }, [photo]);
@@ -584,15 +589,15 @@ const Layout = ({ children, photo = true }) => {
         {/* Flüssigkeits-Pegel als Scroll-Indikator — sinkt beim Runterscrollen
             (Glas leert sich), mit Kohlensäure-Bläschen & wogender Oberfläche. */}
         <div aria-hidden="true" style={{
-          position: "fixed", right: "9px", top: "16%", height: "68%", width: "14px", zIndex: 2,
+          position: "fixed", right: "9px", top: "15%", height: "70%", width: "15px", zIndex: 2,
           pointerEvents: "none", borderRadius: "999px", overflow: "hidden",
-          background: "rgba(255,255,255,0.13)", border: "1px solid rgba(255,255,255,0.22)",
-          boxShadow: "inset 0 0 5px rgba(0,0,0,0.20)", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)",
+          background: "rgba(12,22,34,0.30)", border: "1px solid rgba(255,255,255,0.30)",
+          boxShadow: "inset 0 0 6px rgba(0,0,0,0.28)", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)",
         }}>
           <div ref={liquidRef} style={{
             position: "absolute", left: 0, right: 0, bottom: 0, height: "98%", borderRadius: "999px",
-            background: "linear-gradient(180deg, rgba(238,251,255,0.80) 0%, rgba(205,236,245,0.66) 45%, rgba(176,222,235,0.70) 100%)",
-            boxShadow: "0 0 9px rgba(196,232,242,0.55), inset 0 0 6px rgba(255,255,255,0.35)", willChange: "height",
+            background: "linear-gradient(180deg, rgba(224,248,255,0.95) 0%, rgba(150,214,236,0.92) 45%, rgba(96,184,212,0.94) 100%)",
+            boxShadow: "0 0 10px rgba(150,214,236,0.7), inset 1px 0 0 rgba(255,255,255,0.55)", willChange: "height",
           }}>
             {/* wogende Oberfläche (heller Schimmer) */}
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "4px", background: "rgba(255,255,255,0.9)", borderRadius: "999px", animation: "waterBob 2.4s ease-in-out infinite" }} />
