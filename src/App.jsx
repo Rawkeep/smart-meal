@@ -825,6 +825,40 @@ export default function App() {
   const [shopGroupBy, setShopGroupBy] = useState("category"); // category | recipe
   const [mode, setMode] = useState("quick");
   const [overlay, setOverlay] = useState(null);
+  // ─── Koch-Modus (geführt, Schritt für Schritt) + abhakbare Schritte ───
+  const [cookOn, setCookOn] = useState(false);
+  const [cookStep, setCookStep] = useState(0);
+  const [doneSteps, setDoneSteps] = useState(() => new Set());
+  const toggleDone = useCallback((i) => setDoneSteps(prev => {
+    const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n;
+  }), []);
+  // Neues Rezept → Fortschritt & Koch-Modus zurücksetzen.
+  useEffect(() => { setDoneSteps(new Set()); setCookStep(0); setCookOn(false); }, [suggestion]);
+  // Koch-Modus hält den Bildschirm wach (wie „Verhindert Standby") — falls vom
+  // Browser unterstützt; nach erneuter Sichtbarkeit neu anfordern.
+  useEffect(() => {
+    if (!cookOn || !("wakeLock" in navigator)) return;
+    let lock = null;
+    const acquire = async () => { try { lock = await navigator.wakeLock.request("screen"); } catch { /* ignore */ } };
+    acquire();
+    const onVis = () => { if (document.visibilityState === "visible") acquire(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { document.removeEventListener("visibilitychange", onVis); try { lock && lock.release(); } catch { /* ignore */ } };
+  }, [cookOn]);
+  // Hebt Zeit-/Hitze-/Gargrad-Hinweise im Schritttext dezent hervor (Cues),
+  // damit man beim Kochen sofort die wichtigen Punkte erfasst.
+  const renderCues = (text) => {
+    if (!text) return text;
+    const re = /(\d+(?:[–-]\d+)?\s?(?:Sek(?:unden)?|Min(?:uten)?|Std|Stunden?)|\d+\s?°\s?C?|\b(?:niedriger|mittlerer|hoher|höchster|starker|kleiner|großer)\s+Hitze|\bgoldbraun\b|\bbissfest\b|\bglasig\b|\bà point\b|\bzimmerwarm\b)/gi;
+    const parts = []; let last = 0, m, key = 0;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) parts.push(text.slice(last, m.index));
+      parts.push(<strong key={key++} style={{ color: "var(--petrol)", fontWeight: 700 }}>{m[0]}</strong>);
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) parts.push(text.slice(last));
+    return parts;
+  };
   const [sourcesOpen, setSourcesOpen] = useState(false); // Quellen & Nachweis collapsed by default
   const [viewingSaved, setViewingSaved] = useState(false); // true when viewing a saved/imported recipe
   const recipeReturn = useRef(null); // where "back" returns to after viewing a saved recipe
@@ -2880,18 +2914,75 @@ NUR JSON (kein Markdown):
           </Card>
         )}
 
-        {/* Steps */}
+        {/* Steps — abhakbar, mit hervorgehobenen Cues + geführtem Koch-Modus */}
         <Card anim="fadeUp" delay="0.25s" style={{ marginBottom: "12px" }}>
-          <ST icon="steps">Zubereitung</ST>
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            {suggestion.schritte?.map((s, i) => (
-              <div key={i} style={{ display: "flex", gap: "12px" }}>
-                <div style={{ width: "28px", height: "28px", borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,var(--petrol),#3C9AA8)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: 700, boxShadow: "0 2px 8px rgba(44,122,134,0.3)" }}>{i + 1}</div>
-                <p style={{ fontSize: "14px", color: "var(--ink)", lineHeight: 1.6, margin: 0, paddingTop: "3px" }}>{s}</p>
-              </div>
-            ))}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <ST icon="steps">Zubereitung</ST>
+            <span style={{ flex: 1 }} />
+            {suggestion.schritte?.length > 0 && (
+              <button onClick={() => { setCookStep(0); setCookOn(true); }} style={{
+                display: "inline-flex", alignItems: "center", gap: "7px", border: 0, cursor: "pointer",
+                background: "linear-gradient(135deg,var(--petrol),#3C9AA8)", color: "#fff", fontWeight: 700,
+                fontSize: "13px", padding: "9px 15px", borderRadius: "999px", boxShadow: "0 4px 14px rgba(44,122,134,0.35)",
+              }}>▶ Jetzt kochen</button>
+            )}
           </div>
+          <p style={{ fontSize: "12px", color: "var(--ink3)", margin: "2px 0 14px", lineHeight: 1.5 }}>
+            👩‍🍳 Schürze um – tippe einen Schritt an, wenn er erledigt ist. Im Koch-Modus bleibt der Bildschirm an.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {suggestion.schritte?.map((s, i) => {
+              const done = doneSteps.has(i);
+              return (
+                <button key={i} onClick={() => toggleDone(i)} style={{
+                  display: "flex", gap: "12px", alignItems: "flex-start", textAlign: "left", width: "100%",
+                  background: done ? "color-mix(in srgb, var(--herb) 8%, transparent)" : "transparent",
+                  border: "1px solid", borderColor: done ? "color-mix(in srgb, var(--herb) 28%, transparent)" : "var(--card-border)",
+                  borderRadius: "12px", padding: "10px 12px", cursor: "pointer", transition: "all 0.2s var(--ease)",
+                }}>
+                  <div style={{ width: "26px", height: "26px", borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: 700, color: "#fff", boxShadow: "0 2px 8px rgba(44,122,134,0.3)", background: done ? "var(--herb)" : "linear-gradient(135deg,var(--petrol),#3C9AA8)" }}>{done ? "✓" : i + 1}</div>
+                  <p style={{ fontSize: "14px", color: done ? "var(--ink3)" : "var(--ink)", lineHeight: 1.6, margin: 0, paddingTop: "2px", textDecoration: done ? "line-through" : "none" }}>{renderCues(s)}</p>
+                </button>
+              );
+            })}
+          </div>
+          <p style={{ fontSize: "13px", color: "var(--ink2)", margin: "16px 0 0", lineHeight: 1.55, fontFamily: "var(--font-display)", fontStyle: "italic", textAlign: "center" }}>
+            Guten Appetit! 🍽️ Schön, dass du mitgekocht hast{suggestion.herkunft ? ` – Aromen aus ${suggestion.herkunft}` : ""}.
+          </p>
         </Card>
+
+        {/* Geführter Koch-Modus — Vollbild, ein Schritt groß, Bildschirm bleibt an */}
+        {cookOn && suggestion.schritte?.length > 0 && (() => {
+          const steps = suggestion.schritte;
+          const i = Math.min(cookStep, steps.length - 1);
+          const isLast = i >= steps.length - 1;
+          const here = doneSteps.has(i);
+          return (
+            <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "linear-gradient(180deg,var(--bg1),var(--bg2))", display: "flex", flexDirection: "column", padding: "max(18px, env(safe-area-inset-top)) 18px 22px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "12px", color: "var(--ink3)", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{suggestion.emoji} {suggestion.name}</div>
+                  <div style={{ height: "7px", borderRadius: "5px", background: "var(--bg3)", marginTop: "6px", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${((i + 1) / steps.length) * 100}%`, background: "linear-gradient(90deg,var(--petrol),var(--herb))", transition: "width 0.3s var(--ease)" }} />
+                  </div>
+                </div>
+                <button onClick={() => setCookOn(false)} aria-label="Koch-Modus schließen" style={{ flexShrink: 0, width: "38px", height: "38px", borderRadius: "50%", border: "1px solid var(--card-border)", background: "var(--card)", color: "var(--ink2)", fontSize: "17px", cursor: "pointer" }}>✕</button>
+              </div>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", overflowY: "auto", padding: "20px 4px" }}>
+                <div style={{ fontSize: "13px", fontWeight: 800, letterSpacing: ".5px", textTransform: "uppercase", color: "var(--petrol)", marginBottom: "14px" }}>Schritt {i + 1} / {steps.length}</div>
+                <p style={{ fontSize: "clamp(20px,5.5vw,28px)", lineHeight: 1.45, color: "var(--ink)", margin: 0, fontFamily: "var(--font-display)" }}>{renderCues(steps[i])}</p>
+                {isLast && (
+                  <p style={{ fontSize: "15px", color: "var(--ink2)", marginTop: "20px", fontStyle: "italic", fontFamily: "var(--font-display)" }}>Guten Appetit! 🍽️ Danke, dass du mitgekocht hast{suggestion.herkunft ? ` – Aromen aus ${suggestion.herkunft}` : ""}.</p>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <button onClick={() => setCookStep(s => Math.max(0, s - 1))} disabled={i === 0} style={{ flexShrink: 0, padding: "14px 16px", borderRadius: "14px", border: "1px solid var(--card-border)", background: "var(--card)", color: "var(--ink2)", fontWeight: 700, fontSize: "15px", cursor: i === 0 ? "not-allowed" : "pointer", opacity: i === 0 ? 0.4 : 1 }}>←</button>
+                <button onClick={() => toggleDone(i)} style={{ flex: 1, padding: "14px", borderRadius: "14px", border: "1px solid", borderColor: here ? "color-mix(in srgb, var(--herb) 40%, transparent)" : "var(--card-border)", background: here ? "color-mix(in srgb, var(--herb) 14%, transparent)" : "var(--card)", color: here ? "var(--herb)" : "var(--ink2)", fontWeight: 700, fontSize: "14px", cursor: "pointer" }}>{here ? "✓ Erledigt" : "Abhaken"}</button>
+                <button onClick={() => { setDoneSteps(prev => new Set(prev).add(i)); if (isLast) setCookOn(false); else setCookStep(s => s + 1); }} style={{ flexShrink: 0, padding: "14px 22px", borderRadius: "14px", border: 0, background: "linear-gradient(135deg,var(--petrol),#3C9AA8)", color: "#fff", fontWeight: 800, fontSize: "15px", cursor: "pointer", boxShadow: "0 6px 18px rgba(44,122,134,0.4)" }}>{isLast ? "Fertig 🎉" : "Weiter →"}</button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Full macros panel — bewusst nach der Zubereitung: erst Gericht,
             Zutaten & Schritte, dann die Nährwert-Referenz (Kcal/Protein stehen
