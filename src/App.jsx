@@ -414,24 +414,6 @@ const Reveal = ({ children, y = 30, delay = 0, style }) => {
   return <div ref={ref} style={style}>{children}</div>;
 };
 
-// Pin — hält den Inhalt beim Scrollen kurz fest (Pin) und lässt die Überschrift
-// dabei sanft mitskalieren/aufklaren. Cinematic-Auftakt für die Startseite.
-const Pin = ({ children, headlineSel, distVH = 0.45, style }) => {
-  const ref = useRef(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || _prefersReduced() || window.innerWidth < 1) return;
-    const ctx = gsap.context(() => {
-      const end = `+=${Math.round(window.innerHeight * distVH)}`;
-      ScrollTrigger.create({ trigger: el, start: "top 64px", end, pin: true, pinSpacing: true, scrub: true, invalidateOnRefresh: true });
-      const h = headlineSel ? el.querySelector(headlineSel) : null;
-      if (h) gsap.fromTo(h, { scale: 1 }, { scale: 1.06, ease: "none", scrollTrigger: { trigger: el, start: "top 64px", end, scrub: true } });
-    }, el);
-    return () => ctx.revert();
-  }, [headlineSel, distVH]);
-  return <div ref={ref} style={style}>{children}</div>;
-};
-
 const ICON_PATHS = {
   ingredients: <><path d="M4 7h11M4 12h11M4 17h7" /><circle cx="19" cy="7" r="1.3" /><circle cx="19" cy="12" r="1.3" /></>,
   steps: <><path d="M5 6h14M5 6l1.4 12.5a1.5 1.5 0 0 0 1.5 1.3h8.2a1.5 1.5 0 0 0 1.5-1.3L19 6" /><path d="M9 3.5h6" /><path d="M9.5 10v6M14.5 10v6" /></>,
@@ -2370,9 +2352,7 @@ NUR JSON (kein Markdown):
 
     return (
       <Layout photo>
-        {/* Hero-Header — großes appetitanregendes Food-Foto mit Begrüßung darüber.
-            In <Pin> gewickelt: bleibt beim Scrollen kurz stehen, Headline skaliert sanft. */}
-        <Pin headlineSel="h1">
+        {/* Hero-Header — großes appetitanregendes Food-Foto mit Begrüßung darüber */}
         <div style={{
           position: "relative", marginTop: "10px", borderRadius: "20px", overflow: "hidden",
           minHeight: "172px", display: "flex", flexDirection: "column", justifyContent: "space-between",
@@ -2404,7 +2384,6 @@ NUR JSON (kein Markdown):
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: "30px", fontWeight: 900, letterSpacing: "-1px", margin: 0, color: "#fff", textShadow: "0 2px 16px rgba(0,0,0,.6)" }}>Was esse ich heute?</h1>
           </div>
         </div>
-        </Pin>
         <div style={{ display: "flex", gap: "6px", marginTop: "10px", flexWrap: "wrap", animation: "fadeUp 0.4s ease both", animationDelay: "0.05s" }}>
           {profile.histamin && <Badge icon="⚠️" text="Histamin" />}
           {profile.allergies.length > 0 && <Badge icon="🛡️" text={`${profile.allergies.length} Allergien`} />}
