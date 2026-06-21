@@ -132,7 +132,7 @@ const GATE_SECRET = process.env.GATE_SECRET || GATE_PASS || "dev-gate-secret";
 // link. Inert unless APP_BYPASS_TOKEN is set. Apps pass it via the
 // `x-app-token` header (native fetch) or `?app=<token>` query (TWA start URL).
 const APP_TOKEN = process.env.APP_BYPASS_TOKEN || "";
-const GATE_CSP = "default-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:";
+const GATE_CSP = "default-src 'self'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:";
 
 const _b64u = (buf) => Buffer.from(buf).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 // Fingerprint eines Codes — landet im Cookie, NICHT der Code selbst. Erlaubt
@@ -223,10 +223,9 @@ body{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-
 .bg{position:absolute;inset:0;background:url('${hero}') center/cover no-repeat;transform:scale(1.06);animation:kb 28s ease-in-out infinite alternate,gi 1.5s ease both;will-change:transform}
 .ov{position:fixed;inset:0;z-index:-1;background:radial-gradient(120% 85% at 50% 0%,rgba(11,16,30,.40) 0%,rgba(11,16,30,.74) 58%,rgba(11,16,30,.93) 100%)}
 .phase{width:100%}
-/* JS: Gate erst nach „Eintauchen". Ohne JS: echte Folgeseite via ?gate=1 (force-gate). */
-.js #gate{display:none}
-.js.show-gate #intro{display:none}
-.js.show-gate #gate{display:block}
+/* Story zuerst; #gate ist standardmäßig versteckt — ganz ohne JS. „Eintauchen"
+   führt via ?gate=1 zur reinen Zugangs-Folgeseite (Server setzt force-gate). */
+#gate{display:none}
 .force-gate #intro{display:none}
 .force-gate #gate{display:block}
 /* ---- Intro / Werbung ---- */
@@ -273,7 +272,6 @@ body{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-
 @media(prefers-reduced-motion:reduce){.r{animation:none;opacity:1}.btn.big{animation:none}.bg{animation:gi 1s ease both;transform:none}}
 </style></head>
 <body>
-<script>document.documentElement.classList.add('js')</script>
 <div class="bgwrap"><div class="bg"></div></div><div class="ov"></div>
 
 <section id="intro" class="phase">
@@ -315,17 +313,6 @@ body{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-
   </div>
 </section>
 
-<script>
-(function(){
-  var root=document.documentElement, code=document.getElementById('code');
-  // Mit JS: die Server-Folgeseite (force-gate) in den schnellen JS-Toggle überführen.
-  if(root.classList.contains('force-gate')){ root.classList.remove('force-gate'); root.classList.add('show-gate'); }
-  function show(gate){ root.classList.toggle('show-gate', gate); if(gate&&code){ try{ code.focus(); }catch(e){} } }
-  var e=document.getElementById('enterBtn'); if(e) e.addEventListener('click', function(ev){ ev.preventDefault(); show(true); });
-  var b=document.getElementById('backBtn'); if(b) b.addEventListener('click', function(ev){ ev.preventDefault(); show(false); });
-  if(root.classList.contains('show-gate')&&code){ try{ code.focus(); }catch(e){} }
-})();
-</script>
 </body></html>`;
 }
 
