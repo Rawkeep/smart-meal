@@ -2694,14 +2694,14 @@ NUR JSON (kein Markdown):
         {/* Kultur / Herkunft-Story — redaktioneller Mehrwert, jetzt bei JEDEM Vorschlag
             (Offline-Rezepte haben oft nur das Herkunftsland → als Fallback nutzen). */}
         {(suggestion.kultur || suggestion.herkunft) && (
-          <Card anim="fadeUp" delay="0.1s" style={{ marginBottom: "12px", background: "linear-gradient(135deg,rgba(232,148,58,0.12),rgba(178,58,72,0.06))", borderLeft: "4px solid var(--saffron)" }}>
-            <div style={{ fontSize: "10px", fontWeight: 800, letterSpacing: ".6px", textTransform: "uppercase", color: "var(--saffron)", marginBottom: "5px" }}>
+          <div style={{ marginBottom: "12px", padding: "9px 12px", borderRadius: "12px", borderLeft: "3px solid var(--saffron)", background: "linear-gradient(135deg,rgba(232,148,58,0.10),rgba(178,58,72,0.05))", animation: "fadeUp 0.5s ease both", animationDelay: "0.1s" }}>
+            <span style={{ fontSize: "9.5px", fontWeight: 800, letterSpacing: ".5px", textTransform: "uppercase", color: "var(--saffron)" }}>
               📖 Herkunft{suggestion.herkunft ? ` · ${suggestion.herkunft}` : ""}
-            </div>
-            <p style={{ margin: 0, fontSize: "14px", color: "var(--ink2)", lineHeight: 1.6, fontFamily: "var(--font-display)" }}>
+            </span>
+            <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "var(--ink2)", lineHeight: 1.5 }}>
               {suggestion.kultur || (/international/i.test(suggestion.herkunft || "") ? "Ein internationaler Klassiker." : `Ein Klassiker aus ${suggestion.herkunft}.`)}
             </p>
-          </Card>
+          </div>
         )}
 
         {/* Health warnings */}
@@ -2778,6 +2778,7 @@ NUR JSON (kein Markdown):
             color: "#fff", background: fg, fontFamily: "var(--font-display)",
           });
           const alk = decl.alkohol || {};
+          const declAllerg = decl.allergene.length;
           return (
             <Card anim="fadeUp" delay="0.2s" style={{ marginBottom: "12px" }}>
               <ST icon="ingredients" sub={`Für ${persons} Person${persons > 1 ? "en" : ""}`}>Inhaltsstoffe</ST>
@@ -2799,15 +2800,17 @@ NUR JSON (kein Markdown):
               </div>
 
               {/* Kennzeichnung — farbcodierte Legende, erklärt jeden Marker oben. */}
-              <div style={{ marginTop: "16px", paddingTop: "13px", borderTop: "1px solid var(--card-border)", display: "flex", flexDirection: "column", gap: "13px" }}>
-                <div>
-                  <p style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "12px", color: "var(--ink2)", fontWeight: 700, margin: "0 0 2px", fontFamily: "var(--font-display)" }}>
-                    <Icon name="label" size={15} /> Kennzeichnung — alles offen erklärt
-                  </p>
+              <details style={{ marginTop: "16px", paddingTop: "13px", borderTop: "1px solid var(--card-border)" }}>
+                <summary style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", listStyle: "none", userSelect: "none" }}>
+                  <Icon name="label" size={15} />
+                  <span style={{ fontSize: "12px", color: "var(--ink2)", fontWeight: 700, fontFamily: "var(--font-display)" }}>Kennzeichnung — alles offen erklärt</span>
+                  <span style={{ marginLeft: "auto", fontSize: "10px", fontWeight: 700, color: declAllerg > 0 ? "var(--berry)" : "var(--herb)" }}>{declAllerg > 0 ? `${declAllerg} Allergen${declAllerg > 1 ? "e" : ""}` : "keine Allergene 🌿"}</span>
+                  <span className="chev" style={{ fontSize: "11px", color: "var(--ink3)" }}>▾</span>
+                </summary>
+                <div style={{ display: "flex", flexDirection: "column", gap: "13px", marginTop: "12px" }}>
                   <p style={{ fontSize: "11px", color: "var(--ink3)", margin: 0, lineHeight: 1.5 }}>
                     Wir nehmen deine Unverträglichkeiten ernst. Die kleinen Marker hinter manchen Zutaten bedeuten: <strong style={{ color: "var(--berry)" }}>Buchstabe = Allergen</strong>, <strong style={{ color: "var(--petrol)" }}>Zahl = Zusatzstoff</strong>. Tippe einen Marker an (oder fahre mit der Maus darüber), um den Klartext zu sehen — die vollständige Übersicht steht direkt darunter.
                   </p>
-                </div>
 
                 <div>
                   <p style={{ fontSize: "10px", color: C.allergen.fg, fontWeight: 700, margin: "0 0 6px", letterSpacing: "0.3px", textTransform: "uppercase" }}>Allergene · EU-LMIV</p>
@@ -2854,7 +2857,8 @@ NUR JSON (kein Markdown):
                     <p style={{ fontSize: "10px", color: "var(--ink3)", margin: "6px 0 0", lineHeight: 1.4 }}>{alk.hinweis}</p>
                   )}
                 </div>
-              </div>
+                </div>
+              </details>
             </Card>
           );
         })()}

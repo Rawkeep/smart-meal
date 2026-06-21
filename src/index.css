@@ -111,6 +111,12 @@ h1, h2, h3, h4 {
 .font-display { font-family: var(--font-display); font-optical-sizing: auto; letter-spacing: var(--tracking-display); }
 .font-ui { font-family: var(--font-ui); }
 
+/* ─── Native Collapsible (details/summary) — eigener Chevron statt Default-Marker ─── */
+details > summary { list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary .chev { transition: transform 0.25s var(--ease); }
+details[open] > summary .chev { transform: rotate(180deg); }
+
 /* ─── Subtle paper grain for atmosphere (sits behind app content) ─── */
 body::before {
   content: "";
