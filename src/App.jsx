@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+gsap.registerPlugin(ScrollTrigger);
 import { initDB, getAllFoods, getFoodsFiltered } from "./db";
 import { FOODS, FOOD_CATEGORIES } from "./data/foods";
 import { CROSS_ALLERGIES, ADDITIVES, ADDITIVE_CATEGORIES, NUTRIENT_DEFICIENCIES, METABOLISM_CONDITIONS, HEALTH_GOALS } from "./data/health";
@@ -511,38 +514,27 @@ const Layout = ({ children, photo = true }) => {
     if (!photo || !bgRef.current) return;
     const bg = bgRef.current, scrim = scrimRef.current, liquid = liquidRef.current;
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    let curY = window.scrollY || window.pageYOffset || 0, raf = 0;
-    // Alle Ebenen aus EINEM (geglätteten) Scrollwert ableiten → synchron & weich:
-    // Parallax-Drift, sanftes Einzoomen (scale wächst beim Runterscrollen),
-    // dünner werdender Schleier und sinkender Flüssigkeitspegel.
-    const apply = (y) => {
-      const drift = Math.min(y * 0.34, window.innerHeight * 0.28);
-      const max = (document.documentElement.scrollHeight - window.innerHeight) || 1;
-      const p = Math.min(1, Math.max(0, y / max));
-      const scale = 1.08 + p * 0.10; // einzoomend beim Scrollen
-      bg.style.transform = `translate3d(0, ${drift.toFixed(2)}px, 0) scale(${scale.toFixed(4)})`;
-      if (scrim) scrim.style.opacity = String(1 - Math.min(1, y / (window.innerHeight * 1.1)) * 0.28);
-      if (liquid) liquid.style.height = `${(1 - p) * 92 + 6}%`;
-    };
-    const loop = () => {
-      const targetY = window.scrollY || window.pageYOffset || 0;
-      curY += (targetY - curY) * 0.14;            // lerp → weiches Nachziehen
-      if (Math.abs(targetY - curY) < 0.2) curY = targetY;
-      apply(curY);
-      raf = curY !== targetY ? requestAnimationFrame(loop) : 0;
-    };
-    const onScroll = () => {
-      if (reduce) { curY = window.scrollY || 0; apply(curY); return; }
-      if (!raf) raf = requestAnimationFrame(loop);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll, { passive: true });
-    apply(curY);
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      if (raf) cancelAnimationFrame(raf);
-    };
+    // Reduzierte Bewegung: statischer Zustand, keine Scroll-Animation.
+    if (reduce) {
+      gsap.set(bg, { y: 0, scale: 1.08 });
+      if (scrim) gsap.set(scrim, { opacity: 1 });
+      if (liquid) gsap.set(liquid, { height: "98%" });
+      return;
+    }
+    // GSAP + ScrollTrigger: alle Ebenen an EINER gescrubbten Timeline → perfekt
+    // synchron. scrub:1.6 = träges, weiches Nachziehen. Hintergrund zoomt beim
+    // Runterscrollen kräftig ein (1.05 → 1.25), driftet als Parallax mit.
+    const ctx = gsap.context(() => {
+      const driftMax = window.innerHeight * 0.30;
+      const tl = gsap.timeline({
+        defaults: { ease: "none" },
+        scrollTrigger: { start: 0, end: "max", scrub: 1.6, invalidateOnRefresh: true },
+      });
+      tl.fromTo(bg, { y: 0, scale: 1.05 }, { y: driftMax, scale: 1.25 }, 0);
+      if (scrim) tl.fromTo(scrim, { opacity: 1 }, { opacity: 0.72 }, 0);
+      if (liquid) tl.fromTo(liquid, { height: "98%" }, { height: "6%" }, 0);
+    });
+    return () => ctx.revert();
   }, [photo]);
 
   if (photo) {
