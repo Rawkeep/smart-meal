@@ -397,20 +397,28 @@ const Card = ({ children, style, anim, delay }) => (
 const _prefersReduced = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 // Reveal — Inhalt taucht beim Scrollen weich auf (GSAP ScrollTrigger, einmalig).
-const Reveal = ({ children, y = 30, delay = 0, style }) => {
+// `from`: Richtung des Einflugs — "up" | "down" | "left" | "right" | "zoom".
+const Reveal = ({ children, from = "up", delay = 0, style }) => {
   const ref = useRef(null);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (_prefersReduced()) { gsap.set(el, { opacity: 1, y: 0 }); return; }
+    if (_prefersReduced()) { gsap.set(el, { opacity: 1, x: 0, y: 0, scale: 1 }); return; }
+    const D = 36;
+    const start = {
+      opacity: 0,
+      x: from === "left" ? -D : from === "right" ? D : 0,
+      y: from === "up" ? D : from === "down" ? -D : 0,
+      scale: from === "zoom" ? 0.92 : 1,
+    };
     const ctx = gsap.context(() => {
-      gsap.fromTo(el, { opacity: 0, y }, {
-        opacity: 1, y: 0, duration: 0.7, ease: "power3.out", delay,
-        scrollTrigger: { trigger: el, start: "top 90%", once: true },
+      gsap.fromTo(el, start, {
+        opacity: 1, x: 0, y: 0, scale: 1, duration: 0.7, ease: "power3.out", delay,
+        scrollTrigger: { trigger: el, start: "top 88%", once: true },
       });
     }, el);
     return () => ctx.revert();
-  }, [y, delay]);
+  }, [from, delay]);
   return <div ref={ref} style={style}>{children}</div>;
 };
 
@@ -548,7 +556,7 @@ const Layout = ({ children, photo = true }) => {
       const driftMax = window.innerHeight * 0.30;
       const tl = gsap.timeline({
         defaults: { ease: "none" },
-        scrollTrigger: { start: 0, end: "max", scrub: 1.6, invalidateOnRefresh: true },
+        scrollTrigger: { start: 0, end: "max", scrub: 2.2, invalidateOnRefresh: true },
       });
       tl.fromTo(bg, { y: 0, scale: 1.05 }, { y: driftMax, scale: 1.25 }, 0);
       // Zweite Ebene (Tiefe): Vignette driftet langsamer & verdichtet sich → Parallax-Tiefe.
@@ -573,19 +581,25 @@ const Layout = ({ children, photo = true }) => {
           willChange: "transform, opacity",
         }} />
         <div ref={scrimRef} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "var(--photo-scrim)", willChange: "opacity" }} />
-        {/* Flüssigkeits-Pegel als Scroll-Indikator — sinkt beim Runterscrollen (Glas leert sich) */}
+        {/* Flüssigkeits-Pegel als Scroll-Indikator — sinkt beim Runterscrollen
+            (Glas leert sich), mit Kohlensäure-Bläschen & wogender Oberfläche. */}
         <div aria-hidden="true" style={{
-          position: "fixed", right: "9px", top: "17%", height: "66%", width: "12px", zIndex: 2,
+          position: "fixed", right: "9px", top: "16%", height: "68%", width: "14px", zIndex: 2,
           pointerEvents: "none", borderRadius: "999px", overflow: "hidden",
-          background: "rgba(255,255,255,0.13)", border: "1px solid rgba(255,255,255,0.18)",
-          boxShadow: "inset 0 0 4px rgba(0,0,0,0.18)", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)",
+          background: "rgba(255,255,255,0.13)", border: "1px solid rgba(255,255,255,0.22)",
+          boxShadow: "inset 0 0 5px rgba(0,0,0,0.20)", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)",
         }}>
           <div ref={liquidRef} style={{
             position: "absolute", left: 0, right: 0, bottom: 0, height: "98%", borderRadius: "999px",
-            background: "linear-gradient(180deg, rgba(95,201,214,0.95) 0%, rgba(44,122,134,0.92) 100%)",
-            boxShadow: "0 0 8px rgba(44,122,134,0.5)", willChange: "height",
+            background: "linear-gradient(180deg, rgba(110,212,225,0.97) 0%, rgba(58,160,176,0.95) 45%, rgba(44,122,134,0.95) 100%)",
+            boxShadow: "0 0 10px rgba(60,180,196,0.6)", willChange: "height",
           }}>
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: "rgba(224,250,255,0.75)", borderRadius: "999px" }} />
+            {/* wogende Oberfläche */}
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "4px", background: "rgba(231,252,255,0.85)", borderRadius: "999px", animation: "waterBob 2.4s ease-in-out infinite" }} />
+            {/* Kohlensäure-Bläschen */}
+            <div style={{ position: "absolute", bottom: "6px", left: "3px", width: "3px", height: "3px", borderRadius: "50%", background: "rgba(255,255,255,0.85)", animation: "bubbleRise 2.6s ease-in infinite" }} />
+            <div style={{ position: "absolute", bottom: "6px", left: "8px", width: "2.5px", height: "2.5px", borderRadius: "50%", background: "rgba(255,255,255,0.8)", animation: "bubbleRise 3.3s ease-in 0.6s infinite" }} />
+            <div style={{ position: "absolute", bottom: "6px", left: "5px", width: "2px", height: "2px", borderRadius: "50%", background: "rgba(255,255,255,0.7)", animation: "bubbleRise 2.1s ease-in 1.1s infinite" }} />
           </div>
         </div>
         <div style={{ maxWidth: "680px", margin: "0 auto", padding: "24px 24px 72px", position: "relative", zIndex: 1 }}>
@@ -2501,7 +2515,7 @@ NUR JSON (kein Markdown):
         {mode === "quick" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "14px" }}>
             {/* Beispiel-Vorschau — variiert (verschiedene Küchen), tippen für ein anderes */}
-            <Reveal><Card style={{ padding: 0, overflow: "hidden", cursor: "pointer" }}
+            <Reveal from="zoom"><Card style={{ padding: 0, overflow: "hidden", cursor: "pointer" }}
               onClick={() => setExampleIdx(i => (i + 1) % EXAMPLE_RECIPES.length)}
               title="Tippen für ein anderes Beispiel">
               <div style={{ display: "flex", gap: "12px", alignItems: "center", padding: "12px 14px 6px" }}>
@@ -2534,12 +2548,12 @@ NUR JSON (kein Markdown):
               </div>
             </Card></Reveal>
 
-            <Reveal><Card><ST sub="Was wird's?">🍽️ Mahlzeit</ST><ChipGrid options={MEALS} selected={meal} onToggle={id => setMeal(id === meal ? "" : id)} multi={false} /></Card></Reveal>
-            <Reveal><Card><ST sub="Wie viel Zeit hast du?">⏱️ Kochzeit</ST><ChipGrid options={TIMES} selected={cookTime} onToggle={id => setCookTime(id === cookTime ? "" : id)} multi={false} showSub /></Card></Reveal>
-            <Reveal><Card><ST>🎨 Stimmung</ST><ChipGrid options={MOODS} selected={mood} onToggle={id => setMood(id === mood ? "" : id)} multi={false} colorMap /></Card></Reveal>
+            <Reveal from="left"><Card><ST sub="Was wird's?">🍽️ Mahlzeit</ST><ChipGrid options={MEALS} selected={meal} onToggle={id => setMeal(id === meal ? "" : id)} multi={false} /></Card></Reveal>
+            <Reveal from="right"><Card><ST sub="Wie viel Zeit hast du?">⏱️ Kochzeit</ST><ChipGrid options={TIMES} selected={cookTime} onToggle={id => setCookTime(id === cookTime ? "" : id)} multi={false} showSub /></Card></Reveal>
+            <Reveal from="left"><Card><ST>🎨 Stimmung</ST><ChipGrid options={MOODS} selected={mood} onToggle={id => setMood(id === mood ? "" : id)} multi={false} colorMap /></Card></Reveal>
 
             {/* Optionale Verfeinerung — eingeklappt; erscheint (wie alles) beim Scrollen */}
-            <Reveal><div>
+            <Reveal from="right"><div>
               <button onClick={() => setShowMoreOpts(v => !v)} style={{
                 width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
                 padding: "13px 16px", borderRadius: "var(--r)", cursor: "pointer",
@@ -2552,15 +2566,15 @@ NUR JSON (kein Markdown):
                 <span style={{ color: "var(--ink3)", display: "inline-block", transition: "transform .2s", transform: showMoreOpts ? "rotate(180deg)" : "none" }}>▾</span>
               </button>
               {showMoreOpts && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px", animation: "fadeUp 0.3s ease both" }}>
-                  <Card><ST>💰 Budget</ST><ChipGrid options={BUDGETS} selected={budget} onToggle={id => setBudget(id === budget ? "egal" : id)} multi={false} showSub /></Card>
-                  <Card><ST sub="Lust auf etwas Bestimmtes?">🍴 Art des Gerichts</ST><ChipGrid options={DISH_TYPES} selected={dishType} onToggle={setDishType} multi={false} /></Card>
-                  <Card><ST>🍗 Protein</ST><ChipGrid options={PROTEINS} selected={proteinPref} onToggle={setProteinPref} multi={false} /></Card>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
+                  <Card anim="fadeInLeft" delay="0s"><ST>💰 Budget</ST><ChipGrid options={BUDGETS} selected={budget} onToggle={id => setBudget(id === budget ? "egal" : id)} multi={false} showSub /></Card>
+                  <Card anim="fadeInRight" delay="0.1s"><ST sub="Lust auf etwas Bestimmtes?">🍴 Art des Gerichts</ST><ChipGrid options={DISH_TYPES} selected={dishType} onToggle={setDishType} multi={false} /></Card>
+                  <Card anim="fadeInLeft" delay="0.2s"><ST>🍗 Protein</ST><ChipGrid options={PROTEINS} selected={proteinPref} onToggle={setProteinPref} multi={false} /></Card>
                 </div>
               )}
             </div></Reveal>
 
-            <Reveal><Card>
+            <Reveal from="left"><Card>
               <ST sub={`für ${persons} Person${persons > 1 ? "en" : ""}`}>👤 Portionen</ST>
               <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                 <button onClick={() => setPersons(Math.max(1, persons - 1))} style={{ width: "40px", height: "40px", borderRadius: "50%", border: "2px solid var(--card-border)", background: "var(--card)", fontSize: "20px", cursor: "pointer", color: "var(--ink)" }}>−</button>
@@ -2568,7 +2582,7 @@ NUR JSON (kein Markdown):
                 <button onClick={() => setPersons(Math.min(12, persons + 1))} style={{ width: "40px", height: "40px", borderRadius: "50%", border: "2px solid var(--card-border)", background: "var(--card)", fontSize: "20px", cursor: "pointer", color: "var(--ink)" }}>+</button>
               </div>
             </Card></Reveal>
-            <Reveal>
+            <Reveal from="up">
               <Btn onClick={() => generate("quick")} disabled={!ready || loading}>
                 {loading ? "Kreiere dein Gericht... 🔥" : "Was esse ich? ✨"}
               </Btn>
