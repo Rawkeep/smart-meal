@@ -205,9 +205,23 @@ const _safeReturn = (r) => {
 function _gatePage(msg, returnTo) {
   const feat = (icon, text) => `<div style="display:flex;align-items:flex-start;gap:11px;margin:0 0 11px"><div style="font-size:17px;line-height:1.4;flex-shrink:0">${icon}</div><div style="font-size:13px;color:#cbd5e1;line-height:1.45">${text}</div></div>`;
   const hero = `/smart-meal/img/hero-${1 + Math.floor(Math.random() * 4)}.webp`; // rotiert pro Aufruf
-  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Meal — Dein KI-Essensberater</title></head>
-<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;background:radial-gradient(120% 80% at 50% 0%,rgba(11,16,30,.42) 0%,rgba(11,16,30,.72) 60%,rgba(11,16,30,.9) 100%),url('${hero}') center/cover no-repeat fixed,#0b1120;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0">
-<main style="width:100%;max-width:380px;background:#161f33;border:1px solid #243049;padding:30px 28px;border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,.5)">
+  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Meal — Dein KI-Essensberater</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#0b1120;overflow-x:hidden;font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0}
+.bgwrap{position:fixed;inset:0;overflow:hidden;z-index:-2}
+.bg{position:absolute;inset:0;background:url('${hero}') center/cover no-repeat;transform:scale(1.06);animation:kb 28s ease-in-out infinite alternate,gi 1.5s ease both;will-change:transform}
+.ov{position:fixed;inset:0;z-index:-1;background:radial-gradient(120% 85% at 50% 0%,rgba(11,16,30,.40) 0%,rgba(11,16,30,.72) 58%,rgba(11,16,30,.92) 100%)}
+main{animation:fu .85s cubic-bezier(.16,1,.3,1) both}
+.s{animation:fu .7s cubic-bezier(.16,1,.3,1) both}
+@keyframes kb{0%{transform:scale(1.06) translate(0,0)}100%{transform:scale(1.2) translate(-2%,-2.5%)}}
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes gi{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.bg{animation:gi 1s ease both;transform:none}main,.s{animation:none}}
+</style></head>
+<body>
+<div class="bgwrap"><div class="bg"></div></div><div class="ov"></div>
+<main style="width:100%;max-width:380px;background:rgba(22,31,51,.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid #243049;padding:30px 28px;border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,.55)">
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
 <div style="width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:25px;background:linear-gradient(135deg,#e8896b,#c2415a);box-shadow:0 6px 18px rgba(194,65,90,.4)">🍽️</div>
 <div><div style="font-size:19px;font-weight:700;letter-spacing:-.3px">Smart Meal</div><div style="font-size:12px;color:#8aa0c0">Dein KI-Essensberater</div></div>
