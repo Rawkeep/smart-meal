@@ -202,14 +202,14 @@ const _safeReturn = (r) => {
   const v = String(r || "/smart-meal/");
   return v.startsWith("/") && !v.startsWith("//") ? v : "/smart-meal/";
 };
-function _gatePage(msg, returnTo) {
+function _gatePage(msg, returnTo, forceGate) {
   // Zwei-Phasen-„Login": (1) cinematische, werbeartige Intro — Name + Infos
   // fliegen groß ein und erregen Aufmerksamkeit; am Ende „Eintauchen?" →
   // (2) erst dann erscheint die Zugangscode-Eingabe. Bei Fehler/ohne JS wird
   // die Eingabe direkt gezeigt (progressive enhancement).
   const feat = (icon, text, delay) =>
     `<li class="r" style="animation-delay:${delay}s"><span class="fi">${icon}</span><span>${text}</span></li>`;
-  const startGate = msg ? "show-gate" : "";
+  const startGate = (msg || forceGate) ? "force-gate" : "";
   const hero = `/smart-meal/img/hero-${1 + Math.floor(Math.random() * 4)}.webp`; // rotiert pro Aufruf
   return `<!doctype html><html lang="de" class="${startGate}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Meal — Dein KI-Essensberater</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -223,10 +223,12 @@ body{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-
 .bg{position:absolute;inset:0;background:url('${hero}') center/cover no-repeat;transform:scale(1.06);animation:kb 28s ease-in-out infinite alternate,gi 1.5s ease both;will-change:transform}
 .ov{position:fixed;inset:0;z-index:-1;background:radial-gradient(120% 85% at 50% 0%,rgba(11,16,30,.40) 0%,rgba(11,16,30,.74) 58%,rgba(11,16,30,.93) 100%)}
 .phase{width:100%}
-/* JS aktiv: nur eine Phase zeigen. Ohne JS: beide sichtbar (Fallback). */
+/* JS: Gate erst nach „Eintauchen". Ohne JS: echte Folgeseite via ?gate=1 (force-gate). */
 .js #gate{display:none}
 .js.show-gate #intro{display:none}
 .js.show-gate #gate{display:block}
+.force-gate #intro{display:none}
+.force-gate #gate{display:block}
 /* ---- Intro / Werbung ---- */
 #intro{max-width:540px;margin:0 auto;text-align:center}
 .brand{display:inline-flex;align-items:center;gap:13px;margin:0 auto 22px}
@@ -239,8 +241,8 @@ body{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-
 .feats li{display:flex;align-items:flex-start;gap:13px;font-size:15px;color:#dde6f4;line-height:1.4}
 .feats .fi{font-size:21px;line-height:1.2;flex-shrink:0;filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))}
 .cta-q{font-size:15px;color:#9fb2cc;margin:0 0 13px;font-weight:500}
-.btn{border:0;border-radius:13px;cursor:pointer;font-weight:800;color:#fff;background:linear-gradient(135deg,#e8896b,#c2415a);box-shadow:0 12px 30px rgba(194,65,90,.45)}
-.btn.big{font-size:18px;padding:17px 40px;letter-spacing:.2px;animation:smGlow 2.6s ease-in-out infinite}
+.btn{border:0;border-radius:13px;cursor:pointer;font-weight:800;color:#fff;text-decoration:none;background:linear-gradient(135deg,#e8896b,#c2415a);box-shadow:0 12px 30px rgba(194,65,90,.45)}
+.btn.big{display:inline-block;font-size:18px;padding:17px 40px;letter-spacing:.2px;animation:smGlow 2.6s ease-in-out infinite}
 .btn.big:hover{filter:brightness(1.07);transform:translateY(-1px)}
 .btn.big:active{transform:translateY(0)}
 /* ---- Gate / Code ---- */
@@ -257,7 +259,7 @@ body{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-
 #code:focus{outline:none;border-color:#e8896b;box-shadow:0 0 0 3px rgba(232,137,107,.18)}
 .gatecard .btn{width:100%;padding:13px;font-size:15px}
 .gatecard .btn:hover{filter:brightness(1.06)}
-.back{display:block;margin:14px auto 0;background:none;border:0;color:#7e8ea6;font-size:13px;cursor:pointer;padding:5px}
+.back{display:block;margin:14px auto 0;background:none;border:0;color:#7e8ea6;font-size:13px;cursor:pointer;padding:5px;text-decoration:none;text-align:center}
 .back:hover{color:#aebbd0}
 .fine{font-size:11px;color:#64748b;text-align:center;margin:16px 0 0;line-height:1.5}
 /* ---- Reveal-Animationen ---- */
@@ -289,7 +291,7 @@ body{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-
   </ul>
   <div class="r" style="animation-delay:1.55s">
     <div class="cta-q">Bereit? Möchtest du eintauchen?</div>
-    <button type="button" id="enterBtn" class="btn big">Eintauchen →</button>
+    <a id="enterBtn" class="btn big" href="?gate=1&amp;returnTo=${encodeURIComponent(_safeReturn(returnTo))}">Eintauchen →</a>
   </div>
 </section>
 
@@ -308,7 +310,7 @@ body{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-
       <input id="code" name="code" type="text" inputmode="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" autofocus required placeholder="z. B. SMEAL-XXXX-XXXX">
       <button type="submit" class="btn">Eintreten →</button>
     </form>
-    <button type="button" id="backBtn" class="back">← Zurück zur Übersicht</button>
+    <a id="backBtn" class="back" href="?">← Zurück zur Übersicht</a>
     <p class="fine">🔒 Funktioniert auch offline · keine Konten, kein Tracking</p>
   </div>
 </section>
@@ -316,9 +318,11 @@ body{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-
 <script>
 (function(){
   var root=document.documentElement, code=document.getElementById('code');
+  // Mit JS: die Server-Folgeseite (force-gate) in den schnellen JS-Toggle überführen.
+  if(root.classList.contains('force-gate')){ root.classList.remove('force-gate'); root.classList.add('show-gate'); }
   function show(gate){ root.classList.toggle('show-gate', gate); if(gate&&code){ try{ code.focus(); }catch(e){} } }
-  var e=document.getElementById('enterBtn'); if(e) e.addEventListener('click', function(){ show(true); });
-  var b=document.getElementById('backBtn'); if(b) b.addEventListener('click', function(){ show(false); });
+  var e=document.getElementById('enterBtn'); if(e) e.addEventListener('click', function(ev){ ev.preventDefault(); show(true); });
+  var b=document.getElementById('backBtn'); if(b) b.addEventListener('click', function(ev){ ev.preventDefault(); show(false); });
   if(root.classList.contains('show-gate')&&code){ try{ code.focus(); }catch(e){} }
 })();
 </script>
@@ -504,7 +508,7 @@ if (GATE_ON) {
       }
       if (_hasGate(req)) return res.redirect(302, "/smart-meal/");
       res.setHeader("Content-Security-Policy", GATE_CSP);
-      return res.send(_gatePage(null, req.query.returnTo));
+      return res.send(_gatePage(null, req.query.returnTo, req.query.gate));
     }
     // Store-App-Bypass: gültiger App-Token → durchlassen und (für TWA-Navigation)
     // Gate-Cookie setzen, damit Folge-Requests ohne Token passieren.
@@ -517,7 +521,7 @@ if (GATE_ON) {
     if (_hasGate(req)) return next();
     if (req.method === "GET" && (req.get("accept") || "").includes("text/html")) {
       res.setHeader("Content-Security-Policy", GATE_CSP);
-      return res.status(401).send(_gatePage(null, req.originalUrl));
+      return res.status(401).send(_gatePage(null, req.query.returnTo || req.originalUrl, req.query.gate));
     }
     return res.status(401).json({ error: "Zugang erforderlich" });
   });
