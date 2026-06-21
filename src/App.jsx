@@ -394,8 +394,44 @@ const Card = ({ children, style, anim, delay }) => (
   }}>{children}</div>
 );
 
-// Schlanke Stroke-Icons (24px, currentColor) — professioneller als Emojis in
-// den Section-Headern. Bewusst minimal gehalten; erweiterbar.
+const _prefersReduced = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+// Reveal — Inhalt taucht beim Scrollen weich auf (GSAP ScrollTrigger, einmalig).
+const Reveal = ({ children, y = 30, delay = 0, style }) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (_prefersReduced()) { gsap.set(el, { opacity: 1, y: 0 }); return; }
+    const ctx = gsap.context(() => {
+      gsap.fromTo(el, { opacity: 0, y }, {
+        opacity: 1, y: 0, duration: 0.7, ease: "power3.out", delay,
+        scrollTrigger: { trigger: el, start: "top 90%", once: true },
+      });
+    }, el);
+    return () => ctx.revert();
+  }, [y, delay]);
+  return <div ref={ref} style={style}>{children}</div>;
+};
+
+// Pin — hält den Inhalt beim Scrollen kurz fest (Pin) und lässt die Überschrift
+// dabei sanft mitskalieren/aufklaren. Cinematic-Auftakt für die Startseite.
+const Pin = ({ children, headlineSel, distVH = 0.45, style }) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || _prefersReduced() || window.innerWidth < 1) return;
+    const ctx = gsap.context(() => {
+      const end = `+=${Math.round(window.innerHeight * distVH)}`;
+      ScrollTrigger.create({ trigger: el, start: "top 64px", end, pin: true, pinSpacing: true, scrub: true, invalidateOnRefresh: true });
+      const h = headlineSel ? el.querySelector(headlineSel) : null;
+      if (h) gsap.fromTo(h, { scale: 1 }, { scale: 1.06, ease: "none", scrollTrigger: { trigger: el, start: "top 64px", end, scrub: true } });
+    }, el);
+    return () => ctx.revert();
+  }, [headlineSel, distVH]);
+  return <div ref={ref} style={style}>{children}</div>;
+};
+
 const ICON_PATHS = {
   ingredients: <><path d="M4 7h11M4 12h11M4 17h7" /><circle cx="19" cy="7" r="1.3" /><circle cx="19" cy="12" r="1.3" /></>,
   steps: <><path d="M5 6h14M5 6l1.4 12.5a1.5 1.5 0 0 0 1.5 1.3h8.2a1.5 1.5 0 0 0 1.5-1.3L19 6" /><path d="M9 3.5h6" /><path d="M9.5 10v6M14.5 10v6" /></>,
@@ -510,15 +546,17 @@ const Layout = ({ children, photo = true }) => {
   const bgRef = useRef(null);
   const scrimRef = useRef(null);
   const liquidRef = useRef(null);
+  const depthRef = useRef(null);
   useEffect(() => {
     if (!photo || !bgRef.current) return;
-    const bg = bgRef.current, scrim = scrimRef.current, liquid = liquidRef.current;
+    const bg = bgRef.current, scrim = scrimRef.current, liquid = liquidRef.current, depth = depthRef.current;
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     // Reduzierte Bewegung: statischer Zustand, keine Scroll-Animation.
     if (reduce) {
       gsap.set(bg, { y: 0, scale: 1.08 });
       if (scrim) gsap.set(scrim, { opacity: 1 });
       if (liquid) gsap.set(liquid, { height: "98%" });
+      if (depth) gsap.set(depth, { y: 0, opacity: 0.18 });
       return;
     }
     // GSAP + ScrollTrigger: alle Ebenen an EINER gescrubbten Timeline → perfekt
@@ -531,6 +569,8 @@ const Layout = ({ children, photo = true }) => {
         scrollTrigger: { start: 0, end: "max", scrub: 1.6, invalidateOnRefresh: true },
       });
       tl.fromTo(bg, { y: 0, scale: 1.05 }, { y: driftMax, scale: 1.25 }, 0);
+      // Zweite Ebene (Tiefe): Vignette driftet langsamer & verdichtet sich → Parallax-Tiefe.
+      if (depth) tl.fromTo(depth, { y: 0, opacity: 0.10 }, { y: driftMax * 0.45, opacity: 0.42 }, 0);
       if (scrim) tl.fromTo(scrim, { opacity: 1 }, { opacity: 0.72 }, 0);
       if (liquid) tl.fromTo(liquid, { height: "98%" }, { height: "6%" }, 0);
     });
@@ -544,6 +584,11 @@ const Layout = ({ children, photo = true }) => {
           position: "fixed", left: 0, right: 0, top: "-30vh", height: "160vh", zIndex: 0, pointerEvents: "none",
           backgroundImage: `url(${HERO_IMG})`, backgroundSize: "cover", backgroundPosition: "center top",
           willChange: "transform", transformOrigin: "center center",
+        }} />
+        <div ref={depthRef} aria-hidden="true" style={{
+          position: "fixed", left: 0, right: 0, top: "-20vh", height: "140vh", zIndex: 0, pointerEvents: "none",
+          background: "radial-gradient(120% 90% at 50% 28%, transparent 52%, rgba(10,6,4,0.55) 100%)",
+          willChange: "transform, opacity",
         }} />
         <div ref={scrimRef} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "var(--photo-scrim)", willChange: "opacity" }} />
         {/* Flüssigkeits-Pegel als Scroll-Indikator — sinkt beim Runterscrollen (Glas leert sich) */}
@@ -2325,7 +2370,9 @@ NUR JSON (kein Markdown):
 
     return (
       <Layout photo>
-        {/* Hero-Header — großes appetitanregendes Food-Foto mit Begrüßung darüber */}
+        {/* Hero-Header — großes appetitanregendes Food-Foto mit Begrüßung darüber.
+            In <Pin> gewickelt: bleibt beim Scrollen kurz stehen, Headline skaliert sanft. */}
+        <Pin headlineSel="h1">
         <div style={{
           position: "relative", marginTop: "10px", borderRadius: "20px", overflow: "hidden",
           minHeight: "172px", display: "flex", flexDirection: "column", justifyContent: "space-between",
@@ -2357,6 +2404,7 @@ NUR JSON (kein Markdown):
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: "30px", fontWeight: 900, letterSpacing: "-1px", margin: 0, color: "#fff", textShadow: "0 2px 16px rgba(0,0,0,.6)" }}>Was esse ich heute?</h1>
           </div>
         </div>
+        </Pin>
         <div style={{ display: "flex", gap: "6px", marginTop: "10px", flexWrap: "wrap", animation: "fadeUp 0.4s ease both", animationDelay: "0.05s" }}>
           {profile.histamin && <Badge icon="⚠️" text="Histamin" />}
           {profile.allergies.length > 0 && <Badge icon="🛡️" text={`${profile.allergies.length} Allergien`} />}
@@ -2507,9 +2555,9 @@ NUR JSON (kein Markdown):
               </div>
             </Card>
 
-            <Card anim="fadeUp" delay="0.15s"><ST sub="Was wird's?">🍽️ Mahlzeit</ST><ChipGrid options={MEALS} selected={meal} onToggle={id => setMeal(id === meal ? "" : id)} multi={false} /></Card>
-            <Card anim="fadeUp" delay="0.2s"><ST sub="Wie viel Zeit hast du?">⏱️ Kochzeit</ST><ChipGrid options={TIMES} selected={cookTime} onToggle={id => setCookTime(id === cookTime ? "" : id)} multi={false} showSub /></Card>
-            <Card anim="fadeUp" delay="0.25s"><ST>🎨 Stimmung</ST><ChipGrid options={MOODS} selected={mood} onToggle={id => setMood(id === mood ? "" : id)} multi={false} colorMap /></Card>
+            <Reveal><Card><ST sub="Was wird's?">🍽️ Mahlzeit</ST><ChipGrid options={MEALS} selected={meal} onToggle={id => setMeal(id === meal ? "" : id)} multi={false} /></Card></Reveal>
+            <Reveal><Card><ST sub="Wie viel Zeit hast du?">⏱️ Kochzeit</ST><ChipGrid options={TIMES} selected={cookTime} onToggle={id => setCookTime(id === cookTime ? "" : id)} multi={false} showSub /></Card></Reveal>
+            <Reveal><Card><ST>🎨 Stimmung</ST><ChipGrid options={MOODS} selected={mood} onToggle={id => setMood(id === mood ? "" : id)} multi={false} colorMap /></Card></Reveal>
 
             {/* Optionale Verfeinerung — eingeklappt, hält die Startseite aufgeräumt */}
             <div>
