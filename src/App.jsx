@@ -413,7 +413,7 @@ const Reveal = ({ children, from = "up", delay = 0, style }) => {
     };
     const ctx = gsap.context(() => {
       gsap.fromTo(el, start, {
-        opacity: 1, x: 0, y: 0, scale: 1, duration: 0.7, ease: "power3.out", delay,
+        opacity: 1, x: 0, y: 0, scale: 1, duration: 0.9, ease: "power3.out", delay,
         scrollTrigger: { trigger: el, start: "top 88%", once: true },
       });
     }, el);
@@ -591,15 +591,18 @@ const Layout = ({ children, photo = true }) => {
         }}>
           <div ref={liquidRef} style={{
             position: "absolute", left: 0, right: 0, bottom: 0, height: "98%", borderRadius: "999px",
-            background: "linear-gradient(180deg, rgba(110,212,225,0.97) 0%, rgba(58,160,176,0.95) 45%, rgba(44,122,134,0.95) 100%)",
-            boxShadow: "0 0 10px rgba(60,180,196,0.6)", willChange: "height",
+            background: "linear-gradient(180deg, rgba(238,251,255,0.80) 0%, rgba(205,236,245,0.66) 45%, rgba(176,222,235,0.70) 100%)",
+            boxShadow: "0 0 9px rgba(196,232,242,0.55), inset 0 0 6px rgba(255,255,255,0.35)", willChange: "height",
           }}>
-            {/* wogende Oberfläche */}
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "4px", background: "rgba(231,252,255,0.85)", borderRadius: "999px", animation: "waterBob 2.4s ease-in-out infinite" }} />
-            {/* Kohlensäure-Bläschen */}
-            <div style={{ position: "absolute", bottom: "6px", left: "3px", width: "3px", height: "3px", borderRadius: "50%", background: "rgba(255,255,255,0.85)", animation: "bubbleRise 2.6s ease-in infinite" }} />
-            <div style={{ position: "absolute", bottom: "6px", left: "8px", width: "2.5px", height: "2.5px", borderRadius: "50%", background: "rgba(255,255,255,0.8)", animation: "bubbleRise 3.3s ease-in 0.6s infinite" }} />
-            <div style={{ position: "absolute", bottom: "6px", left: "5px", width: "2px", height: "2px", borderRadius: "50%", background: "rgba(255,255,255,0.7)", animation: "bubbleRise 2.1s ease-in 1.1s infinite" }} />
+            {/* wogende Oberfläche (heller Schimmer) */}
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "4px", background: "rgba(255,255,255,0.9)", borderRadius: "999px", animation: "waterBob 2.4s ease-in-out infinite" }} />
+            {/* Kohlensäure-Bläschen (mehr Sprudel) */}
+            <div style={{ position: "absolute", bottom: "6px", left: "3px", width: "3px", height: "3px", borderRadius: "50%", background: "rgba(255,255,255,0.9)", animation: "bubbleRise 2.6s ease-in infinite" }} />
+            <div style={{ position: "absolute", bottom: "6px", left: "9px", width: "2.5px", height: "2.5px", borderRadius: "50%", background: "rgba(255,255,255,0.85)", animation: "bubbleRise 3.3s ease-in 0.5s infinite" }} />
+            <div style={{ position: "absolute", bottom: "6px", left: "6px", width: "2px", height: "2px", borderRadius: "50%", background: "rgba(255,255,255,0.8)", animation: "bubbleRise 2.1s ease-in 1.0s infinite" }} />
+            <div style={{ position: "absolute", bottom: "6px", left: "4px", width: "2px", height: "2px", borderRadius: "50%", background: "rgba(255,255,255,0.8)", animation: "bubbleRise 2.9s ease-in 1.5s infinite" }} />
+            <div style={{ position: "absolute", bottom: "6px", left: "10px", width: "2px", height: "2px", borderRadius: "50%", background: "rgba(255,255,255,0.75)", animation: "bubbleRise 3.6s ease-in 0.9s infinite" }} />
+            <div style={{ position: "absolute", bottom: "6px", left: "7px", width: "2.5px", height: "2.5px", borderRadius: "50%", background: "rgba(255,255,255,0.85)", animation: "bubbleRise 2.4s ease-in 1.9s infinite" }} />
           </div>
         </div>
         <div style={{ maxWidth: "680px", margin: "0 auto", padding: "24px 24px 72px", position: "relative", zIndex: 1 }}>
@@ -2568,8 +2571,8 @@ NUR JSON (kein Markdown):
               {showMoreOpts && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
                   <Card anim="fadeInLeft" delay="0s"><ST>💰 Budget</ST><ChipGrid options={BUDGETS} selected={budget} onToggle={id => setBudget(id === budget ? "egal" : id)} multi={false} showSub /></Card>
-                  <Card anim="fadeInRight" delay="0.1s"><ST sub="Lust auf etwas Bestimmtes?">🍴 Art des Gerichts</ST><ChipGrid options={DISH_TYPES} selected={dishType} onToggle={setDishType} multi={false} /></Card>
-                  <Card anim="fadeInLeft" delay="0.2s"><ST>🍗 Protein</ST><ChipGrid options={PROTEINS} selected={proteinPref} onToggle={setProteinPref} multi={false} /></Card>
+                  <Card anim="fadeInRight" delay="0.18s"><ST sub="Lust auf etwas Bestimmtes?">🍴 Art des Gerichts</ST><ChipGrid options={DISH_TYPES} selected={dishType} onToggle={setDishType} multi={false} /></Card>
+                  <Card anim="fadeInLeft" delay="0.36s"><ST>🍗 Protein</ST><ChipGrid options={PROTEINS} selected={proteinPref} onToggle={setProteinPref} multi={false} /></Card>
                 </div>
               )}
             </div></Reveal>
