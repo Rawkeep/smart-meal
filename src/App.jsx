@@ -575,7 +575,7 @@ const Layout = ({ children, photo = true }) => {
         <div ref={scrimRef} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "var(--photo-scrim)", willChange: "opacity" }} />
         {/* Flüssigkeits-Pegel als Scroll-Indikator — sinkt beim Runterscrollen (Glas leert sich) */}
         <div aria-hidden="true" style={{
-          position: "fixed", right: "11px", top: "17%", height: "66%", width: "6px", zIndex: 2,
+          position: "fixed", right: "9px", top: "17%", height: "66%", width: "12px", zIndex: 2,
           pointerEvents: "none", borderRadius: "999px", overflow: "hidden",
           background: "rgba(255,255,255,0.13)", border: "1px solid rgba(255,255,255,0.18)",
           boxShadow: "inset 0 0 4px rgba(0,0,0,0.18)", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)",
@@ -2501,7 +2501,7 @@ NUR JSON (kein Markdown):
         {mode === "quick" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "14px" }}>
             {/* Beispiel-Vorschau — variiert (verschiedene Küchen), tippen für ein anderes */}
-            <Card anim="fadeUp" delay="0.12s" style={{ padding: 0, overflow: "hidden", cursor: "pointer" }}
+            <Reveal><Card style={{ padding: 0, overflow: "hidden", cursor: "pointer" }}
               onClick={() => setExampleIdx(i => (i + 1) % EXAMPLE_RECIPES.length)}
               title="Tippen für ein anderes Beispiel">
               <div style={{ display: "flex", gap: "12px", alignItems: "center", padding: "12px 14px 6px" }}>
@@ -2532,14 +2532,14 @@ NUR JSON (kein Markdown):
                   <p style={{ fontSize: "11.5px", color: "var(--ink2)", lineHeight: 1.5, margin: 0 }}><strong style={{ color: "var(--saffron)" }}>📖 Herkunft:</strong> {ex.kultur}</p>
                 </div>
               </div>
-            </Card>
+            </Card></Reveal>
 
             <Reveal><Card><ST sub="Was wird's?">🍽️ Mahlzeit</ST><ChipGrid options={MEALS} selected={meal} onToggle={id => setMeal(id === meal ? "" : id)} multi={false} /></Card></Reveal>
             <Reveal><Card><ST sub="Wie viel Zeit hast du?">⏱️ Kochzeit</ST><ChipGrid options={TIMES} selected={cookTime} onToggle={id => setCookTime(id === cookTime ? "" : id)} multi={false} showSub /></Card></Reveal>
             <Reveal><Card><ST>🎨 Stimmung</ST><ChipGrid options={MOODS} selected={mood} onToggle={id => setMood(id === mood ? "" : id)} multi={false} colorMap /></Card></Reveal>
 
-            {/* Optionale Verfeinerung — eingeklappt, hält die Startseite aufgeräumt */}
-            <div>
+            {/* Optionale Verfeinerung — eingeklappt; erscheint (wie alles) beim Scrollen */}
+            <Reveal><div>
               <button onClick={() => setShowMoreOpts(v => !v)} style={{
                 width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
                 padding: "13px 16px", borderRadius: "var(--r)", cursor: "pointer",
@@ -2558,21 +2558,21 @@ NUR JSON (kein Markdown):
                   <Card><ST>🍗 Protein</ST><ChipGrid options={PROTEINS} selected={proteinPref} onToggle={setProteinPref} multi={false} /></Card>
                 </div>
               )}
-            </div>
+            </div></Reveal>
 
-            <Card anim="fadeUp" delay="0.3s">
+            <Reveal><Card>
               <ST sub={`für ${persons} Person${persons > 1 ? "en" : ""}`}>👤 Portionen</ST>
               <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                 <button onClick={() => setPersons(Math.max(1, persons - 1))} style={{ width: "40px", height: "40px", borderRadius: "50%", border: "2px solid var(--card-border)", background: "var(--card)", fontSize: "20px", cursor: "pointer", color: "var(--ink)" }}>−</button>
                 <span style={{ fontFamily: "var(--font-display)", fontSize: "28px", fontWeight: 700, color: "var(--ink)", minWidth: "30px", textAlign: "center" }}>{persons}</span>
                 <button onClick={() => setPersons(Math.min(12, persons + 1))} style={{ width: "40px", height: "40px", borderRadius: "50%", border: "2px solid var(--card-border)", background: "var(--card)", fontSize: "20px", cursor: "pointer", color: "var(--ink)" }}>+</button>
               </div>
-            </Card>
-            <div style={{ animation: "fadeUp 0.4s ease both", animationDelay: "0.4s" }}>
+            </Card></Reveal>
+            <Reveal>
               <Btn onClick={() => generate("quick")} disabled={!ready || loading}>
                 {loading ? "Kreiere dein Gericht... 🔥" : "Was esse ich? ✨"}
               </Btn>
-            </div>
+            </Reveal>
           </div>
         )}
 
