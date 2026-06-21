@@ -373,7 +373,7 @@ export const RECIPE_TEMPLATES = [
     stepsTemplate: [
       "{BEILAGE} mit heißem Wasser übergießen und quellen lassen.",
       "{GEMUSE1} würfeln und im Ofen oder Pfanne rösten.",
-      "{HULSEN} dazugeben und erwarmen.",
+      "{HULSEN} dazugeben und erwärmen.",
       "Alles vermengen, mit {GEWURZ}, Zitronensaft und Olivenöl würzen.",
     ],
     emoji: "🧆",
@@ -446,7 +446,7 @@ export const RECIPE_TEMPLATES = [
     ],
     stepsTemplate: [
       "{BEILAGE} kochen, {PROTEIN} würzen und braten.",
-      "{HULSEN} erwarmen, {GEMUSE1} frisch vorbereiten.",
+      "{HULSEN} erwärmen, {GEMUSE1} frisch vorbereiten.",
       "Alles in einer Bowl anrichten.",
       "Mit Dressing aus Olivenöl, Zitrone und Kräutern servieren.",
     ],
@@ -498,7 +498,7 @@ export const RECIPE_TEMPLATES = [
     stepsTemplate: [
       "{PROTEIN} würzen (Kreuzkummel, Paprika, Chili) und scharf anbraten.",
       "{GEMUSE1} frisch schneiden als Topping.",
-      "Tortillas kurz erwarmen.",
+      "Tortillas kurz erwärmen.",
       "Mit {PROTEIN}, {GEMUSE1} und {HULSEN} füllen.",
     ],
     emoji: "🌮",
@@ -1070,7 +1070,7 @@ export const RECIPE_TEMPLATES = [
     stepsTemplate: [
       "{HULSEN} als Dip mit Tahini purieren.",
       "{GEMUSE1} in Sticks und Scheiben schneiden.",
-      "{BEILAGE} rösten oder erwarmen.",
+      "{BEILAGE} rösten oder erwärmen.",
       "Alles auf einer großen Platte anrichten mit {MILCH} und Olivenöl.",
     ],
     emoji: "🫒",
@@ -2071,7 +2071,7 @@ export const RECIPE_TEMPLATES = [
     stepsTemplate: [
       "{BEILAGE} kochen, mit Limettensaft mischen.",
       "{PROTEIN} mit Kreuzkummel und Chili braten.",
-      "{HULSEN} erwarmen, {GEMUSE1} frisch schneiden.",
+      "{HULSEN} erwärmen, {GEMUSE1} frisch schneiden.",
       "Alles in einer Bowl schichten.",
     ],
     emoji: "🌯",
