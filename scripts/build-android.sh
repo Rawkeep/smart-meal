@@ -59,7 +59,11 @@ export BUBBLEWRAP_KEYSTORE_PASSWORD="$KS_PASS"
 export BUBBLEWRAP_KEY_PASSWORD="$KEY_PASS"
 ( cd "$BUILD_DIR"
   npx -y @bubblewrap/cli@latest updateConfig --jdkPath "$JDK_BUNDLE" --androidSdkPath "$ANDROID_HOME"
-  printf '1.0.0\n\n\n\n' | npx -y @bubblewrap/cli@latest update
+  # Version aus twa-manifest.json übernehmen (nicht hart auf 1.0.0 pinnen) —
+  # so wirkt ein Versions-Bump im Manifest auch im Build (Play-Update braucht
+  # höheren appVersionCode).
+  VN="$(node -e "process.stdout.write(String(require('./twa-manifest.json').appVersionName||'1.0.0'))")"
+  printf '%s\n\n\n\n' "$VN" | npx -y @bubblewrap/cli@latest update
   npx -y @bubblewrap/cli@latest build --skipPwaValidation </dev/null
 )
 

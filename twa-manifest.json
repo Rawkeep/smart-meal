@@ -17,8 +17,8 @@
   "iconUrl": "https://smartmeal.rawkeep.com/smart-meal/icons/icon-512.png",
   "maskableIconUrl": "https://smartmeal.rawkeep.com/smart-meal/icons/icon-512-maskable.png",
   "splashScreenFadeOutDuration": 300,
-  "appVersionName": "1.0.0",
-  "appVersionCode": 1,
+  "appVersionName": "1.1.0",
+  "appVersionCode": 2,
   "shortcuts": [
     { "name": "Wochenplan", "shortName": "Plan", "url": "/smart-meal/?mode=plan", "chosenIconUrl": "https://smartmeal.rawkeep.com/smart-meal/icons/icon-192.png" },
     { "name": "Kühlschrank", "shortName": "Kühlschrank", "url": "/smart-meal/?mode=fridge", "chosenIconUrl": "https://smartmeal.rawkeep.com/smart-meal/icons/icon-192.png" }
