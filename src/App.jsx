@@ -572,15 +572,30 @@ const Layout = ({ children, photo = true }) => {
       // Zweite Ebene (Tiefe): Vignette driftet langsamer & verdichtet sich → Parallax-Tiefe.
       if (depth) tl.fromTo(depth, { y: 0, opacity: 0.10 }, { y: driftMax * 0.45, opacity: 0.42 }, 0);
       if (scrim) tl.fromTo(scrim, { opacity: 1 }, { opacity: 0.72 }, 0);
-      // Wasserpegel: eigener, gescrubbter Tween → BIDIREKTIONAL. Beim Runter-
-      // scrollen läuft das Wasser ab (98% → 6%), beim Hochscrollen füllt es sich
-      // wieder; exakt über die ganze Seite bis ans Ende.
-      if (liquid) gsap.fromTo(liquid, { height: "98%" }, {
-        height: "6%", ease: "none",
-        scrollTrigger: { start: 0, end: "max", scrub: 0.5, invalidateOnRefresh: true },
-      });
     });
-    return () => ctx.revert();
+
+    // Wasserpegel NATIV (cross-browser): GSAPs Höhen-Tween aktualisierte sich auf
+    // Android-Chromium (Chrome/Opera) nicht zuverlässig. Direkter Scroll-Listener
+    // (rAF, passiv) läuft überall identisch — bidirektional & bis ans Seitenende.
+    let lraf = 0;
+    const setLiquid = () => {
+      lraf = 0;
+      if (!liquid) return;
+      const max = (document.documentElement.scrollHeight - window.innerHeight) || 1;
+      const p = Math.min(1, Math.max(0, (window.scrollY || window.pageYOffset || 0) / max));
+      liquid.style.height = `${(6 + (1 - p) * 92).toFixed(1)}%`;
+    };
+    const onLiquidScroll = () => { if (!lraf) lraf = requestAnimationFrame(setLiquid); };
+    window.addEventListener("scroll", onLiquidScroll, { passive: true });
+    window.addEventListener("resize", onLiquidScroll, { passive: true });
+    setLiquid();
+
+    return () => {
+      ctx.revert();
+      window.removeEventListener("scroll", onLiquidScroll);
+      window.removeEventListener("resize", onLiquidScroll);
+      if (lraf) cancelAnimationFrame(lraf);
+    };
   }, [photo]);
 
   if (photo) {
