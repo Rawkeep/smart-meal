@@ -3451,8 +3451,95 @@ export const RECIPE_TEMPLATES = [
  * @param {Object} context
  * @returns {RecipeTemplate[]}
  */
+// ───────────────────────── Dish-type inference ─────────────────────────
+// Templates carry no explicit dishType field, so we infer it from id/name/tags.
+// The ids here MUST match DISH_TYPES in App.jsx:
+//   suppe, nudeln, reis, bowl, gegrillt, wok, geschmort, ofen, street, süß
+// Order matters: more specific buckets are checked first. A template can
+// legitimately belong to a bucket only once (we return the first match).
+const DISH_TYPE_RULES = [
+  // Süßes/Dessert
+  { id: "süß", test: (s, tags) => tags.includes("süß") || tags.includes("dessert") || /\b(dessert|tarte|crème|creme|pancake|waffel|french toast|bananenbrot|chia-pudding|porridge|smoothie|overnight oats|granola|acai)\b/.test(s) },
+  // Suppe/Eintopf
+  { id: "suppe", test: (s) => /\b(suppe|eintopf|stew|soup|ramen|tom kha|minestrone|dal|congee|fufu|bohneneintopf|red-red|egusi|ndolé|ndole|pondu|misir wat|doro wat)\b/.test(s) },
+  // Aus dem Ofen (gebacken/gratiniert/Auflauf)
+  { id: "ofen", test: (s, tags) => tags.includes("ofen") || tags.includes("auflauf") || /\b(ofen|auflauf|gratin|gratiniert|lasagne|quiche|moussaka|bobotie|tarte|enchiladas|kohlroulade|waffel)\b/.test(s) },
+  // Gebraten/Wok
+  { id: "wok", test: (s) => /\b(wok|stir.?fry|pfanne|gebraten|kimchi-fried|fried rice|teriyaki|gyoza|pad thai|kartoffelpuffer|frittata|rührei|scramble|kartoffel-auflauf)\b/.test(s) },
+  // Gegrilltes / kurzgebraten am Stück
+  { id: "gegrillt", test: (s) => /\b(grill|gegrillt|steak|suya|spieß|plancha|à la plancha|miso-glaz)\b/.test(s) },
+  // Geschmort
+  { id: "geschmort", test: (s, tags) => tags.includes("schmoren") || /\b(geschmort|schmortopf|schmor|tajine|tagine|curry|masala|maafe|moambe|yassa|coq au vin|confit|sousvide|niedriggegart|jus|reduktion|saka-saka)\b/.test(s) },
+  // Nudelgericht
+  { id: "nudeln", test: (s) => /\b(pasta|spaghetti|nudel|carbonara|cacio e pepe|lasagne|ramen|noodle|one-pot pasta)\b/.test(s) },
+  // Reisgericht
+  { id: "reis", test: (s) => /\b(reis|rice|risotto|jollof|pilau|paella|bibimbap|kimbap|congee|sadza|ugali|pap)\b/.test(s) },
+  // Bowl/Salat
+  { id: "bowl", test: (s) => /\b(bowl|salat|salad|caprese|ceviche|poke|carpaccio|mezze|platte|bruschetta)\b/.test(s) },
+  // Street Food
+  { id: "street", test: (s) => /\b(wrap|taco|burrito|quesadilla|falafel|shawarma|kimbap|bruschetta|hummus|huevos rancheros)\b/.test(s) },
+];
+
+/**
+ * Infer the dish-type id (matching DISH_TYPES in App.jsx) for a template.
+ * Returns null when nothing matches.
+ * @param {object} t recipe template
+ * @returns {string|null}
+ */
+export function inferDishType(t) {
+  const haystack = `${t.id} ${t.name}`.toLowerCase();
+  const tags = (t.tags || []).map((x) => x.toLowerCase());
+  for (const rule of DISH_TYPE_RULES) {
+    if (rule.test(haystack, tags)) return rule.id;
+  }
+  return null;
+}
+
+// Map a cookTime bucket id (App.jsx TIMES) to an inclusive minute range.
+const TIME_BUCKETS = {
+  blitz: [0, 10],
+  schnell: [10, 20],
+  normal: [20, 40],
+  genuss: [40, 90],
+  projekt: [90, Infinity],
+};
+
+/** Parse "30 Min" → 30. Returns null if unparseable. */
+function parseMinutes(zeit) {
+  const m = String(zeit || "").match(/(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+/** True if the template's protein slot can satisfy the requested protein. */
+function templateMatchesProtein(t, proteinPref) {
+  if (!proteinPref || proteinPref === "egal") return true;
+  const tags = (t.tags || []).map((x) => x.toLowerCase());
+  // Vegetarian/vegan request: template must be vegetarian or vegan, or have
+  // no swappable protein slot that defaults to meat/fish.
+  if (proteinPref === "gemüse") {
+    return tags.includes("vegan") || tags.includes("vegetarisch");
+  }
+  // Tofu/Soja → must be a veg-friendly template (we swap protein in later).
+  if (proteinPref === "tofu") {
+    return tags.includes("vegan") || tags.includes("vegetarisch") ||
+      (t.slots || []).some((s) => s.category === "protein" && !s.fixed);
+  }
+  // Concrete animal protein (huhn/rind/schwein/fisch/meeresfrüchte/ei):
+  // template must have a swappable protein slot, OR a fixed slot matching it.
+  const proteinSlots = (t.slots || []).filter((s) => s.category === "protein");
+  if (proteinSlots.length === 0) return false; // purely vegetarian template
+  // Pescetarisch templates only fit fish/seafood.
+  if (tags.includes("pescetarisch") && !["fisch", "meeresfrüchte"].includes(proteinPref)) {
+    return false;
+  }
+  // Vegan/vegetarian templates can't deliver a real meat/fish dish.
+  if (tags.includes("vegan")) return false;
+  if (tags.includes("vegetarisch") && proteinPref !== "ei") return false;
+  return true;
+}
+
 export function findMatchingTemplates(context) {
-  const { meal, mood } = context;
+  const { meal, mood, dishType, proteinPref, cookTime } = context;
 
   return RECIPE_TEMPLATES.filter((t) => {
     // Hard meal-type gate: template mealType MUST match the user's choice exactly.
@@ -3467,6 +3554,23 @@ export function findMatchingTemplates(context) {
 
     // Mood match (if specified)
     if (mood && mood !== "random" && !t.moods.includes(mood)) return false;
+
+    // Hard dish-type gate: when the user picks a dish type, the template's
+    // inferred type MUST match. This is the user's priority requirement
+    // (e.g. "aus dem Ofen" → only oven dishes).
+    if (dishType && dishType !== "egal") {
+      if (inferDishType(t) !== dishType) return false;
+    }
+
+    // Hard protein gate.
+    if (!templateMatchesProtein(t, proteinPref)) return false;
+
+    // Hard cook-time gate: template time must fall in the requested bucket.
+    if (cookTime && TIME_BUCKETS[cookTime]) {
+      const mins = parseMinutes(t.zeit);
+      const [lo, hi] = TIME_BUCKETS[cookTime];
+      if (mins !== null && (mins < lo || mins > hi)) return false;
+    }
 
     // Cuisine preference is a soft match handled via scoring, not filtering.
     return true;

@@ -32,6 +32,22 @@ import { enrichSteps } from "./step-detail";
 const recentTemplateIds = [];
 const MAX_TEMPLATE_MEMORY = 10;
 
+// Maps a proteinPref id (App.jsx PROTEINS) to the concrete protein food ids /
+// tags that satisfy it. Used to hard-narrow the protein slot so the requested
+// protein actually lands on the plate.
+const PROTEIN_PREF_IDS = {
+  huhn: ["hähnchen", "hähnchen_schenkel", "pute", "ente"],
+  rind: ["rind", "hackfleisch"],
+  schwein: ["schwein", "speck", "schinken", "wurst"],
+  fisch: ["lachs", "thunfisch", "kabeljau", "forelle", "seelachs", "räucherlachs"],
+  meeresfrüchte: ["garnelen", "miesmuschel"],
+  tofu: ["tofu", "tempeh", "seitan"],
+  ei: ["ei"],
+};
+const PROTEIN_PREF_TAGS = {
+  gemüse: ["vegan", "vegetarisch"],
+};
+
 /**
  * Weighted random selection from top candidates
  * @param {Array} scored - sorted by score descending
@@ -82,7 +98,27 @@ function scoreFood(food, context, selectedFoods, templateCuisine) {
  * Select a template matching the context
  */
 function selectTemplate(context) {
-  const matching = findMatchingTemplates(context);
+  let matching = findMatchingTemplates(context);
+
+  // Graceful widening when hard filters leave an empty pool (catalog gap).
+  // We relax the LEAST important constraints first so we never silently
+  // violate the user's priority filter (dishType). cookTime is relaxed
+  // before dishType/protein; dishType is relaxed only as the last resort.
+  if (matching.length === 0 && context.cookTime) {
+    matching = findMatchingTemplates({ ...context, cookTime: undefined });
+  }
+  if (matching.length === 0 && context.mood && context.mood !== "random") {
+    matching = findMatchingTemplates({ ...context, cookTime: undefined, mood: "random" });
+  }
+  if (matching.length === 0 && context.proteinPref && context.proteinPref !== "egal") {
+    matching = findMatchingTemplates({ ...context, cookTime: undefined, mood: "random", proteinPref: "egal" });
+  }
+  // Only if STILL empty do we drop the dishType gate (true catalog gap, e.g.
+  // no oven breakfast). Even then we bias toward the requested dishType.
+  if (matching.length === 0 && context.dishType && context.dishType !== "egal") {
+    matching = findMatchingTemplates({ ...context, cookTime: undefined, mood: "random", proteinPref: "egal", dishType: "egal" });
+  }
+
   if (matching.length === 0) return null;
 
   // Penalize recently used templates
@@ -161,6 +197,19 @@ function fillSlot(slot, safeFoods, context, selectedFoods, templateCuisine, temp
     if (template?.mealType === "frühstück" && slot.category === "protein") {
       const breakfastProteins = candidates.filter((f) => f.tags?.includes("protein-frühstück"));
       if (breakfastProteins.length > 0) candidates = breakfastProteins;
+    }
+
+    // Protein-preference gate: when the user picks a concrete main protein,
+    // the protein slot MUST be filled from that group (so "Huhn" really puts
+    // chicken on the plate, not random meat). Narrow only if matches exist.
+    if (slot.category === "protein" && context.proteinPref && context.proteinPref !== "egal") {
+      const prefIds = PROTEIN_PREF_IDS[context.proteinPref];
+      const prefTags = PROTEIN_PREF_TAGS[context.proteinPref];
+      const matchesPref = (f) =>
+        (prefIds && prefIds.includes(f.id)) ||
+        (prefTags && prefTags.some((tg) => f.tags?.includes(tg)));
+      const filtered = candidates.filter(matchesPref);
+      if (filtered.length > 0) candidates = filtered;
     }
 
     // Cuisine coherence: a Ramen or Pad Thai must never pick Kohlrabi,

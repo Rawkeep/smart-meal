@@ -1296,7 +1296,29 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
 - "schluss": EIN warmer, einladender Schlusssatz zum Servieren/Genießen (1 Satz), passend zur Küche.`;
 
     // Optionale Verfeinerung (nur wenn gesetzt): Gericht-Typ + Haupt-Protein.
-    const prefLine = `${dishType && dishType !== "egal" ? `\n- Art des Gerichts: ${DISH_TYPES.find(d => d.id === dishType)?.label}` : ""}${proteinPref && proteinPref !== "egal" ? `\n- Haupt-Protein: ${PROTEINS.find(p => p.id === proteinPref)?.label}` : ""}`;
+    // Beide sind HARTE Constraints — das Modell muss sie zwingend einhalten.
+    // Pro Gericht-Typ wird explizit ausgeschlossen, was NICHT erlaubt ist.
+    const DISH_TYPE_STRICT = {
+      suppe: "AUSSCHLIESSLICH eine Suppe oder ein Eintopf (löffelbar, mit Flüssigkeit) — KEINE Pfannen-, Ofen-, Pasta- oder Salatgerichte.",
+      nudeln: "AUSSCHLIESSLICH ein Nudel-/Pastagericht (Pasta als Hauptkomponente) — KEINE Suppe, Reis-, Ofen- oder Salatgerichte.",
+      reis: "AUSSCHLIESSLICH ein Reisgericht (Reis als Hauptkomponente, z.B. Risotto, Pilau, Jollof, Bowl auf Reis) — KEINE Pasta-, Suppen- oder Brotgerichte.",
+      bowl: "AUSSCHLIESSLICH eine Bowl oder ein Salat (kalt/lauwarm angerichtet) — KEINE Suppe, KEIN Ofen-/Schmorgericht.",
+      gegrillt: "AUSSCHLIESSLICH ein gegrilltes/kurzgebratenes Gericht am Stück (Grill/Plancha/Steak/Spieße) — KEINE Suppe, KEIN Eintopf, KEIN Auflauf.",
+      wok: "AUSSCHLIESSLICH ein Wok-/Pfannengericht (gebraten, schnell) — KEINE Suppe, KEIN Ofengericht, KEIN Schmorgericht.",
+      geschmort: "AUSSCHLIESSLICH ein Schmorgericht (lange in Flüssigkeit gegart, z.B. Tajine, Curry, Schmortopf) — KEIN Salat, KEIN kurzgebratenes Gericht.",
+      ofen: "AUSSCHLIESSLICH ein Ofengericht (im Backofen gebacken/gratiniert/überbacken, z.B. Auflauf, Gratin, Ofengemüse, Quiche) — KEINE Pfannen-, Wok-, Suppen- oder Salatgerichte.",
+      street: "AUSSCHLIESSLICH ein Street-Food-Gericht (Wrap, Taco, Burrito, Falafel, Quesadilla, mit der Hand essbar) — KEINE Suppe, KEIN Auflauf.",
+      süß: "AUSSCHLIESSLICH ein süßes Gericht/Dessert — KEIN herzhaftes Hauptgericht.",
+    };
+    const dishStrict = dishType && dishType !== "egal"
+      ? `\n- Art des Gerichts (PFLICHT): ${DISH_TYPES.find(d => d.id === dishType)?.label}. ${DISH_TYPE_STRICT[dishType] || ""}`
+      : "";
+    const proteinStrict = proteinPref && proteinPref !== "egal"
+      ? (proteinPref === "gemüse"
+          ? `\n- Haupt-Protein (PFLICHT): NUR Gemüse — das Gericht MUSS rein vegetarisch/vegan sein. KEIN Fleisch, KEIN Fisch, KEINE Meeresfrüchte.`
+          : `\n- Haupt-Protein (PFLICHT): Das Haupt-Protein MUSS ${PROTEINS.find(p => p.id === proteinPref)?.label} sein — KEIN anderes Hauptprotein verwenden.`)
+      : "";
+    const prefLine = `${dishStrict}${proteinStrict}`;
 
     // Erweiterte JSON-Felder (Mehrwert) — an beide Detail-Rezept-Prompts angehängt.
     const extraFields = `,"kultur":"1-2 Sätze Herkunft/Story","schaerfe":0,"gerichtTyp":"...","proteinTyp":"...","ersatz":[{"zutat":"...","was":"kurze Erklärung","ersatz":"Supermarkt-Alternative"}],"zutatenGruppen":[{"titel":"z.B. Sauce/Marinade/Topping","zutaten":["Menge + Zutat"]}],"schluss":"warmer Schlusssatz zum Servieren"`;
@@ -1369,6 +1391,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
       const fridgeItems = [...selectedIngredients, ...(fridgeInput.trim() ? fridgeInput.split(/[,\n]+/).map(s => s.trim()).filter(Boolean) : [])];
       return generateOfflineSuggestion({
         profile, meal, cookTime, mood, budget, persons, history,
+        dishType, proteinPref,
         fridgeItems: m === "fridge" ? fridgeItems : [],
         guestMode, guestAllergies, guestHistamin, guestDiet,
       });
@@ -1408,7 +1431,7 @@ SAISON (${SEASON_NAMES[mo]}): ${SEASONS[mo]}`;
     }
     clearInterval(iv);
     setLoading(false);
-  }, [apiKey, backendAvailable, offlineMode, callAPI, buildPrompt, history, updateStreak, profile, meal, cookTime, mood, budget, persons, fridgeInput, selectedIngredients, guestMode, guestAllergies, guestHistamin, guestDiet]);
+  }, [apiKey, backendAvailable, offlineMode, callAPI, buildPrompt, history, updateStreak, profile, meal, cookTime, mood, budget, persons, fridgeInput, selectedIngredients, dishType, proteinPref, guestMode, guestAllergies, guestHistamin, guestDiet]);
 
   const generatePlan = useCallback(async () => {
     setPlanLoading(true);
