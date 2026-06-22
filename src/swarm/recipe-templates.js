@@ -3444,6 +3444,306 @@ export const RECIPE_TEMPLATES = [
     tags: ["gehoben", "süß", "vegetarisch"],
     herkunft: "Frankreich",
   },
+
+  // ═══════════ LÜCKENFÜLLER: fehlende Mahlzeit×Gericht-Kombis ═══════════
+  // Jeweils ein echtes Gericht pro bisher leerer (mealType × dishType)-Kombi,
+  // damit die Offline-Engine jeden Gerichtstyp pro Mahlzeit liefern kann.
+
+  // Frühstück × Ofen
+  {
+    id: "ofen-shakshuka",
+    name: "Ofen-Shakshuka mit {GEMUSE1} und {EI}",
+    beschreibung: "Würzige Tomaten-Paprika-Sauce mit pochierten Eiern, im Ofen gebacken.",
+    cuisines: ["orientalisch", "nordafrikanisch", "mediterran"],
+    mealType: "frühstück",
+    moods: ["comfort", "deftig", "proteinreich"],
+    zeit: "30 Min",
+    schwierigkeit: "Mittel",
+    slots: [
+      { category: "protein", min: 1, max: 1, role: "EI", fixed: "ei" },
+      { category: "gemüse", min: 2, max: 2, role: "GEMUSE1", preferred: ["tomate", "paprika", "zwiebel"] },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", preferred: ["brot", "vollkornbrot", "fladenbrot"] },
+      { category: "gewürze", min: 0, max: 1, role: "GEWURZ", optional: true },
+    ],
+    stepsTemplate: [
+      "Ofen auf 200 °C vorheizen. {GEMUSE1} waschen und in Stücke schneiden.",
+      "{GEMUSE1} mit {GEWURZ}, Salz und Pfeffer in einer ofenfesten Form mischen und 10 Min vorgaren.",
+      "Mulden in die Sauce drücken und je ein {EI} hineingleiten lassen.",
+      "Im Ofen 8–10 Min backen, bis das {EI} gestockt ist.",
+      "Mit frischem {BEILAGE} zum Tunken servieren.",
+    ],
+    emoji: "🍳",
+    tags: ["ofen", "vegetarisch", "proteinreich"],
+    herkunft: "Naher Osten",
+  },
+
+  // Frühstück × Gegrilltes
+  {
+    id: "grill-halloumi-fruehstueck",
+    name: "Halloumi vom Grill mit {GEMUSE1} und {BEILAGE}",
+    beschreibung: "Goldbraun gegrillter Halloumi mit warmem Gemüse auf knusprigem Brot.",
+    cuisines: ["mediterran", "orientalisch"],
+    mealType: "frühstück",
+    moods: ["proteinreich", "deftig", "gesund"],
+    zeit: "15 Min",
+    schwierigkeit: "Leicht",
+    slots: [
+      { category: "milch", min: 1, max: 1, role: "PROTEIN", fixed: "halloumi" },
+      { category: "gemüse", min: 1, max: 2, role: "GEMUSE1", preferred: ["tomate", "zucchini", "paprika"] },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", preferred: ["vollkornbrot", "brot", "fladenbrot"] },
+    ],
+    stepsTemplate: [
+      "Grillpfanne erhitzen. {PROTEIN} in Scheiben schneiden.",
+      "{PROTEIN} ohne Öl 2 Min pro Seite grillen, bis er Streifen bekommt.",
+      "{GEMUSE1} waschen, in Scheiben schneiden und kurz mitgrillen.",
+      "{BEILAGE} antoasten und mit {GEMUSE1} sowie {PROTEIN} belegen.",
+      "Mit Salz, Pfeffer und etwas Olivenöl abschmecken.",
+    ],
+    emoji: "🧀",
+    tags: ["gegrillt", "vegetarisch", "proteinreich"],
+    herkunft: "Zypern",
+  },
+
+  // Frühstück × Nudelgericht
+  {
+    id: "asia-nudel-fruehstueck",
+    name: "Sesam-Nudel-Bowl zum Frühstück mit {EI}",
+    beschreibung: "Herzhafte asiatische Nudeln mit Ei und knackigem Gemüse für den herzhaften Start.",
+    cuisines: ["japanisch", "koreanisch", "thai"],
+    mealType: "frühstück",
+    moods: ["deftig", "proteinreich", "exotisch"],
+    zeit: "15 Min",
+    schwierigkeit: "Leicht",
+    slots: [
+      { category: "protein", min: 1, max: 1, role: "EI", fixed: "ei" },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", preferred: ["mehl"] },
+      { category: "gemüse", min: 1, max: 2, role: "GEMUSE1", preferred: ["frühlingszwiebel", "spinat", "karotte"] },
+    ],
+    stepsTemplate: [
+      "{BEILAGE}-Nudeln nach Packung kochen und abgießen.",
+      "{GEMUSE1} waschen, fein schneiden und kurz in etwas Sesamöl anbraten.",
+      "Nudeln mit {GEMUSE1}, Sojasauce und einer Prise Sesam mischen.",
+      "{EI} weich kochen, halbieren und auf die Nudeln legen.",
+      "Mit Röstsesam bestreut servieren.",
+    ],
+    emoji: "🍜",
+    tags: ["vegetarisch", "proteinreich"],
+    herkunft: "Ostasien",
+  },
+
+  // Frühstück × Geschmort
+  {
+    id: "schmortopf-fruehstuecksbohnen",
+    name: "Frühstücks-Schmortopf mit weißen {HULSEN} auf {BEILAGE}",
+    beschreibung: "Sanft geschmorte weiße Bohnen in würziger Tomatensauce, klassisch zum Brunch.",
+    cuisines: ["mediterran", "orientalisch"],
+    mealType: "frühstück",
+    moods: ["comfort", "deftig", "gesund"],
+    zeit: "25 Min",
+    schwierigkeit: "Leicht",
+    slots: [
+      { category: "hülsenfrüchte", min: 1, max: 1, role: "HULSEN", preferred: ["weiße_bohnen", "kichererbsen"] },
+      { category: "gemüse", min: 1, max: 2, role: "GEMUSE1", preferred: ["tomate", "zwiebel", "paprika"] },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", preferred: ["vollkornbrot", "brot", "fladenbrot"] },
+      { category: "gewürze", min: 0, max: 1, role: "GEWURZ", optional: true },
+    ],
+    stepsTemplate: [
+      "{GEMUSE1} waschen, würfeln und in etwas Öl andünsten.",
+      "{HULSEN} abtropfen lassen und mit {GEWURZ} dazugeben.",
+      "Mit etwas Wasser ablöschen und 15 Min sanft schmoren lassen.",
+      "Mit Salz und Pfeffer abschmecken.",
+      "Auf getoastetem {BEILAGE} anrichten.",
+    ],
+    emoji: "🫘",
+    tags: ["geschmort", "vegan", "gesund"],
+    herkunft: "Mittelmeerraum",
+  },
+
+  // Mittag × Gegrilltes
+  {
+    id: "mittag-gemuesespiesse",
+    name: "Bunte {GEMUSE1}-Spieße vom Grill mit {BEILAGE}",
+    beschreibung: "Marinierte Gemüsespieße vom Grill mit Protein und sättigender Beilage.",
+    cuisines: ["mediterran", "orientalisch", "deutsch"],
+    mealType: "mittag",
+    moods: ["gesund", "leicht", "proteinreich"],
+    zeit: "30 Min",
+    schwierigkeit: "Mittel",
+    slots: [
+      { category: "protein", min: 1, max: 1, role: "PROTEIN" },
+      { category: "gemüse", min: 2, max: 3, role: "GEMUSE1", preferred: ["zucchini", "paprika", "aubergine", "champignon"] },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", preferred: ["reis", "couscous", "fladenbrot"] },
+      { category: "gewürze", min: 0, max: 1, role: "GEWURZ", optional: true },
+    ],
+    stepsTemplate: [
+      "{GEMUSE1} waschen und in mundgerechte Stücke schneiden.",
+      "{PROTEIN} würfeln und mit {GEMUSE1} abwechselnd auf Spieße stecken.",
+      "Mit Öl, {GEWURZ}, Salz und Pfeffer einpinseln.",
+      "Spieße auf dem Grill rundum 8–10 Min grillen, bis sie Farbe nehmen.",
+      "Mit {BEILAGE} servieren.",
+    ],
+    emoji: "🍢",
+    tags: ["gegrillt", "gesund"],
+    herkunft: "Mittelmeerraum",
+  },
+
+  // Mittag × Süßes/Dessert (Süßspeise als Mittagessen)
+  {
+    id: "mittag-kaiserschmarrn",
+    name: "Kaiserschmarrn mit {OBST} und {NUSS}",
+    beschreibung: "Fluffiger, karamellisierter Pfannkuchen-Schmarrn mit Obst — die süße Mittagsmahlzeit.",
+    cuisines: ["deutsch", "österreichisch"],
+    mealType: "mittag",
+    moods: ["comfort", "süß", "deftig"],
+    zeit: "25 Min",
+    schwierigkeit: "Mittel",
+    slots: [
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", fixed: "mehl" },
+      { category: "obst", min: 1, max: 2, role: "OBST", preferred: ["apfel", "heidelbeere", "erdbeere"] },
+      { category: "nüsse", min: 0, max: 1, role: "NUSS", optional: true },
+    ],
+    stepsTemplate: [
+      "{BEILAGE} mit Eiern, Milch, Zucker und einer Prise Salz zu einem Teig verrühren.",
+      "Teig in Butter goldbraun backen, dann mit zwei Gabeln in Stücke reißen.",
+      "Mit etwas Zucker in der Pfanne karamellisieren lassen.",
+      "{OBST} waschen, klein schneiden und untermengen oder daneben anrichten.",
+      "Mit {NUSS} und Puderzucker bestreut servieren.",
+    ],
+    emoji: "🥞",
+    tags: ["süß", "vegetarisch", "comfort"],
+    herkunft: "Österreich",
+  },
+
+  // Abend × Street Food
+  {
+    id: "abend-bohnen-taco",
+    name: "Knuspriger {HULSEN}-Taco mit {GEMUSE1}",
+    beschreibung: "Warme Tortillas mit würzigen Bohnen, frischem Gemüse und Limette — Street-Food-Abend.",
+    cuisines: ["mexikanisch", "karibisch"],
+    mealType: "abend",
+    moods: ["deftig", "exotisch", "comfort"],
+    zeit: "25 Min",
+    schwierigkeit: "Leicht",
+    slots: [
+      { category: "hülsenfrüchte", min: 1, max: 1, role: "HULSEN", preferred: ["kidneybohnen", "schwarze_bohnen", "kichererbsen"] },
+      { category: "gemüse", min: 2, max: 3, role: "GEMUSE1", preferred: ["tomate", "mais", "avocado", "paprika"] },
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", fixed: "mehl" },
+      { category: "gewürze", min: 0, max: 1, role: "GEWURZ", optional: true },
+    ],
+    stepsTemplate: [
+      "{HULSEN} abtropfen lassen und mit {GEWURZ}, Salz und Pfeffer in der Pfanne erhitzen.",
+      "{GEMUSE1} waschen, klein würfeln und als frische Füllung bereitstellen.",
+      "Tortillas aus {BEILAGE} kurz in der Pfanne erwärmen.",
+      "Tacos mit {HULSEN} und {GEMUSE1} füllen.",
+      "Mit einem Spritzer Limette beträufeln und servieren.",
+    ],
+    emoji: "🌮",
+    tags: ["street", "vegan", "exotisch"],
+    herkunft: "Mexiko",
+  },
+
+  // Abend × Süßes/Dessert (süßes Abendessen)
+  {
+    id: "abend-suesse-pfannkuchen",
+    name: "Süße Pfannkuchen mit {OBST} und {NUSS}",
+    beschreibung: "Dünne, goldene Pfannkuchen mit warmem Obst — als gemütliches süßes Abendessen.",
+    cuisines: ["deutsch", "französisch"],
+    mealType: "abend",
+    moods: ["comfort", "süß"],
+    zeit: "20 Min",
+    schwierigkeit: "Leicht",
+    slots: [
+      { category: "getreide", min: 1, max: 1, role: "BEILAGE", fixed: "mehl" },
+      { category: "obst", min: 1, max: 2, role: "OBST", preferred: ["apfel", "banane", "erdbeere"] },
+      { category: "nüsse", min: 0, max: 1, role: "NUSS", optional: true },
+    ],
+    stepsTemplate: [
+      "{BEILAGE} mit Eiern, Milch und einer Prise Salz zu einem glatten Teig verrühren.",
+      "Teig portionsweise in einer Pfanne mit etwas Butter goldbraun backen.",
+      "{OBST} waschen, in Scheiben schneiden und kurz in Butter schwenken.",
+      "Pfannkuchen mit dem warmen {OBST} füllen oder belegen.",
+      "Mit {NUSS} und Ahornsirup beträufelt servieren.",
+    ],
+    emoji: "🥞",
+    tags: ["süß", "vegetarisch", "comfort"],
+    herkunft: "International",
+  },
+
+  // Snack × Suppe (kleine Tassensuppe)
+  {
+    id: "snack-gemuesesuppe",
+    name: "Schnelle Gemüse-Suppe aus der Tasse mit {GEMUSE1}",
+    beschreibung: "Wärmende kleine Suppe für zwischendurch — in wenigen Minuten fertig.",
+    cuisines: ["deutsch", "mediterran"],
+    mealType: "snack",
+    moods: ["gesund", "leicht", "comfort"],
+    zeit: "10 Min",
+    schwierigkeit: "Leicht",
+    slots: [
+      { category: "gemüse", min: 1, max: 2, role: "GEMUSE1", preferred: ["karotte", "tomate", "zucchini", "erbsen"] },
+      { category: "gewürze", min: 0, max: 1, role: "GEWURZ", optional: true },
+    ],
+    stepsTemplate: [
+      "{GEMUSE1} waschen und in kleine Würfel schneiden.",
+      "{GEMUSE1} mit etwas Brühe und {GEWURZ} aufkochen.",
+      "5–7 Min köcheln, bis das {GEMUSE1} weich ist.",
+      "Nach Geschmack fein pürieren oder stückig lassen.",
+      "Heiß in eine Tasse füllen und servieren.",
+    ],
+    emoji: "🍵",
+    tags: ["suppe", "vegan", "gesund", "schnell"],
+    herkunft: "International",
+  },
+
+  // Snack × Aus dem Ofen
+  {
+    id: "snack-ofen-pommes",
+    name: "Ofen-{GEMUSE1}-Pommes mit Kräutersalz",
+    beschreibung: "Knusprige Süßkartoffel-Pommes aus dem Ofen — der gesündere Snack.",
+    cuisines: ["deutsch", "international"],
+    mealType: "snack",
+    moods: ["comfort", "gesund", "deftig"],
+    zeit: "30 Min",
+    schwierigkeit: "Leicht",
+    slots: [
+      { category: "gemüse", min: 1, max: 1, role: "GEMUSE1", preferred: ["süßkartoffel", "kartoffel", "karotte"] },
+      { category: "gewürze", min: 0, max: 1, role: "GEWURZ", optional: true },
+    ],
+    stepsTemplate: [
+      "Ofen auf 220 °C vorheizen. {GEMUSE1} waschen und in dünne Stifte schneiden.",
+      "{GEMUSE1} mit etwas Öl, {GEWURZ} und Salz vermengen.",
+      "Auf einem Blech verteilen und 20–25 Min backen, dabei einmal wenden.",
+      "Mit Kräutersalz bestreuen und knusprig servieren.",
+    ],
+    emoji: "🍟",
+    tags: ["ofen", "vegan", "gesund"],
+    herkunft: "International",
+  },
+
+  // Snack × Gegrilltes
+  {
+    id: "snack-gegrillter-mais",
+    name: "Gegrillter Maiskolben am Grill mit {GEWURZ}",
+    beschreibung: "Saftiger Maiskolben vom Grill mit würziger Butter — der herzhafte Sommer-Snack.",
+    cuisines: ["mexikanisch", "karibisch", "international"],
+    mealType: "snack",
+    moods: ["deftig", "comfort", "exotisch"],
+    zeit: "15 Min",
+    schwierigkeit: "Leicht",
+    slots: [
+      { category: "gemüse", min: 1, max: 1, role: "GEMUSE1", fixed: "mais" },
+      { category: "gewürze", min: 1, max: 1, role: "GEWURZ", preferred: ["paprikapulver", "chili"] },
+    ],
+    stepsTemplate: [
+      "{GEMUSE1} putzen und die Hüllblätter entfernen.",
+      "Grill erhitzen und {GEMUSE1} rundum 8–10 Min grillen, bis er Röststellen hat.",
+      "Butter mit {GEWURZ} und etwas Salz verrühren.",
+      "Den heißen Maiskolben mit der {GEWURZ}-Butter bestreichen und servieren.",
+    ],
+    emoji: "🌽",
+    tags: ["gegrillt", "vegetarisch", "exotisch"],
+    herkunft: "Lateinamerika",
+  },
 ];
 
 /**
