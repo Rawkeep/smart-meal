@@ -560,15 +560,15 @@ const Layout = ({ children, photo = true }) => {
       return;
     }
     // GSAP + ScrollTrigger: alle Ebenen an EINER gescrubbten Timeline → perfekt
-    // synchron. scrub:1.6 = träges, weiches Nachziehen. Hintergrund zoomt beim
-    // Runterscrollen kräftig ein (1.05 → 1.25), driftet als Parallax mit.
+    // synchron. scrub:2.8 = sehr träges, butterweiches Nachziehen. Hintergrund
+    // zoomt beim Runterscrollen sanft HERAUS (1.18 → 1.04), driftet als Parallax mit.
     const ctx = gsap.context(() => {
       const driftMax = window.innerHeight * 0.30;
       const tl = gsap.timeline({
         defaults: { ease: "none" },
-        scrollTrigger: { start: 0, end: "max", scrub: 2.2, invalidateOnRefresh: true },
+        scrollTrigger: { start: 0, end: "max", scrub: 2.8, invalidateOnRefresh: true },
       });
-      tl.fromTo(bg, { y: 0, scale: 1.05 }, { y: driftMax, scale: 1.25 }, 0);
+      tl.fromTo(bg, { y: 0, scale: 1.18 }, { y: driftMax, scale: 1.04 }, 0);
       // Zweite Ebene (Tiefe): Vignette driftet langsamer & verdichtet sich → Parallax-Tiefe.
       if (depth) tl.fromTo(depth, { y: 0, opacity: 0.10 }, { y: driftMax * 0.45, opacity: 0.42 }, 0);
       if (scrim) tl.fromTo(scrim, { opacity: 1 }, { opacity: 0.72 }, 0);
