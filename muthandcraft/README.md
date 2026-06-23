@@ -1,6 +1,6 @@
-# Muth & Craft — Website
+# MutHandCraft — Website
 
-Fertige, suchmaschinenoptimierte Website für **Muth & Craft**, einen Full-Service-Handwerksbetrieb
+Fertige, suchmaschinenoptimierte Website für **MutHandCraft**, einen Full-Service-Handwerksbetrieb
 in Connecticut, USA (Umbau innen & außen, Bad, Küche, Rohr verlegen / Sanitär, Terrassen, Garten —
 einfach alles rund ums Haus).
 

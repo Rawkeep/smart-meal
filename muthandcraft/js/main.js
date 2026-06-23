@@ -1,4 +1,4 @@
-/* Muth & Craft — site interactions */
+/* MutHandCraft — site interactions */
 (function () {
   "use strict";
 
