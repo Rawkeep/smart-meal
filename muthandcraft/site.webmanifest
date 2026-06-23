@@ -1,0 +1,12 @@
+{
+  "name": "Muth & Craft",
+  "short_name": "Muth & Craft",
+  "description": "Full-service handyman & remodeling in Connecticut.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1a232b",
+  "icons": [
+    { "src": "assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
