@@ -392,8 +392,8 @@ const BulkToggle = ({ options, selected, onSelectAll, onClear, label = "Allergie
 const Card = ({ children, style, anim, delay }) => (
   <div style={{
     background: "var(--card)",
-    backdropFilter: "blur(24px) saturate(1.3)",
-    WebkitBackdropFilter: "blur(24px) saturate(1.3)",
+    backdropFilter: "blur(12px) saturate(1.3)",
+    WebkitBackdropFilter: "blur(12px) saturate(1.3)",
     borderRadius: "var(--R)",
     padding: "26px",
     border: "1px solid var(--card-border)",
@@ -555,18 +555,19 @@ const Layout = ({ children, photo = true }) => {
     if (reduce) {
       gsap.set(bg, { y: 0, scale: 1.08 });
       if (scrim) gsap.set(scrim, { opacity: 1 });
-      if (liquid) gsap.set(liquid, { height: "98%" });
+      if (liquid) gsap.set(liquid, { y: "2%" });
       if (depth) gsap.set(depth, { y: 0, opacity: 0.18 });
       return;
     }
     // GSAP + ScrollTrigger: alle Ebenen an EINER gescrubbten Timeline → perfekt
-    // synchron. scrub:2.8 = sehr träges, butterweiches Nachziehen. Hintergrund
+    // synchron. scrub:0.6 = weiches Nachziehen, das aber schnell zur Ruhe kommt
+    // (kein ~3s-Nachlauf → Backdrop-Blurs müssen nicht dauernd neu rechnen). Hintergrund
     // zoomt beim Runterscrollen sanft HERAUS (1.18 → 1.04), driftet als Parallax mit.
     const ctx = gsap.context(() => {
       const driftMax = window.innerHeight * 0.30;
       const tl = gsap.timeline({
         defaults: { ease: "none" },
-        scrollTrigger: { start: 0, end: "max", scrub: 2.8, invalidateOnRefresh: true },
+        scrollTrigger: { start: 0, end: "max", scrub: 0.6, invalidateOnRefresh: true },
       });
       tl.fromTo(bg, { y: 0, scale: 1.18 }, { y: driftMax, scale: 1.04 }, 0);
       // Zweite Ebene (Tiefe): Vignette driftet langsamer & verdichtet sich → Parallax-Tiefe.
@@ -583,7 +584,9 @@ const Layout = ({ children, photo = true }) => {
       if (!liquid) return;
       const max = (document.documentElement.scrollHeight - window.innerHeight) || 1;
       const p = Math.min(1, Math.max(0, (window.scrollY || window.pageYOffset || 0) / max));
-      liquid.style.height = `${(6 + (1 - p) * 92).toFixed(1)}%`;
+      // Compositor-freundlich: volle Höhe, per translateY nach unten geschoben
+      // (Tube ist overflow:hidden) statt height zu animieren (layoutgebunden).
+      liquid.style.transform = `translateY(${(94 - (1 - p) * 92).toFixed(1)}%)`;
     };
     const onLiquidScroll = () => { if (!lraf) lraf = requestAnimationFrame(setLiquid); };
     window.addEventListener("scroll", onLiquidScroll, { passive: true });
@@ -621,9 +624,10 @@ const Layout = ({ children, photo = true }) => {
           boxShadow: "inset 0 0 6px rgba(0,0,0,0.28)", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)",
         }}>
           <div ref={liquidRef} style={{
-            position: "absolute", left: 0, right: 0, bottom: 0, height: "98%", borderRadius: "999px",
+            position: "absolute", left: 0, right: 0, bottom: 0, height: "100%", borderRadius: "999px",
             background: "linear-gradient(180deg, rgba(224,248,255,0.95) 0%, rgba(150,214,236,0.92) 45%, rgba(96,184,212,0.94) 100%)",
-            boxShadow: "0 0 10px rgba(150,214,236,0.7), inset 1px 0 0 rgba(255,255,255,0.55)", willChange: "height",
+            boxShadow: "0 0 10px rgba(150,214,236,0.7), inset 1px 0 0 rgba(255,255,255,0.55)",
+            transform: "translateY(2%)", willChange: "transform",
           }}>
             {/* wogende Oberfläche (heller Schimmer) */}
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "4px", background: "rgba(255,255,255,0.9)", borderRadius: "999px", animation: "waterBob 2.4s ease-in-out infinite" }} />
