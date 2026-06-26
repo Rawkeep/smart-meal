@@ -414,17 +414,17 @@ const Reveal = ({ children, from = "up", delay = 0, style }) => {
     const el = ref.current;
     if (!el) return;
     if (_prefersReduced()) { gsap.set(el, { opacity: 1, x: 0, y: 0, scale: 1 }); return; }
-    const D = 36;
+    const D = 24;
     const start = {
       opacity: 0,
       x: from === "left" ? -D : from === "right" ? D : 0,
       y: from === "up" ? D : from === "down" ? -D : 0,
-      scale: from === "zoom" ? 0.92 : 1,
+      scale: from === "zoom" ? 0.96 : 1,
     };
     const ctx = gsap.context(() => {
       gsap.fromTo(el, start, {
-        opacity: 1, x: 0, y: 0, scale: 1, duration: 0.9, ease: "power3.out", delay,
-        scrollTrigger: { trigger: el, start: "top 88%", once: true },
+        opacity: 1, x: 0, y: 0, scale: 1, duration: 1.3, ease: "power2.out", delay,
+        scrollTrigger: { trigger: el, start: "top 92%", once: true },
       });
     }, el);
     return () => ctx.revert();
@@ -550,30 +550,19 @@ const Layout = ({ children, photo = true }) => {
   useEffect(() => {
     if (!photo || !bgRef.current) return;
     const bg = bgRef.current, scrim = scrimRef.current, liquid = liquidRef.current, depth = depthRef.current;
+    // Hintergrund STATISCH & ruhig — kein Parallax-Scrub mehr. Der bewegte Foto-
+    // Hintergrund war die Hauptquelle des Ruckelns (zwang die Card-Backdrop-Blurs
+    // zum Dauer-Recompute). Foto-Stimmung bleibt, aber nichts driftet beim Scrollen.
+    gsap.set(bg, { y: 0, scale: 1.06 });
+    if (scrim) gsap.set(scrim, { opacity: 0.92 });
+    if (depth) gsap.set(depth, { y: 0, opacity: 0.22 });
+
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    // Reduzierte Bewegung: statischer Zustand, keine Scroll-Animation.
+    // Reduzierte Bewegung: auch der Wasserpegel bleibt statisch.
     if (reduce) {
-      gsap.set(bg, { y: 0, scale: 1.08 });
-      if (scrim) gsap.set(scrim, { opacity: 1 });
       if (liquid) gsap.set(liquid, { y: "2%" });
-      if (depth) gsap.set(depth, { y: 0, opacity: 0.18 });
       return;
     }
-    // GSAP + ScrollTrigger: alle Ebenen an EINER gescrubbten Timeline → perfekt
-    // synchron. scrub:0.6 = weiches Nachziehen, das aber schnell zur Ruhe kommt
-    // (kein ~3s-Nachlauf → Backdrop-Blurs müssen nicht dauernd neu rechnen). Hintergrund
-    // zoomt beim Runterscrollen sanft HERAUS (1.18 → 1.04), driftet als Parallax mit.
-    const ctx = gsap.context(() => {
-      const driftMax = window.innerHeight * 0.30;
-      const tl = gsap.timeline({
-        defaults: { ease: "none" },
-        scrollTrigger: { start: 0, end: "max", scrub: 0.6, invalidateOnRefresh: true },
-      });
-      tl.fromTo(bg, { y: 0, scale: 1.18 }, { y: driftMax, scale: 1.04 }, 0);
-      // Zweite Ebene (Tiefe): Vignette driftet langsamer & verdichtet sich → Parallax-Tiefe.
-      if (depth) tl.fromTo(depth, { y: 0, opacity: 0.10 }, { y: driftMax * 0.45, opacity: 0.42 }, 0);
-      if (scrim) tl.fromTo(scrim, { opacity: 1 }, { opacity: 0.72 }, 0);
-    });
 
     // Wasserpegel NATIV (cross-browser): GSAPs Höhen-Tween aktualisierte sich auf
     // Android-Chromium (Chrome/Opera) nicht zuverlässig. Direkter Scroll-Listener
@@ -594,7 +583,6 @@ const Layout = ({ children, photo = true }) => {
     setLiquid();
 
     return () => {
-      ctx.revert();
       window.removeEventListener("scroll", onLiquidScroll);
       window.removeEventListener("resize", onLiquidScroll);
       if (lraf) cancelAnimationFrame(lraf);
